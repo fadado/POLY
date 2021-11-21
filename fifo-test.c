@@ -1,16 +1,20 @@
 // Channel test
 
-#include <stddef.h>
+#include <errno.h>
 #include <stdbool.h>
-#include <stdio.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
 
 // comment next line to enable assertions
 //#define NDEBUG
 #include <assert.h>
 
 ////////////////////////////////////////////////////////////////////////
-// Scalar
+// Channel of scalars
 ////////////////////////////////////////////////////////////////////////
 
 typedef union {
@@ -20,95 +24,22 @@ typedef union {
 	void*    p;
 } Scalar __attribute__((__transparent_union__));
 
-////////////////////////////////////////////////////////////////////////
-// Channel
-////////////////////////////////////////////////////////////////////////
-
-#define N 10
-
 typedef struct {
-	size_t front;
-	size_t rear;
-	size_t size;
-	Scalar buffer[N+1]; // TODO: use malloc
+	size_t  front;
+	size_t  rear;
+	size_t  size;
+	Scalar* buffer;
 } Channel;
 
-#define ALWAYS __attribute__((always_inline))
+static int  chn_init(Channel* self, size_t capacity);
+static void chn_destroy(Channel* self);
+static bool chn_empty(Channel* self);
+static bool chn_full(Channel* self);
+static void chn_send_(Channel* self, Scalar x);
+static void chn_receive(Channel* self, Scalar* x);
 
-static inline void chn_init(Channel* self, size_t size);
-static inline void chn_destroy(Channel* self);
-static ALWAYS inline bool chn_empty(Channel* self);
-static ALWAYS inline bool chn_full(Channel* self);
-static ALWAYS inline void chn_snd_(Channel* self, Scalar x);
-static ALWAYS inline void chn_rcv(Channel* self, Scalar* x);
-//#define chn_cast(scalar,variable) 
-
-// Channel life
-
-static inline void chn_init(Channel* self, size_t size)
-{
-	self->front = self->rear = 0;
-	self->size = size+1;
-	// TODO: malloc
-	assert(chn_empty(self));
-	assert(!chn_full(self));
-}
-
-static inline void chn_destroy(Channel* self)
-{
-	; // TODO
-}
-
-// Predicates
-
-static ALWAYS inline bool chn_empty(Channel* self)
-{
-	return self->front == self->rear;
-}
-
-static ALWAYS inline bool chn_full(Channel* self)
-{
-	return ((self->front+1) % self->size) == self->rear;
-}
-
-// Send & Receive
-
-static ALWAYS inline void chn_snd_(Channel* self, Scalar x)
-{
-	assert(!chn_full(self));
-	self->buffer[self->front] = x;
-	self->front = (self->front+1) % self->size;
-	assert(!chn_empty(self));
-}
-
-#define chn_snd(C,S) chn_snd_((C), _Generic((S),\
-	_Bool: (uint64_t)(S),\
-	char: (uint64_t)(S),\
-	signed char: (int64_t)(S),\
-	unsigned char: (uint64_t)(S),\
-	signed short int: (int64_t)(S),\
-	unsigned short int: (uint64_t)(S),\
-	signed int: (int64_t)(S),\
-	unsigned int: (uint64_t)(S),\
-	signed long int: (int64_t)(S),\
-	unsigned long int: (uint64_t)(S),\
-	signed long long int: (int64_t)(S),\
-	unsigned long long int: (uint64_t)(S),\
-	float: (double)(S),\
-	double: (double)(S),\
-	long double: (double)(S),\
-	default: (void*)(intptr_t)(S))/* assume pointer */\
-)
-
-static ALWAYS inline void chn_rcv(Channel* self, Scalar* x)
-{
-	assert(!chn_empty(self));
-	*x = self->buffer[self->rear];
-	self->rear = (self->rear+1) % self->size;
-	assert(!chn_full(self));
-}
-
-#define chn_cast(S,V) _Generic(V,\
+// Cast an Scalar to the variable type
+#define chn_cast(S,V) _Generic((V),\
 	_Bool: (_Bool)(S).u,\
 	char: (char)(S).u,\
 	signed char: (signed char)(S).i,\
@@ -124,14 +55,97 @@ static ALWAYS inline void chn_rcv(Channel* self, Scalar* x)
 	float: (float)(S).r,\
 	double: (double)(S).r,\
 	long double: (long double)(S).r,\
-	default: (void*)(S).p\
+	default: (void*)(S).p)
+
+#define ALWAYS __attribute__((always_inline))
+
+//
+// Channel life
+//
+static inline int chn_init(Channel* self, size_t capacity)
+{
+	self->front = self->rear = 0;
+	self->size  = capacity+1;
+
+	self->buffer = calloc(self->size, sizeof(Scalar));
+	if (!self->buffer) return thrd_nomem;
+
+	assert(chn_empty(self));
+	assert(!chn_full(self));
+	assert(self->buffer);
+
+	return thrd_success;
+}
+
+static inline void chn_destroy(Channel* self)
+{
+	free(self->buffer);
+	self->front = self->rear = self->size = 0;
+	self->buffer = (Scalar*)0;
+}
+
+//
+// Predicates
+//
+static ALWAYS inline bool chn_empty(Channel* self)
+{
+	return self->front == self->rear;
+}
+
+static ALWAYS inline bool chn_full(Channel* self)
+{
+	return ((self->front+1) % self->size) == self->rear;
+}
+
+//
+// Send & Receive
+//
+static ALWAYS inline void chn_send_(Channel* self, Scalar x)
+{
+	assert(!chn_full(self));
+
+	self->buffer[self->front] = x;
+	self->front = (self->front+1) % self->size;
+
+	assert(!chn_empty(self));
+}
+
+#define chn_send(C,S) chn_send_((C), _Generic((S),\
+	_Bool: (uint64_t)(S),\
+	char: (uint64_t)(S),\
+	signed char: (int64_t)(S),\
+	unsigned char: (uint64_t)(S),\
+	signed short int: (int64_t)(S),\
+	unsigned short int: (uint64_t)(S),\
+	signed int: (int64_t)(S),\
+	unsigned int: (uint64_t)(S),\
+	signed long int: (int64_t)(S),\
+	unsigned long int: (uint64_t)(S),\
+	signed long long int: (int64_t)(S),\
+	unsigned long long int: (uint64_t)(S),\
+	float: (double)(S),\
+	double: (double)(S),\
+	long double: (double)(S),\
+	default: (void*)(intptr_t)(S))/*ASSUME POINTER*/\
 )
+
+static ALWAYS inline void chn_receive(Channel* self, Scalar* x)
+{
+	assert(!chn_empty(self));
+
+	*x = self->buffer[self->rear];
+	self->rear = (self->rear+1) % self->size;
+
+	assert(!chn_full(self));
+}
 
 #undef ALWAYS
 
 ////////////////////////////////////////////////////////////////////////
 // TEST
 ////////////////////////////////////////////////////////////////////////
+
+#define N 10
 
 int main(int argc, char* argv[])
 {
@@ -140,19 +154,21 @@ int main(int argc, char* argv[])
 	static_assert(sizeof(double)==sizeof(void*));
 	static_assert(sizeof(Scalar)==8);
 
-	Channel chn;
+	int err;
+#	define catch(e)	if ((err=(e)) != thrd_success) goto onerror
 
-	chn_init(&chn, N);
+	Channel chn;
+	catch(chn_init(&chn, N));
 
 	for (char c='0'; !chn_full(&chn); ++c) {
-		chn_snd(&chn, c);
+		chn_send(&chn, c);
 	}
 	assert(chn_full(&chn));
 
 	Scalar s;
 	for (char c; !chn_empty(&chn);) {
-		chn_rcv(&chn, &s);
-		c = chn_cast(s, c); // chn_set(c, s); ???
+		chn_receive(&chn, &s);
+		c = chn_cast(s, c);
 		putchar(c);
 	}
 	assert(chn_empty(&chn));
@@ -161,7 +177,20 @@ int main(int argc, char* argv[])
 
 	chn_destroy(&chn);
 
-	return 0;
+	return EXIT_SUCCESS;
+
+onerror:
+#	undef catch
+	switch (err) {
+		case thrd_nomem:
+			fprintf(stderr, "%s\n", strerror(ENOMEM));
+			break;
+		case thrd_busy: // TODO
+		case thrd_error:
+		case thrd_timedout:
+		default: abort();
+	}
+	return EXIT_FAILURE;
 }
 
 // vim:ai:sw=4:ts=4
