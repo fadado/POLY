@@ -17,14 +17,14 @@ int main(int argc, char* argv[])
 	Channel chn;
 	catch(chn_init(&chn, N));
 
-	for (char c='0'; !_chn_full(&chn); ++c) {
-		catch(chn_send(&chn, c));
+	for (int i=0; i < N; ++i) {
+		catch(chn_send(&chn, '0'+i));
 	}
 
 	Scalar s;
-	for (char c; !_chn_empty(&chn);) {
+	for (int i=0; i < N; ++i) {
 		catch(chn_receive(&chn, &s));
-		c = chn_cast(s, c);
+		char c = chn_cast(s, i);
 		putchar(c);
 	}
 

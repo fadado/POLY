@@ -1,7 +1,7 @@
 /*
  * Channels of scalars
  *
- *
+ * Compile: gcc -O2 -lpthread ...
  *
  */
 #ifndef CHANNEL_H
@@ -31,6 +31,10 @@ typedef struct {
 	unsigned front;
 	unsigned back;
 	unsigned size;
+	unsigned count;
+	mtx_t    monitor;
+	cnd_t    nonempty;
+	cnd_t    nonfull;
 	Scalar*  buffer;
 } Channel;
 
@@ -95,25 +99,40 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	static_assert(sizeof(double)==sizeof(void*));
 	static_assert(sizeof(Scalar)==8);
 
-	self->front = self->back = 0;
-	self->size  = 1+(capacity==0 ? 1 : capacity);
+	int err;
+#	define catch(e)	if ((err=(e)) != thrd_success) goto onerror
+
+	self->count = self->front = self->back = 0;
+	self->size  = (capacity == 0 ? 1 : capacity);
 
 	self->buffer = calloc(self->size, sizeof(Scalar));
-	if (!self->buffer)
-		return thrd_nomem;
+	if (!self->buffer) return thrd_nomem;
 
 	//assert(_chn_empty(self));
 	//assert(!_chn_full(self));
 
+	catch(mtx_init(&self->monitor, mtx_plain));
+	catch(cnd_init(&self->nonempty));
+	catch(cnd_init(&self->nonfull));
+
 	return thrd_success;
+
+onerror:
+#	undef catch
+	return err;
 }
 
 static inline void chn_destroy(Channel* self)
 {
+	//assert(self->count == 0)
+
 	free(self->buffer);
+	mtx_destroy(&self->monitor);
+	cnd_destroy(&self->nonempty);
+	cnd_destroy(&self->nonfull);
 
 	// sanitize
-	self->front = self->back = self->size = 0;
+	self->count = self->front = self->back = self->size = 0;
 	self->buffer = (Scalar*)0;
 }
 
@@ -122,12 +141,12 @@ static inline void chn_destroy(Channel* self)
 //
 static ALWAYS inline bool _chn_empty(Channel* self)
 {
-	return self->front == self->back;
+	return self->count == 0;
 }
 
 static ALWAYS inline bool _chn_full(Channel* self)
 {
-	return ((self->front+1) % self->size) == self->back;
+	return self->count == self->size;
 }
 
 //
@@ -139,6 +158,7 @@ static ALWAYS inline int chn_send_(Channel* self, Scalar x)
 
 	self->buffer[self->front] = x;
 	self->front = (self->front+1) % self->size;
+	++self->count;
 
 	assert(!_chn_empty(self));
 
@@ -151,6 +171,7 @@ static ALWAYS inline int chn_receive(Channel* self, Scalar* x)
 
 	*x = self->buffer[self->back];
 	self->back = (self->back+1) % self->size;
+	--self->count;
 
 	assert(!_chn_full(self));
 
