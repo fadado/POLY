@@ -41,7 +41,7 @@ typedef struct {
 	unsigned back;
 	unsigned size;
 	unsigned count;
-	mtx_t    monitor;
+	mtx_t    lock;
 	cnd_t    nonempty;
 	cnd_t    nonfull;
 	Scalar*  buffer;
@@ -124,9 +124,9 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	int err, eN=0;
 #	define catch(X)	if ((++eN,err=(X))!=thrd_success) goto onerror
 
-	catch (mtx_init(&self->monitor, mtx_plain)); // eN == 1
-	catch (cnd_init(&self->nonempty));           // eN == 2
-	catch (cnd_init(&self->nonfull));            // eN == 3
+	catch (mtx_init(&self->lock, mtx_plain)); // eN == 1
+	catch (cnd_init(&self->nonempty));        // eN == 2
+	catch (cnd_init(&self->nonfull));         // eN == 3
 
 	return thrd_success;
 
@@ -136,7 +136,7 @@ onerror:
 	assert(1 <= eN && eN <= 3);
 	switch (eN) {
 		case 3: cnd_destroy(&self->nonempty);
-		case 2: mtx_destroy(&self->monitor);
+		case 2: mtx_destroy(&self->lock);
 		case 1: free(self->buffer);
 	}
 	return err;
@@ -147,7 +147,7 @@ static inline void chn_destroy(Channel* self)
 	assert(self->count == 0);
 
 	free(self->buffer);
-	mtx_destroy(&self->monitor);
+	mtx_destroy(&self->lock);
 	cnd_destroy(&self->nonempty);
 	cnd_destroy(&self->nonfull);
 
@@ -156,67 +156,62 @@ static inline void chn_destroy(Channel* self)
 	self->buffer = (Scalar*)0;
 }
 
+////////////////////////////////////////////////////////////////////////
+
+#define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
+	int err_;\
+	if ((err_=mtx_lock(&self->lock))!=thrd_success)\
+		{ return err_; }\
+	if (PREDICATE) {\
+		if ((err_=cnd_wait(CONDITION, &self->lock))!=thrd_success) {\
+			mtx_destroy(&self->lock);\
+			return err_;\
+		}\
+	}
+
+#define LEAVE_CHANNEL_MONITOR(CONDITION)\
+	if ((err_=mtx_unlock(&self->lock))!=thrd_success) {\
+		cnd_signal(CONDITION);\
+		return err_;\
+	}\
+	if ((err_=cnd_signal(CONDITION))!=thrd_success)\
+		{ return err_; }
+
+////////////////////////////////////////////////////////////////////////
+
 //
 // Send & Receive
 //
 static ALWAYS inline int chn_send_(Channel* self, Scalar x)
 {
-	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success)
-
-	catch (mtx_lock(&self->monitor)) { return err; }
-
-	if (_chn_full(self)) {
-		catch (cnd_wait(&self->nonfull, &self->monitor)) {
-			mtx_destroy(&self->monitor);
-			return err;
-		}
-	}
+	ENTER_CHANNEL_MONITOR (_chn_full(self), &self->nonfull)
 
 	self->buffer[self->front] = x;
 	self->front = (self->front+1) % self->size;
 	++self->count;
 
-	catch (mtx_unlock(&self->monitor)) {
-		cnd_signal(&self->nonempty);
-		return err;
-	}
-	catch (cnd_signal(&self->nonempty)) { return err; }
+	LEAVE_CHANNEL_MONITOR (&self->nonempty)
 
 	return thrd_success;
-#	undef catch
 }
 
 static ALWAYS inline int chn_receive(Channel* self, Scalar* x)
 {
-	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success)
-
-	catch (mtx_lock(&self->monitor)) { return err; }
-
-	if (_chn_empty(self)) {
-		catch (cnd_wait(&self->nonempty, &self->monitor)) {
-			mtx_destroy(&self->monitor);
-			return err;
-		}
-	}
+	ENTER_CHANNEL_MONITOR (_chn_empty(self), &self->nonempty)
 
 	*x = self->buffer[self->back];
 	self->back = (self->back+1) % self->size;
 	--self->count;
 
-	catch (mtx_unlock(&self->monitor)) {
-		cnd_signal(&self->nonfull);
-		return err;
-	}
-	catch (cnd_signal(&self->nonfull)) { return err; }
+	LEAVE_CHANNEL_MONITOR (&self->nonfull)
 
 	return thrd_success;
-#	undef catch
 }
 
 #undef ALWAYS
+#undef ENTER_CHANNEL_MONITOR
+#undef LEAVE_CHANNEL_MONITOR
 
 #endif // CHANNEL_H
 
-// vim:ai:sw=4:ts=4
+// vim:ai:sw=4:ts=4:syntax=cpp
