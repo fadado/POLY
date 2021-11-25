@@ -7,8 +7,7 @@
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
-#include <stdbool.h>
-#include <stdlib.h>
+#include <stdlib.h> // calloc
 #include <threads.h>
 
 // comment next line to enable assertions
@@ -101,12 +100,12 @@ static ALWAYS inline int  chn_receive(Channel* self, Scalar* x);
 //
 // Predicates
 //
-static ALWAYS inline bool _chn_empty(Channel* self)
+static ALWAYS inline unsigned _chn_empty(Channel* self)
 {
 	return self->count == 0;
 }
 
-static ALWAYS inline bool _chn_full(Channel* self)
+static ALWAYS inline unsigned _chn_full(Channel* self)
 {
 	return self->count == self->size;
 }
@@ -139,8 +138,8 @@ onerror:
 		case 3: cnd_destroy(&self->nonempty);
 		case 2: mtx_destroy(&self->monitor);
 		case 1: free(self->buffer);
-		default: return err;
 	}
+	return err;
 }
 
 static inline void chn_destroy(Channel* self)

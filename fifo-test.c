@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <error.h>
+#include <threads.h>
 
 #include "channel.h"
 
@@ -17,26 +18,50 @@
 
 #define N 10
 
-int main(int argc, char* argv[])
+static int producer(void* args)
 {
 	int err;
+#	define catch(X)	if ((err=(X))!=thrd_success) return err
+
+	Channel* cp = args;
+	for (int i=0; i < N; ++i) {
+		catch (chn_send(cp, '0'+i));
+	}
+	return thrd_success;
+#	undef catch
+}
+
+static int consumer(void* args)
+{
+	int err;
+#	define catch(X)	if ((err=(X))!=thrd_success) return err
+
+	Channel* cp = args;
+	Scalar s;
+	for (int i=0; i < N; ++i) {
+		catch (chn_receive(cp, &s));
+		char c = chn_cast(s, '@');
+		putchar(c);
+	}
+	putchar('\n');
+	return thrd_success;
+#	undef catch
+}
+
+int main(int argc, char* argv[])
+{
+	int err, status;
 #	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
 	Channel chn;
 	catch (chn_init(&chn, N));
 
-	for (int i=0; i < N; ++i) {
-		catch (chn_send(&chn, '0'+i));
-	}
+	thrd_t p, c;
+	catch (thrd_create(&p, producer, &chn));
+	catch (thrd_create(&c, consumer, &chn));
 
-	Scalar s;
-	for (int i=0; i < N; ++i) {
-		catch (chn_receive(&chn, &s));
-		char c = chn_cast(s, '@');
-		putchar(c);
-	}
-
-	putchar('\n');
+	catch (thrd_join(p, &status)); catch (status);
+	catch (thrd_join(c, &status)); catch (status);
 
 	chn_destroy(&chn);
 
@@ -45,7 +70,7 @@ int main(int argc, char* argv[])
 onerror:
 #	undef catch
 	enum { internal_error };
-	static const char const* ename[] = {
+	static const char* ename[] = {
 		[thrd_success] = "thrd_success",
 		[thrd_nomem] = "thrd_nomem",
 		[thrd_busy] = "thrd_busy",
@@ -55,10 +80,11 @@ onerror:
 	assert(err != thrd_success);
 	switch (err) {
 		case thrd_nomem:
+			error(EXIT_FAILURE, ENOMEM, "%s", ename[err]);
 		case thrd_busy:
 		case thrd_error:
 		case thrd_timedout:
-			error(EXIT_FAILURE, ENOMEM, "%s", ename[err]);
+			error(EXIT_FAILURE, 0, "%s", ename[err]);
 		default: assert(internal_error);
 	}
 	return EXIT_FAILURE;
