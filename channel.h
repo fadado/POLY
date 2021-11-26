@@ -38,21 +38,21 @@ static_assert(sizeof(Scalar)==8);
 
 typedef struct {
 	unsigned front;
-	unsigned back;
 	unsigned size;
 	unsigned count;
 	mtx_t    lock;
 	cnd_t    nonempty;
 	cnd_t    nonfull;
-	Scalar*  buffer;
+	union {
+		Scalar* buffer;
+		Scalar  value;
+	};
 } Channel;
 
-#define ALWAYS __attribute__((always_inline))
-
-static        inline int  chn_init(Channel* self, unsigned capacity);
-static        inline void chn_destroy(Channel* self);
-static ALWAYS inline int  chn_send_(Channel* self, Scalar x);
-static ALWAYS inline int  chn_receive(Channel* self, Scalar* x);
+static inline int  chn_init(Channel* self, unsigned capacity);
+static inline void chn_destroy(Channel* self);
+static inline int  chn_send_(Channel* self, Scalar x);
+static inline int  chn_receive(Channel* self, Scalar* x);
 
 // Accept any scalar type
 #define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), _Generic((EXPRESSION),\
@@ -97,6 +97,16 @@ static ALWAYS inline int  chn_receive(Channel* self, Scalar* x);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
+#define ALWAYS __attribute__((always_inline))
+
+#ifdef NDEBUG
+#	define ASSERT_CHANNEL_INVARIANT
+#else
+#	define ASSERT_CHANNEL_INVARIANT\
+		assert(0 <= self->count && self->count <= self->size);\
+		assert(0 <= self->front && self->front <  self->size);
+#endif
+
 //
 // Predicates
 //
@@ -115,11 +125,16 @@ static ALWAYS inline unsigned _chn_full(Channel* self)
 //
 static inline int chn_init(Channel* self, unsigned capacity)
 {
-	self->count = self->front = self->back = 0;
-	self->size  = (capacity == 0 ? 1 : capacity);
-
-	self->buffer = calloc(self->size, sizeof(Scalar));
-	if (self->buffer == (Scalar*)0) return thrd_nomem;
+	self->count = self->front = 0;
+	if (capacity > 1) {
+		self->size = capacity;
+		self->buffer = calloc(self->size, sizeof(Scalar));
+		if (self->buffer == (Scalar*)0) return thrd_nomem;
+	} else {
+		self->size = 1;
+		assert(0);
+		// TODO: use self->value
+	}
 
 	int err, eN=0;
 #	define catch(X)	if ((++eN,err=(X))!=thrd_success) goto onerror
@@ -127,6 +142,8 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	catch (mtx_init(&self->lock, mtx_plain)); // eN == 1
 	catch (cnd_init(&self->nonempty));        // eN == 2
 	catch (cnd_init(&self->nonfull));         // eN == 3
+
+	ASSERT_CHANNEL_INVARIANT
 
 	return thrd_success;
 
@@ -137,23 +154,22 @@ onerror:
 	switch (eN) {
 		case 3: cnd_destroy(&self->nonempty);
 		case 2: mtx_destroy(&self->lock);
-		case 1: free(self->buffer);
+		case 1: if (self->size > 1) free(self->buffer);
 	}
 	return err;
 }
 
 static inline void chn_destroy(Channel* self)
 {
-	assert(self->count == 0);
+	assert(self->count == 0); // ???
 
-	free(self->buffer);
+	if (self->size > 1){
+		free(self->buffer);
+		self->buffer = (Scalar*)0; // sanitize
+	}
 	mtx_destroy(&self->lock);
 	cnd_destroy(&self->nonempty);
 	cnd_destroy(&self->nonfull);
-
-	// sanitize
-	self->count = self->front = self->back = self->size = 0;
-	self->buffer = (Scalar*)0;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -162,7 +178,7 @@ static inline void chn_destroy(Channel* self)
 	int err_;\
 	if ((err_=mtx_lock(&self->lock))!=thrd_success)\
 		{ return err_; }\
-	if (PREDICATE) {\
+	/*if?*/while (PREDICATE) {\
 		if ((err_=cnd_wait(CONDITION, &self->lock))!=thrd_success) {\
 			mtx_destroy(&self->lock);\
 			return err_;\
@@ -182,7 +198,7 @@ static inline void chn_destroy(Channel* self)
 //
 // Send & Receive
 //
-static ALWAYS inline int chn_send_(Channel* self, Scalar x)
+static inline int chn_send_(Channel* self, Scalar x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_full(self), &self->nonfull)
 
@@ -190,18 +206,26 @@ static ALWAYS inline int chn_send_(Channel* self, Scalar x)
 	self->front = (self->front+1) % self->size;
 	++self->count;
 
+	ASSERT_CHANNEL_INVARIANT
+
 	LEAVE_CHANNEL_MONITOR (&self->nonempty)
 
 	return thrd_success;
 }
 
-static ALWAYS inline int chn_receive(Channel* self, Scalar* x)
+static inline int chn_receive(Channel* self, Scalar* x)
 {
+	inline int back() {
+		int b = self->front - self->count;
+		return (b >= 0) ? b : b+self->size;
+	}
+
 	ENTER_CHANNEL_MONITOR (_chn_empty(self), &self->nonempty)
 
-	*x = self->buffer[self->back];
-	self->back = (self->back+1) % self->size;
+	if (x) *x = self->buffer[back()];
 	--self->count;
+
+	ASSERT_CHANNEL_INVARIANT
 
 	LEAVE_CHANNEL_MONITOR (&self->nonfull)
 
@@ -209,6 +233,7 @@ static ALWAYS inline int chn_receive(Channel* self, Scalar* x)
 }
 
 #undef ALWAYS
+#undef ASSERT_CHANNEL_INVARIANT
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
 
