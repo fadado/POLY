@@ -28,6 +28,7 @@ static int task_producer(void* args)
 	for (int i=0; i < M; ++i) {
 		catch (chn_send(channel, '0'+i));
 	}
+	chn_close(channel);
 	return thrd_success;
 #	undef catch
 }
@@ -39,7 +40,7 @@ static int task_consumer(void* args)
 
 	Channel* channel = args;
 	Scalar s;
-	for (int i=0; i < M; ++i) {  // while no closed???
+	while (!chn_exhaust(channel)) {
 		catch (chn_receive(channel, &s));
 		char c = chn_cast(s, '@');
 		putchar(c);
@@ -58,11 +59,11 @@ int main(int argc, char* argv[])
 	catch (chn_init(&chn, N));
 
 	thrd_t producer, consumer;
+
 	catch (thrd_create(&producer, task_producer, &chn));
 	catch (thrd_create(&consumer, task_consumer, &chn));
 
 	catch (thrd_join(producer, &err)); catch (err);
-
 	catch (thrd_join(consumer, &err)); catch (err);
 
 	chn_destroy(&chn);
