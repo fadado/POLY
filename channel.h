@@ -8,7 +8,7 @@
 #define CHANNEL_H
 
 #include <stdbool.h>
-#include <stdlib.h> // calloc, abort
+#include <stdlib.h> // calloc
 #include <threads.h>
 
 // comment next line to enable assertions
@@ -51,7 +51,7 @@ typedef struct {
 	};
 } Channel;
 
-enum flag {
+enum channel_flag {
 	CHANNEL_BUFFERED   = (1<<0),
 	CHANNEL_BLOCKING   = (1<<1),
 	CHANNEL_UNBUFFERED = (1<<1), // synonym for blocking
@@ -78,6 +78,7 @@ static inline int  chn_send_(Channel* self, Scalar x);
 static inline int  chn_receive(Channel* self, Scalar* x);
 static inline void chn_close(Channel* self);
 static inline bool chn_exhaust(Channel* self);
+//                 chn_cast(SCALAR,EXPRESSION) ...
 
 // Accept any scalar type
 #define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), _Generic((EXPRESSION),\
@@ -137,11 +138,14 @@ static ALWAYS inline bool _chn_full(Channel* self)
 	return self->count == self->size;
 }
 
-static ALWAYS inline bool _chn_flag(Channel* self, enum flag flag)
+static ALWAYS inline bool _chn_flag(Channel* self, enum channel_flag flag)
 {
 	return (self->flags & flag) == flag;
 }
 
+/*
+ *
+ */
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
 	mtx_lock(&self->lock);
@@ -153,6 +157,10 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 //
 // Channel life
 //
+
+/*
+ *
+ */
 static inline int chn_init(Channel* self, unsigned capacity)
 {
 	if (capacity > 0x7FFFu) return thrd_error;
@@ -198,6 +206,9 @@ onerror:
 	return err;
 }
 
+/*
+ *
+ */
 static inline void chn_destroy(Channel* self)
 {
 	assert(self->count == 0); // ???
@@ -219,6 +230,9 @@ static inline void chn_destroy(Channel* self)
 	cnd_destroy(&self->non_full);
 }
 
+/*
+ *
+ */
 static ALWAYS inline void chn_close(Channel* self)
 {
 	mtx_lock(&self->lock);
@@ -226,7 +240,9 @@ static ALWAYS inline void chn_close(Channel* self)
 	mtx_unlock(&self->lock);
 }
 
-////////////////////////////////////////////////////////////////////////
+//
+// Monitor helpers
+//
 
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
 	int err_;\
@@ -248,14 +264,19 @@ static ALWAYS inline void chn_close(Channel* self)
 		{ return err_; }
 
 //
-// Send & Receive
+// FIFO
 //
+
+/*
+ *
+ */
 static inline int chn_send_(Channel* self, Scalar x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_full, self->non_full)
 
 	if (_chn_flag(self, CHANNEL_CLOSED)) {
-		abort();
+		mtx_unlock(&self->lock);
+		return thrd_error;
 	}
 
 	switch (self->size) {
@@ -279,6 +300,9 @@ static inline int chn_send_(Channel* self, Scalar x)
 	return thrd_success;
 }
 
+/*
+ *
+ */
 static inline int chn_receive(Channel* self, Scalar* x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)

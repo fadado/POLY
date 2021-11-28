@@ -52,7 +52,7 @@ static int task_consumer(void* args)
 
 int main(int argc, char* argv[])
 {
-	int err;
+	int err, status;
 #	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
 	Channel chn;
@@ -63,8 +63,8 @@ int main(int argc, char* argv[])
 	catch (thrd_create(&producer, task_producer, &chn));
 	catch (thrd_create(&consumer, task_consumer, &chn));
 
-	catch (thrd_join(producer, &err)); catch (err);
-	catch (thrd_join(consumer, &err)); catch (err);
+	catch (thrd_join(producer, &status)); catch (status);
+	catch (thrd_join(consumer, &status)); catch (status);
 
 	chn_destroy(&chn);
 
