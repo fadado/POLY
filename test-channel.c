@@ -2,15 +2,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <error.h>
 #include <threads.h>
 
+// uncomment next line to enable assertions
+#define DEBUG
+#include "failure.h"
 #include "channel.h"
-
-// comment next line to enable assertions
-//#define NDEBUG
-#include <assert.h>
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test
@@ -19,6 +16,9 @@
 #define N 7
 #define M 43
 
+/*
+ *
+ */
 static int task_producer(void* args)
 {
 	int err;
@@ -33,6 +33,9 @@ static int task_producer(void* args)
 #	undef catch
 }
 
+/*
+ *
+ */
 static int task_consumer(void* args)
 {
 	int err;
@@ -50,29 +53,30 @@ static int task_consumer(void* args)
 #	undef catch
 }
 
+/*
+ *
+ */
 int main(int argc, char* argv[])
 {
 	int err, status;
 #	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
-	Channel chn;
-	catch (chn_init(&chn, N));
+	Channel channel;
+	catch (chn_init(&channel, N));
 
 	thrd_t producer, consumer;
 
-	catch (thrd_create(&producer, task_producer, &chn));
-	catch (thrd_create(&consumer, task_consumer, &chn));
+	catch (thrd_create(&producer, task_producer, &channel));
+	catch (thrd_create(&consumer, task_consumer, &channel));
 
 	catch (thrd_join(producer, &status)); catch (status);
 	catch (thrd_join(consumer, &status)); catch (status);
 
-	chn_destroy(&chn);
+	chn_destroy(&channel);
 
 	return EXIT_SUCCESS;
-
 onerror:
 #	undef catch
-	enum { internal_error };
 	static const char* ename[] = {
 		[thrd_success] = "thrd_success",
 		[thrd_nomem] = "thrd_nomem",
@@ -80,6 +84,7 @@ onerror:
 		[thrd_error] = "thrd_error",
 		[thrd_timedout] = "thrd_timedout",
 	};
+
 	assert(err != thrd_success);
 	switch (err) {
 		case thrd_nomem:

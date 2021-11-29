@@ -11,9 +11,9 @@
 #include <stdlib.h> // calloc
 #include <threads.h>
 
-// comment next line to enable assertions
-//#define NDEBUG
-#include <assert.h>
+#ifndef FAILURE_H
+#error To cope with failure I need "failure.h"!
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Types
@@ -42,20 +42,21 @@ typedef struct {
 	short count;
 	short front;
 	short size;
-	mtx_t lock;
-	cnd_t non_empty;
-	cnd_t non_full;
 	union {
 		Scalar* buffer;
 		Scalar  value;
 	};
+	mtx_t lock;
+	cnd_t non_empty;
+	cnd_t non_full;
 } Channel;
 
 enum channel_flag {
-	CHANNEL_BUFFERED   = (1<<0),
-	CHANNEL_BLOCKING   = (1<<1),
-	CHANNEL_UNBUFFERED = (1<<1), // synonym for blocking
-	CHANNEL_CLOSED     = (1<<2),
+	CHANNEL_BUFFERED    = (1<<0),
+	CHANNEL_ASYNCRONOUS = (1<<0), // synonym for buffered
+	CHANNEL_BLOCKING    = (1<<1),
+	CHANNEL_UNBUFFERED  = (1<<1), // synonym for blocking
+	CHANNEL_CLOSED      = (1<<2),
 };
 
 #ifdef NDEBUG
@@ -65,7 +66,7 @@ enum channel_flag {
 		assert(0 <= self->count && self->count <= self->size);\
 		assert(0 <= self->front && self->front <  self->size);\
 		assert(self->size < 2 || self->buffer != (Scalar*)0);\
-		assert(0==(_chn_empty(self) && _chn_full(self)));
+		assert(!(_chn_empty(self) && _chn_full(self)));
 #endif
 
 ////////////////////////////////////////////////////////////////////////
@@ -170,7 +171,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	switch (self->size) {
 		case 0:
 			// TODO:
-			assert(0);
+			assert(not_implemented);
 			self->flags |= CHANNEL_BLOCKING;
 			break;
 		case 1:
@@ -216,7 +217,7 @@ static inline void chn_destroy(Channel* self)
 	switch (self->size) {
 		case 0: // blocking channel
 			// TODO:
-			assert(0);
+			assert(not_implemented);
 			break;
 		case 1: // buffered channel
 			break;
@@ -275,14 +276,13 @@ static inline int chn_send_(Channel* self, Scalar x)
 	ENTER_CHANNEL_MONITOR (_chn_full, self->non_full)
 
 	if (_chn_flag(self, CHANNEL_CLOSED)) {
-		mtx_unlock(&self->lock);
-		return thrd_error;
+		panic("chn_send want to send an scalar to a closed channel");
 	}
 
 	switch (self->size) {
 		case 0: // blocking channel
 			// TODO:
-			assert(0);
+			assert(not_implemented);
 		case 1: // buffered channel
 			assert(self->count == 0);
 			self->value = x;
@@ -310,7 +310,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	switch (self->size) {
 		case 0: // blocking channel
 			// TODO:
-			assert(0);
+			assert(not_implemented);
 		case 1: // buffered channel
 			assert(self->count == 1);
 			if (x) *x = self->value;
