@@ -59,14 +59,14 @@ enum channel_flag {
 	CHANNEL_CLOSED      = (1<<2),
 };
 
-#ifdef NDEBUG
-#	define ASSERT_CHANNEL_INVARIANT
-#else
+#ifdef DEBUG
 #	define ASSERT_CHANNEL_INVARIANT\
 		assert(0 <= self->count && self->count <= self->size);\
 		assert(0 <= self->front && self->front <  self->size);\
 		assert(self->size < 2 || self->buffer != (Scalar*)0);\
 		assert(!(_chn_empty(self) && _chn_full(self)));
+#else
+#	define ASSERT_CHANNEL_INVARIANT
 #endif
 
 ////////////////////////////////////////////////////////////////////////
