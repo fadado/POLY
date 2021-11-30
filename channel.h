@@ -247,8 +247,9 @@ static ALWAYS inline void chn_close(Channel* self)
 
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
 	int err_;\
-	if ((err_=mtx_lock(&self->lock))!=thrd_success)\
-		{ return err_; }\
+	if ((err_=mtx_lock(&self->lock))!=thrd_success) {\
+		return err_;\
+	}\
 	while (PREDICATE(self)) {\
 		if ((err_=cnd_wait(&CONDITION, &self->lock))!=thrd_success) {\
 			mtx_destroy(&self->lock);\
@@ -256,13 +257,25 @@ static ALWAYS inline void chn_close(Channel* self)
 		}\
 	}
 
+#ifdef VersionWithSignalAfterUnlock
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if ((err_=mtx_unlock(&self->lock))!=thrd_success) {\
 		cnd_signal(&CONDITION);\
 		return err_;\
 	}\
-	if ((err_=cnd_signal(&CONDITION))!=thrd_success)\
-		{ return err_; }
+	if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
+		return err_;\
+	}
+#endif
+
+#define LEAVE_CHANNEL_MONITOR(CONDITION)\
+	if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
+		mtx_unlock(&self->lock);\
+		return err_;\
+	}\
+	if ((err_=mtx_unlock(&self->lock))!=thrd_success) {\
+		return err_;\
+	}
 
 //
 // FIFO

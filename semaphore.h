@@ -15,35 +15,45 @@
 
 ////////////////////////////////////////////////////////////////////////
 // Types
+// Interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	short count;
+	int   count;
 	mtx_t lock;
-	cnd_t non_zero;
+	cnd_t queue;
 } Semaphore;
-
-#ifdef DEBUG
-#	define ASSERT_SEMAPHORE_INVARIANT\
-		assert(0 <= self->count);
-#else
-#	define ASSERT_SEMAPHORE_INVARIANT
-#endif
-
-////////////////////////////////////////////////////////////////////////
-// Interface
-////////////////////////////////////////////////////////////////////////
 
 static inline int  sem_init(Semaphore* self, int count);
 static inline void sem_destroy(Semaphore* self);
 static inline int  sem_P(Semaphore* self);
 static inline int  sem_V(Semaphore* self);
+
+#define            sem_down(s) sem_P(s)
 #define            sem_acquire(s) sem_P(s)
+#define            sem_wait(s) sem_P(s)
+
+#define            sem_up(s) sem_V(s)
+#define            sem_signal(s) sem_V(s)
 #define            sem_release(s) sem_V(s)
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
+
+#define ALWAYS __attribute__((always_inline))
+
+/*
+static ALWAYS inline int _sem_avail(Semaphore* self)
+{
+	return (self->count > 0) ? self->count : 0;
+}
+
+static ALWAYS inline int _sem_blocked(Semaphore* self)
+{
+	return (self->count < 0) ? -self->count : 0;
+}
+*/
 
 /*
  *
@@ -51,23 +61,17 @@ static inline int  sem_V(Semaphore* self);
 static inline int sem_init(Semaphore* self, int count)
 {
 	assert(count >= 0);
-
 	self->count = count;
-	ASSERT_SEMAPHORE_INVARIANT
 
-	// initialize mutex and conditions
-	int err, eN=0;
-#	define catch(X)	if ((++eN,err=(X))!=thrd_success) goto onerror
-
-	catch (mtx_init(&self->lock, mtx_plain)); // eN == 1
-	catch (cnd_init(&self->non_zero));        // eN == 2
+	int err;
+	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
+		return err;
+	}
+	if ((err=cnd_init(&self->queue)) != thrd_success) {
+		return err;
+	}
 
 	return thrd_success;
-onerror:
-#	undef catch
-	assert(err != thrd_success);
-	if (eN == 2) mtx_destroy(&self->lock);
-	return err;
 }
 
 /*
@@ -76,60 +80,72 @@ onerror:
 static inline void sem_destroy(Semaphore* self)
 {
 	mtx_destroy(&self->lock);
-	cnd_destroy(&self->non_zero);
+	cnd_destroy(&self->queue);
 }
 
 /*
- *
- */
+Decrements the value of semaphore variable by 1. If the new value of the
+semaphore variable is negative, the process executing wait is blocked (i.e.,
+added to the semaphore's queue). Otherwise, the process continues execution,
+having used a unit of the resource.
+*/
 static inline int sem_P(Semaphore* self)
 {
 	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success) return err
 
-	catch (mtx_lock(&self->lock));
-	while (self->count == 0) {
-		if ((err=cnd_wait(&self->non_zero, &self->lock)) != thrd_success) {
-			mtx_destroy(&self->lock);
+	if ((err=mtx_lock(&self->lock)) != thrd_success) {
+		return err;
+	}
+
+	--self->count;
+	if (self->count < 0) {
+		int c = self->count;
+		while (self->count <= c) {
+			// TODO: detect spurious wakeup!!!
+			if ((err=cnd_wait(&self->queue, &self->lock)) != thrd_success) {
+				mtx_unlock(&self->lock);
+				return err;
+			}
+		}
+	}
+
+	if ((err=mtx_unlock(&self->lock)) != thrd_success) {
+		return err;
+	}
+
+	return thrd_success;
+}
+
+/*
+Increments the value of semaphore variable by 1. After the increment, if the
+pre-increment value was negative (meaning there are processes waiting for a
+resource), it transfers a blocked process from the semaphore's waiting queue
+to the ready queue.
+*/
+static inline int sem_V(Semaphore* self)
+{
+	int err;
+
+	if ((err=mtx_lock(&self->lock)) != thrd_success) {
+		return err;
+	}
+
+	++self->count;
+	if (self->count <= 0) {
+		if ((err=cnd_signal(&self->queue)) != thrd_success) {
+			mtx_unlock(&self->lock);
 			return err;
 		}
 	}
 
-	--self->count;
-	ASSERT_SEMAPHORE_INVARIANT
-
-	catch (mtx_unlock(&self->lock));
-
-	return thrd_success;
-#	undef catch
-}
-
-/*
- *
- */
-static inline int sem_V(Semaphore* self)
-{
-	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success) return err
-
-	catch (mtx_lock(&self->lock));
-
-	++self->count;
-	ASSERT_SEMAPHORE_INVARIANT
-
 	if ((err=mtx_unlock(&self->lock)) != thrd_success) {
-		cnd_signal(&self->non_zero);
 		return err;
 	}
-	catch (cnd_signal(&self->non_zero));
 
 	return thrd_success;
-#	undef catch
 }
 
-#undef ASSERT_SEMAPHORE_INVARIANT
-//#undef ENTER_SEMAPHORE_MONITOR
-//#undef LEAVE_SEMAPHORE_MONITOR
+#undef ALWAYS
 
 #endif // SEMAPHORE_H
 
