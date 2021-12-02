@@ -13,8 +13,6 @@
 #error To cope with failure I need "failure.h"!
 #endif
 
-//#define LIFO_SPURIOUS_WAKEUPS
-
 ////////////////////////////////////////////////////////////////////////
 // Types
 // Interface
@@ -22,9 +20,7 @@
 
 typedef struct {
 	int   count;
-#ifndef LIFO_SPURIOUS_WAKEUPS
 	int   wakeups;
-#endif
 	mtx_t lock;
 	cnd_t queue;
 } Semaphore;
@@ -52,7 +48,7 @@ static inline int  sem_V(Semaphore* self);
 
 /*
 
-// Number of vailable resources
+// Number of available resources
 static ALWAYS inline int _sem_avail(Semaphore* self)
 {
 	return (self->count > 0) ? self->count : 0;
@@ -73,9 +69,7 @@ static inline int sem_init(Semaphore* self, int count)
 {
 	assert(count >= 0);
 	self->count = count;
-#ifndef LIFO_SPURIOUS_WAKEUPS
 	self->wakeups = 0;
-#endif
 
 	int err;
 	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
@@ -126,24 +120,16 @@ static inline int sem_P(Semaphore* self)
 	ENTER_SEMAPHORE_MONITOR;
 
 	--self->count;
-	if (self->count < 0) {
-#ifdef LIFO_SPURIOUS_WAKEUPS
-		int top = self->count;
-		while (self->count <= top) {
+	if (self->count < 0) { // Do I have to block?
+		do {
+			// waiting
 			int err = cnd_wait(&self->queue, &self->lock);
 			if (err != thrd_success) {
 				BREAK_SEMAPHORE_MONITOR(err);
 			}
-		}
-#else
-		do {
-			int err = cnd_signal(&self->queue);
-			if (err != thrd_success) {
-				BREAK_SEMAPHORE_MONITOR(err);
-			}
+		//until (self->wakeups > 0);
 		} while (self->wakeups < 1);
 		--self->wakeups;
-#endif
 	}
 
 	LEAVE_SEMAPHORE_MONITOR;
@@ -160,13 +146,10 @@ static inline int sem_V(Semaphore* self)
 	ENTER_SEMAPHORE_MONITOR;
 
 	++self->count;
-	if (self->count <= 0) {
-#ifdef LIFO_SPURIOUS_WAKEUPS
-		int err = cnd_broadcast(&self->queue);
-#else
+	if (self->count <= 0) { // There are threads blocked?
+		// waking
 		++self->wakeups;
 		int err = cnd_signal(&self->queue);
-#endif
 		if (err != thrd_success) {
 			BREAK_SEMAPHORE_MONITOR(err);
 		}
