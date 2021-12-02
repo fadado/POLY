@@ -13,6 +13,8 @@
 #error To cope with failure I need "failure.h"!
 #endif
 
+//#define LIFO_SPURIOUS_WAKEUPS
+
 ////////////////////////////////////////////////////////////////////////
 // Types
 // Interface
@@ -20,6 +22,9 @@
 
 typedef struct {
 	int   count;
+#ifndef LIFO_SPURIOUS_WAKEUPS
+	int   wakeups;
+#endif
 	mtx_t lock;
 	cnd_t queue;
 } Semaphore;
@@ -68,6 +73,9 @@ static inline int sem_init(Semaphore* self, int count)
 {
 	assert(count >= 0);
 	self->count = count;
+#ifndef LIFO_SPURIOUS_WAKEUPS
+	self->wakeups = 0;
+#endif
 
 	int err;
 	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
@@ -119,12 +127,7 @@ static inline int sem_P(Semaphore* self)
 
 	--self->count;
 	if (self->count < 0) {
-		// Try to manage spurious wakeups:
-		// + Assume that the signal has been emitted with a broadcast.
-		// + Use a LIFO strategy to permit progress.  The last thread blocked
-		//   is the first to unblock.
-		// + In case of spurious wakeups the while predicate must be false to
-		//   all threads.
+#ifdef LIFO_SPURIOUS_WAKEUPS
 		int top = self->count;
 		while (self->count <= top) {
 			int err = cnd_wait(&self->queue, &self->lock);
@@ -132,6 +135,15 @@ static inline int sem_P(Semaphore* self)
 				BREAK_SEMAPHORE_MONITOR(err);
 			}
 		}
+#else
+		do {
+			int err = cnd_signal(&self->queue);
+			if (err != thrd_success) {
+				BREAK_SEMAPHORE_MONITOR(err);
+			}
+		} while (self->wakeups < 1);
+		--self->wakeups;
+#endif
 	}
 
 	LEAVE_SEMAPHORE_MONITOR;
@@ -149,8 +161,12 @@ static inline int sem_V(Semaphore* self)
 
 	++self->count;
 	if (self->count <= 0) {
-		// Use broadcast in a strategy to fight spurious wakeups
+#ifdef LIFO_SPURIOUS_WAKEUPS
 		int err = cnd_broadcast(&self->queue);
+#else
+		++self->wakeups;
+		int err = cnd_signal(&self->queue);
+#endif
 		if (err != thrd_success) {
 			BREAK_SEMAPHORE_MONITOR(err);
 		}
