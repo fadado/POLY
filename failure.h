@@ -13,6 +13,7 @@
 
 #include <errno.h>
 #include <error.h>
+#include <err.h>
 
 #ifndef DEBUG
 #define NDEBUG

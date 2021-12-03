@@ -5,7 +5,7 @@
 #include <threads.h>
 
 // uncomment next line to enable assertions
-#define DEBUG
+#define DEBUG 1
 #include "failure.h"
 #include "channel.h"
 
@@ -13,8 +13,8 @@
 // FIFO test
 ////////////////////////////////////////////////////////////////////////
 
-#define N 7
-#define M 43
+#define N 1
+#define M 7
 
 /*
  *
@@ -24,11 +24,20 @@ static int task_producer(void* args)
 	int err;
 #	define catch(X)	if ((err=(X))!=thrd_success) return err
 
+#if DEBUG
+	warn("Enter %s", __func__);
+#endif
 	Channel* channel = args;
 	for (int i=0; i < M; ++i) {
+#if DEBUG
+		warn("Snd> %c", '0'+i);
+#endif
 		catch (chn_send(channel, '0'+i));
 	}
 	chn_close(channel);
+#if DEBUG
+	warn("Exit %s", __func__);
+#endif
 	return thrd_success;
 #	undef catch
 }
@@ -41,14 +50,23 @@ static int task_consumer(void* args)
 	int err;
 #	define catch(X)	if ((err=(X))!=thrd_success) return err
 
+#if DEBUG
+	warn("Enter %s", __func__);
+#endif
 	Channel* channel = args;
 	Scalar s;
 	while (!chn_exhaust(channel)) {
+#if DEBUG
+		warn("Rcv< %c", chn_cast(s, '@'));
+#endif
 		catch (chn_receive(channel, &s));
 		char c = chn_cast(s, '@');
 		putchar(c);
 	}
 	putchar('\n');
+#if DEBUG
+	warn("Exit %s", __func__);
+#endif
 	return thrd_success;
 #	undef catch
 }

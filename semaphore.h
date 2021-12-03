@@ -25,6 +25,14 @@ typedef struct {
 	cnd_t queue;
 } Semaphore;
 
+#ifdef DisabledUntilAnyInvariantIsFoundForSemaphores
+#ifdef DEBUG
+#	define ASSERT_SEMAPHORE_INVARIANT
+#else
+#	define ASSERT_SEMAPHORE_INVARIANT
+#endif
+#endif
+
 static inline int  sem_init(Semaphore* self, int count);
 static inline void sem_destroy(Semaphore* self);
 static inline int  sem_P(Semaphore* self);
@@ -37,8 +45,6 @@ static inline int  sem_V(Semaphore* self);
 #define            sem_up(s) sem_V(s)
 #define            sem_signal(s) sem_V(s)
 #define            sem_release(s) sem_V(s)
-
-//#undef ASSERT_SEMAPHORE_INVARIANT
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -55,7 +61,7 @@ static ALWAYS inline int _sem_avail(Semaphore* self)
 }
 
 // Number of blocked threads
-static ALWAYS inline int _sem_blocked(Semaphore* self)
+static ALWAYS inline int _sem_waiting(Semaphore* self)
 {
 	return (self->count < 0) ? -self->count : 0;
 }
@@ -98,16 +104,16 @@ static inline void sem_destroy(Semaphore* self)
 #define ENTER_SEMAPHORE_MONITOR\
 	int err_;\
 	if ((err_=mtx_lock(&self->lock))!=thrd_success)\
-	return err_
+	return err_;
 
 #define LEAVE_SEMAPHORE_MONITOR\
 	if ((err_=mtx_unlock(&self->lock))!=thrd_success)\
 	return err_;\
-	else return thrd_success
+	else return thrd_success;
 
 #define BREAK_SEMAPHORE_MONITOR(E)\
 	mtx_unlock(&self->lock);\
-	return (E)
+	return (E);
 
 /*
 Decrements the value of semaphore variable by 1. If the new value of 
@@ -117,7 +123,7 @@ having used a unit of the resource.
 */
 static inline int sem_P(Semaphore* self)
 { // P, down, wait, acquire
-	ENTER_SEMAPHORE_MONITOR;
+	ENTER_SEMAPHORE_MONITOR
 
 	--self->count;
 	if (self->count < 0) { // Do I have to block?
@@ -125,14 +131,15 @@ static inline int sem_P(Semaphore* self)
 			// waiting
 			int err = cnd_wait(&self->queue, &self->lock);
 			if (err != thrd_success) {
-				BREAK_SEMAPHORE_MONITOR(err);
+				BREAK_SEMAPHORE_MONITOR (err)
 			}
 		//until (self->wakeups > 0);
 		} while (self->wakeups < 1);
 		--self->wakeups;
+		assert(self->wakeups >= 0);
 	}
 
-	LEAVE_SEMAPHORE_MONITOR;
+	LEAVE_SEMAPHORE_MONITOR
 }
 
 /*
@@ -143,7 +150,7 @@ to the ready queue.
 */
 static inline int sem_V(Semaphore* self)
 { // V, up, signal, release
-	ENTER_SEMAPHORE_MONITOR;
+	ENTER_SEMAPHORE_MONITOR
 
 	++self->count;
 	if (self->count <= 0) { // There are threads blocked?
@@ -151,14 +158,15 @@ static inline int sem_V(Semaphore* self)
 		++self->wakeups;
 		int err = cnd_signal(&self->queue);
 		if (err != thrd_success) {
-			BREAK_SEMAPHORE_MONITOR(err);
+			BREAK_SEMAPHORE_MONITOR (err)
 		}
 	}
 
-	LEAVE_SEMAPHORE_MONITOR;
+	LEAVE_SEMAPHORE_MONITOR
 }
 
 #undef ALWAYS
+#undef ASSERT_SEMAPHORE_INVARIANT
 #undef ENTER_SEMAPHORE_MONITOR
 #undef LEAVE_SEMAPHORE_MONITOR
 #undef BREAK_SEMAPHORE_MONITOR

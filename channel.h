@@ -15,8 +15,10 @@
 #error To cope with failure I need "failure.h"!
 #endif
 
+#include "semaphore.h" // for Rendez-Vous
+
 ////////////////////////////////////////////////////////////////////////
-// Types
+// Type Scalar
 ////////////////////////////////////////////////////////////////////////
 
 typedef signed long long   Integer;
@@ -37,6 +39,10 @@ static_assert(sizeof(Real)==sizeof(Word));
 static_assert(sizeof(Real)==sizeof(Pointer));
 static_assert(sizeof(Scalar)==8);
 
+////////////////////////////////////////////////////////////////////////
+// Type Channel (of scalars)
+////////////////////////////////////////////////////////////////////////
+
 typedef struct {
 	short unsigned flags;
 	short count;
@@ -46,9 +52,10 @@ typedef struct {
 		Scalar* buffer;
 		Scalar  value;
 	};
-	mtx_t lock;
-	cnd_t non_empty;
-	cnd_t non_full;
+	mtx_t     lock;
+	cnd_t     non_empty;
+	cnd_t     non_full;
+	Semaphore barrier[2];
 } Channel;
 
 enum channel_flag {
@@ -164,20 +171,28 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
  */
 static inline int chn_init(Channel* self, unsigned capacity)
 {
+	int err;
+
 	if (capacity > 0x7FFFu) return thrd_error;
 
 	self->count = self->front = self->flags = 0;
 	self->size = capacity;
 	switch (self->size) {
 		case 0:
-			// TODO:
-			assert(not_implemented);
+			if ((err=sem_init(&self->barrier[0], 0)) != thrd_success) {
+				return err;
+			}
+			if ((err=sem_init(&self->barrier[1], 0)) != thrd_success) {
+				sem_destroy(&self->barrier[0]);
+				return err;
+			}
+			self->size = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
 		case 1:
 			self->flags |= CHANNEL_BUFFERED;
 			break;
-		default:
+		default: // > 1
 			self->flags |= CHANNEL_BUFFERED;
 			self->buffer = calloc(self->size, sizeof(Scalar));
 			if (self->buffer == (Scalar*)0) return thrd_nomem;
@@ -186,7 +201,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	ASSERT_CHANNEL_INVARIANT
 
 	// initialize mutex and conditions
-	int err, eN=0;
+	int eN=0;
 #	define catch(X)	if ((++eN,err=(X))!=thrd_success) goto onerror
 
 	catch (mtx_init(&self->lock, mtx_plain)); // eN == 1
@@ -204,6 +219,10 @@ onerror:
 		case 2: mtx_destroy(&self->lock);
 		case 1: if (self->size > 1) free(self->buffer);
 	}
+	if (_chn_flag(self, CHANNEL_BLOCKING)) {
+		sem_destroy(&self->barrier[0]);
+		sem_destroy(&self->barrier[1]);
+	}
 	return err;
 }
 
@@ -214,21 +233,19 @@ static inline void chn_destroy(Channel* self)
 {
 	assert(self->count == 0); // ???
 
-	switch (self->size) {
-		case 0: // blocking channel
-			// TODO:
-			assert(not_implemented);
-			break;
-		case 1: // buffered channel
-			break;
-		default:
-			free(self->buffer);
-			self->buffer = (Scalar*)0; // sanitize
-			break;
-	}
 	mtx_destroy(&self->lock);
 	cnd_destroy(&self->non_empty);
 	cnd_destroy(&self->non_full);
+
+	if (_chn_flag(self, CHANNEL_BLOCKING)) {
+		sem_destroy(&self->barrier[0]);
+		sem_destroy(&self->barrier[1]);
+	} else if (self->size == 1) {
+		; // NOP
+	} else { // self->size > 1
+		free(self->buffer);
+		self->buffer = (Scalar*)0; // sanitize
+	}
 }
 
 /*
@@ -244,7 +261,6 @@ static ALWAYS inline void chn_close(Channel* self)
 //
 // Monitor helpers
 //
-
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
 	int err_;\
 	if ((err_=mtx_lock(&self->lock))!=thrd_success) {\
@@ -257,17 +273,6 @@ static ALWAYS inline void chn_close(Channel* self)
 		}\
 	}
 
-#ifdef VersionWithSignalAfterUnlock
-#define LEAVE_CHANNEL_MONITOR(CONDITION)\
-	if ((err_=mtx_unlock(&self->lock))!=thrd_success) {\
-		cnd_signal(&CONDITION);\
-		return err_;\
-	}\
-	if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
-		return err_;\
-	}
-#endif
-
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
 		mtx_unlock(&self->lock);\
@@ -276,10 +281,6 @@ static ALWAYS inline void chn_close(Channel* self)
 	if ((err_=mtx_unlock(&self->lock))!=thrd_success) {\
 		return err_;\
 	}
-
-//
-// FIFO
-//
 
 /*
  *
@@ -292,18 +293,19 @@ static inline int chn_send_(Channel* self, Scalar x)
 		panic("chn_send want to send an scalar to a closed channel");
 	}
 
-	switch (self->size) {
-		case 0: // blocking channel
-			// TODO:
-			assert(not_implemented);
-		case 1: // buffered channel
-			assert(self->count == 0);
-			self->value = x;
-			break;
-		default:
-			self->buffer[self->front] = x;
-			self->front = (self->front+1) % self->size;
-			break;
+	if (_chn_flag(self, CHANNEL_BLOCKING)) {
+		assert(not_implemented);
+		mtx_unlock(&self->lock);
+		sem_wait(&self->barrier[1]);
+		self->value = x;
+		sem_signal(&self->barrier[0]); // rendez-vous
+		mtx_lock(&self->lock);
+	} else if (self->size == 1) {
+		assert(self->count == 0);
+		self->value = x;
+	} else { // self->size > 1
+		self->buffer[self->front] = x;
+		self->front = (self->front+1) % self->size;
 	}
 	++self->count;
 	ASSERT_CHANNEL_INVARIANT
@@ -320,21 +322,22 @@ static inline int chn_receive(Channel* self, Scalar* x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
 
-	switch (self->size) {
-		case 0: // blocking channel
-			// TODO:
-			assert(not_implemented);
-		case 1: // buffered channel
-			assert(self->count == 1);
-			if (x) *x = self->value;
-			break;
-		default:
-			if (x) {
-				int back = self->front - self->count;
-				back = (back >= 0) ? back : back+self->size;
-				*x = self->buffer[back];
-			}
-			break;
+	if (_chn_flag(self, CHANNEL_BLOCKING)) {
+		assert(not_implemented);
+		mtx_unlock(&self->lock);
+		sem_signal(&self->barrier[1]); // rendez-vous
+		sem_wait(&self->barrier[0]);
+		if (x) *x = self->value;
+		mtx_lock(&self->lock);
+	} else if (self->size == 1) {
+		assert(self->count == 1);
+		if (x) *x = self->value;
+	} else { // self->size > 1
+		if (x) {
+			int back = self->front - self->count;
+			back = (back >= 0) ? back : back+self->size;
+			*x = self->buffer[back];
+		}
 	}
 	--self->count;
 	ASSERT_CHANNEL_INVARIANT
