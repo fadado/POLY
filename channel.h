@@ -15,43 +15,25 @@
 #error To cope with failure I need "failure.h"!
 #endif
 
+#include "scalar.h"
 #include "semaphore.h" // for Rendez-Vous
-
-////////////////////////////////////////////////////////////////////////
-// Type Scalar
-////////////////////////////////////////////////////////////////////////
-
-typedef signed long long   Integer;
-typedef unsigned long long Word;
-typedef double             Real;
-typedef void*              Pointer;
-
-typedef union {
-	Integer integer;
-	Word    word;
-	Real    real;
-	Pointer pointer;
-} Scalar
-__attribute__((__transparent_union__));
-
-static_assert(sizeof(Real)==sizeof(Integer));
-static_assert(sizeof(Real)==sizeof(Word));
-static_assert(sizeof(Real)==sizeof(Pointer));
-static_assert(sizeof(Scalar)==8);
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
 ////////////////////////////////////////////////////////////////////////
 
-typedef struct {
+typedef struct Channel {
+	// some properties (see enum channel_flag)
 	short unsigned flags;
+	// circular buffer
+	short size;
 	short count;
 	short front;
-	short size;
 	union {
-		Scalar* buffer;
-		Scalar  value;
+		Scalar* buffer; // for size > 1
+		Scalar  value;  // optimize for size == 1
 	};
+	// concurrency objects
 	mtx_t     lock;
 	cnd_t     non_empty;
 	cnd_t     non_full;
@@ -60,9 +42,7 @@ typedef struct {
 
 enum channel_flag {
 	CHANNEL_BUFFERED    = (1<<0),
-	CHANNEL_ASYNCRONOUS = (1<<0), // synonym for buffered
 	CHANNEL_BLOCKING    = (1<<1),
-	CHANNEL_UNBUFFERED  = (1<<1), // synonym for blocking
 	CHANNEL_CLOSED      = (1<<2),
 };
 
@@ -86,46 +66,9 @@ static inline int  chn_send_(Channel* self, Scalar x);
 static inline int  chn_receive(Channel* self, Scalar* x);
 static inline void chn_close(Channel* self);
 static inline bool chn_exhaust(Channel* self);
-//                 chn_cast(SCALAR,EXPRESSION) ...
 
 // Accept any scalar type
-#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), _Generic((EXPRESSION),\
-	Scalar: (EXPRESSION),\
-	_Bool: (Word)(EXPRESSION),\
-	char: (Word)(EXPRESSION),\
-	signed char: (Integer)(EXPRESSION),\
-	unsigned char: (Word)(EXPRESSION),\
-	signed short int: (Integer)(EXPRESSION),\
-	unsigned short int: (Word)(EXPRESSION),\
-	signed int: (Integer)(EXPRESSION),\
-	unsigned int: (Word)(EXPRESSION),\
-	signed long int: (Integer)(EXPRESSION),\
-	unsigned long int: (Word)(EXPRESSION),\
-	signed long long int: (Integer)(EXPRESSION),\
-	unsigned long long int: (Word)(EXPRESSION),\
-	float: (Real)(EXPRESSION),\
-	double: (Real)(EXPRESSION),\
-	long double: (Real)(EXPRESSION),\
-	default: (Pointer)(Word)(EXPRESSION)))
-
-// Cast an Scalar to the expression type
-#define chn_cast(SCALAR,EXPRESSION) _Generic((EXPRESSION),\
-	_Bool: (_Bool)(SCALAR).word,\
-	char: (char)(SCALAR).word,\
-	signed char: (signed char)(SCALAR).integer,\
-	unsigned char: (unsigned char)(SCALAR).word,\
-	signed short int: (signed short int)(SCALAR).integer,\
-	unsigned short int: (unsigned short int)(SCALAR).word,\
-	signed int: (signed int)(SCALAR).integer,\
-	unsigned int: (unsigned int)(SCALAR).word,\
-	signed long int: (signed long int)(SCALAR).integer,\
-	unsigned long int: (unsigned long int)(SCALAR).word,\
-	signed long long int: (signed long long int)(SCALAR).integer,\
-	unsigned long long int: (unsigned long long int)(SCALAR).word,\
-	float: (float)(SCALAR).real,\
-	double: (double)(SCALAR).real,\
-	long double: (long double)(SCALAR).real,\
-	default: (void*)(SCALAR).pointer)
+#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce((EXPRESSION)))
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -173,16 +116,14 @@ static inline int chn_init(Channel* self, unsigned capacity)
 {
 	int err;
 
-	if (capacity > 0x7FFFu) return thrd_error;
-
 	self->count = self->front = self->flags = 0;
 	self->size = capacity;
 	switch (self->size) {
 		case 0:
-			if ((err=sem_init(&self->barrier[0], 0)) != thrd_success) {
+			if ((err=sem_init(&self->barrier[0], SEMAPHORE_DOWN)) != thrd_success) {
 				return err;
 			}
-			if ((err=sem_init(&self->barrier[1], 0)) != thrd_success) {
+			if ((err=sem_init(&self->barrier[1], SEMAPHORE_DOWN)) != thrd_success) {
 				sem_destroy(&self->barrier[0]);
 				return err;
 			}
@@ -294,16 +235,24 @@ static inline int chn_send_(Channel* self, Scalar x)
 	}
 
 	if (_chn_flag(self, CHANNEL_BLOCKING)) {
-		assert(not_implemented);
+		// assert(not_implemented);
+
 		mtx_unlock(&self->lock);
+
 		sem_wait(&self->barrier[1]);
-		self->value = x;
-		sem_signal(&self->barrier[0]); // rendez-vous
+
 		mtx_lock(&self->lock);
+		assert(!_chn_full(self));
+
+		self->value = x;
+		sem_signal(&self->barrier[0]);
+
+		//
 	} else if (self->size == 1) {
 		assert(self->count == 0);
 		self->value = x;
-	} else { // self->size > 1
+	} else {
+		assert(self->size > 1);
 		self->buffer[self->front] = x;
 		self->front = (self->front+1) % self->size;
 	}
@@ -323,21 +272,26 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
 
 	if (_chn_flag(self, CHANNEL_BLOCKING)) {
-		assert(not_implemented);
+		// assert(not_implemented);
+
 		mtx_unlock(&self->lock);
-		sem_signal(&self->barrier[1]); // rendez-vous
+
+		sem_signal(&self->barrier[1]);
 		sem_wait(&self->barrier[0]);
-		if (x) *x = self->value;
+
 		mtx_lock(&self->lock);
+		assert(!_chn_empty(self));
+
+		if (x) *x = self->value;
+		//
 	} else if (self->size == 1) {
 		assert(self->count == 1);
 		if (x) *x = self->value;
-	} else { // self->size > 1
-		if (x) {
-			int back = self->front - self->count;
-			back = (back >= 0) ? back : back+self->size;
-			*x = self->buffer[back];
-		}
+	} else if (x) {
+		assert(self->size > 1);
+		int back = self->front - self->count;
+		back = (back >= 0) ? back : back+self->size;
+		*x = self->buffer[back];
 	}
 	--self->count;
 	ASSERT_CHANNEL_INVARIANT

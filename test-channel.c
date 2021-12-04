@@ -5,16 +5,17 @@
 #include <threads.h>
 
 // uncomment next line to enable assertions
-#define DEBUG 1
+#define DEBUG
 #include "failure.h"
+#include "scalar.h"
 #include "channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test
 ////////////////////////////////////////////////////////////////////////
 
-#define N 1
-#define M 7
+#define N 2
+#define M 2
 
 /*
  *
@@ -24,18 +25,18 @@ static int task_producer(void* args)
 	int err;
 #	define catch(X)	if ((err=(X))!=thrd_success) return err
 
-#if DEBUG
+#ifdef DEBUG
 	warn("Enter %s", __func__);
 #endif
 	Channel* channel = args;
 	for (int i=0; i < M; ++i) {
-#if DEBUG
+#ifdef DEBUG
 		warn("Snd> %c", '0'+i);
 #endif
 		catch (chn_send(channel, '0'+i));
 	}
 	chn_close(channel);
-#if DEBUG
+#ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif
 	return thrd_success;
@@ -50,21 +51,21 @@ static int task_consumer(void* args)
 	int err;
 #	define catch(X)	if ((err=(X))!=thrd_success) return err
 
-#if DEBUG
+#ifdef DEBUG
 	warn("Enter %s", __func__);
 #endif
 	Channel* channel = args;
 	Scalar s;
 	while (!chn_exhaust(channel)) {
-#if DEBUG
-		warn("Rcv< %c", chn_cast(s, '@'));
+#ifdef DEBUG
+		warn("Rcv< %c", cast(s, '@'));
 #endif
 		catch (chn_receive(channel, &s));
-		char c = chn_cast(s, '@');
+		char c = cast(s, '@');
 		putchar(c);
 	}
 	putchar('\n');
-#if DEBUG
+#ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif
 	return thrd_success;
