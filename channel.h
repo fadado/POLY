@@ -16,7 +16,6 @@
 #endif
 
 #include "scalar.h"
-#include "semaphore.h" // for Rendez-Vous
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -33,17 +32,24 @@ typedef struct Channel {
 		Scalar* buffer; // for size > 1
 		Scalar  value;  // optimize for size == 1
 	};
-	// concurrency objects
-	mtx_t     lock;
-	cnd_t     non_empty;
-	cnd_t     non_full;
-	Semaphore barrier[2];
+	mtx_t lock;
+	cnd_t non_empty;
+	cnd_t non_full;
+	// Rendez-vous
+	cnd_t barrier[2];
+	int   waking[2];
 } Channel;
 
+// Constants for flags
 enum channel_flag {
 	CHANNEL_BUFFERED    = (1<<0),
 	CHANNEL_BLOCKING    = (1<<1),
 	CHANNEL_CLOSED      = (1<<2),
+};
+
+// Constants for rendez-vous
+enum {
+	_CHN_RECEIVER, _CHN_SENDER
 };
 
 #ifdef DEBUG
@@ -116,15 +122,16 @@ static inline int chn_init(Channel* self, unsigned capacity)
 {
 	int err;
 
-	self->count = self->front = self->flags = 0;
+	self->count = self->flags = 0;
 	self->size = capacity;
 	switch (self->size) {
 		case 0:
-			if ((err=sem_init(&self->barrier[0], SEMAPHORE_DOWN)) != thrd_success) {
+			self->waking[_CHN_RECEIVER] = self->waking[_CHN_SENDER] = 0;
+			if ((err=cnd_init(&self->barrier[_CHN_RECEIVER])) != thrd_success) {
 				return err;
 			}
-			if ((err=sem_init(&self->barrier[1], SEMAPHORE_DOWN)) != thrd_success) {
-				sem_destroy(&self->barrier[0]);
+			if ((err=cnd_init(&self->barrier[_CHN_SENDER])) != thrd_success) {
+				cnd_destroy(&self->barrier[_CHN_RECEIVER]);
 				return err;
 			}
 			self->size = 1; // reset value to 1!
@@ -134,6 +141,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 			self->flags |= CHANNEL_BUFFERED;
 			break;
 		default: // > 1
+			self->front = 0;
 			self->flags |= CHANNEL_BUFFERED;
 			self->buffer = calloc(self->size, sizeof(Scalar));
 			if (self->buffer == (Scalar*)0) return thrd_nomem;
@@ -161,8 +169,8 @@ onerror:
 		case 1: if (self->size > 1) free(self->buffer);
 	}
 	if (_chn_flag(self, CHANNEL_BLOCKING)) {
-		sem_destroy(&self->barrier[0]);
-		sem_destroy(&self->barrier[1]);
+		cnd_destroy(&self->barrier[_CHN_RECEIVER]);
+		cnd_destroy(&self->barrier[_CHN_SENDER]);
 	}
 	return err;
 }
@@ -172,15 +180,15 @@ onerror:
  */
 static inline void chn_destroy(Channel* self)
 {
-	assert(self->count == 0); // ???
+	assert(_chn_empty(self)); // ???
 
 	mtx_destroy(&self->lock);
 	cnd_destroy(&self->non_empty);
 	cnd_destroy(&self->non_full);
 
 	if (_chn_flag(self, CHANNEL_BLOCKING)) {
-		sem_destroy(&self->barrier[0]);
-		sem_destroy(&self->barrier[1]);
+		cnd_destroy(&self->barrier[_CHN_RECEIVER]);
+		cnd_destroy(&self->barrier[_CHN_SENDER]);
 	} else if (self->size == 1) {
 		; // NOP
 	} else { // self->size > 1
@@ -223,6 +231,12 @@ static ALWAYS inline void chn_close(Channel* self)
 		return err_;\
 	}
 
+#define CHECK_CHANNEL_MONITOR(E)\
+	if ((E)!=thrd_success) {\
+		mtx_unlock(&self->lock);\
+		return (E);\
+	}
+
 /*
  *
  */
@@ -236,20 +250,25 @@ static inline int chn_send_(Channel* self, Scalar x)
 
 	if (_chn_flag(self, CHANNEL_BLOCKING)) {
 		// assert(not_implemented);
+		assert(self->size == 1);
+		assert(_chn_empty(self));
 
-		mtx_unlock(&self->lock);
+		int err;
+		do {
+			err = cnd_wait(&self->barrier[_CHN_RECEIVER], &self->lock);
+			CHECK_CHANNEL_MONITOR (err)
+		} while (!self->waking[_CHN_RECEIVER]);
+		--self->waking[_CHN_RECEIVER];
+		assert(self->waking[_CHN_RECEIVER] >= 0);
 
-		sem_wait(&self->barrier[1]);
-
-		mtx_lock(&self->lock);
 		assert(!_chn_full(self));
-
 		self->value = x;
-		sem_signal(&self->barrier[0]);
 
-		//
+		++self->waking[_CHN_SENDER];
+		err = cnd_signal(&self->barrier[_CHN_SENDER]);
+		CHECK_CHANNEL_MONITOR (err)
 	} else if (self->size == 1) {
-		assert(self->count == 0);
+		assert(_chn_empty(self));
 		self->value = x;
 	} else {
 		assert(self->size > 1);
@@ -273,19 +292,24 @@ static inline int chn_receive(Channel* self, Scalar* x)
 
 	if (_chn_flag(self, CHANNEL_BLOCKING)) {
 		// assert(not_implemented);
+		assert(self->size == 1);
+		assert(_chn_full(self));
 
-		mtx_unlock(&self->lock);
+		++self->waking[_CHN_RECEIVER];
+		int err = cnd_signal(&self->barrier[_CHN_RECEIVER]);
+		CHECK_CHANNEL_MONITOR (err)
 
-		sem_signal(&self->barrier[1]);
-		sem_wait(&self->barrier[0]);
+		do {
+			err = cnd_wait(&self->barrier[_CHN_SENDER], &self->lock);
+			CHECK_CHANNEL_MONITOR (err)
+		} while (!self->waking[_CHN_SENDER]);
+		--self->waking[_CHN_SENDER];
+		assert(self->waking[_CHN_SENDER] >= 0);
 
-		mtx_lock(&self->lock);
 		assert(!_chn_empty(self));
-
 		if (x) *x = self->value;
-		//
 	} else if (self->size == 1) {
-		assert(self->count == 1);
+		assert(_chn_full(self));
 		if (x) *x = self->value;
 	} else if (x) {
 		assert(self->size > 1);
