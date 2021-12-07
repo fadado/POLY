@@ -57,11 +57,11 @@ static int task_consumer(void* args)
 	Channel* channel = args;
 	Scalar s;
 	while (!chn_exhaust(channel)) {
-#ifdef DEBUG
-		warn("Rcv< %c", cast(s, '@'));
-#endif
 		catch (chn_receive(channel, &s));
 		char c = cast(s, '@');
+#ifdef DEBUG
+		warn("Rcv< %c", s);
+#endif
 		putchar(c);
 	}
 	putchar('\n');

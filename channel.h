@@ -21,6 +21,7 @@
 // Type Channel (of scalars)
 ////////////////////////////////////////////////////////////////////////
 
+//
 typedef struct Channel {
 	// some properties (see enum channel_flag)
 	short unsigned flags;
@@ -48,10 +49,10 @@ enum channel_flag {
 };
 
 // Constants for rendez-vous
-enum {
-	_CHN_RECEIVER, _CHN_SENDER
-};
+#define HOLA_DON_PEPITO 0
+#define HOLA_DON_JOSE   1
 
+//
 #ifdef DEBUG
 #	define ASSERT_CHANNEL_INVARIANT\
 		assert(0 <= self->count && self->count <= self->size);\
@@ -95,18 +96,14 @@ static ALWAYS inline bool _chn_full(Channel* self)
 	return self->count == self->size;
 }
 
-static ALWAYS inline bool _chn_flag(Channel* self, enum channel_flag flag)
-{
-	return (self->flags & flag) == flag;
-}
-
 /*
  *
  */
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
+	//TODO: manage errors
 	mtx_lock(&self->lock);
-	bool exhaust = _chn_flag(self, CHANNEL_CLOSED) && _chn_empty(self);
+	bool exhaust = (self->flags & CHANNEL_CLOSED) && _chn_empty(self);
 	mtx_unlock(&self->lock);
 	return exhaust;
 }
@@ -126,12 +123,12 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	self->size = capacity;
 	switch (self->size) {
 		case 0:
-			self->waking[_CHN_RECEIVER] = self->waking[_CHN_SENDER] = 0;
-			if ((err=cnd_init(&self->barrier[_CHN_RECEIVER])) != thrd_success) {
+			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = 0;
+			if ((err=cnd_init(&self->barrier[HOLA_DON_PEPITO])) != thrd_success) {
 				return err;
 			}
-			if ((err=cnd_init(&self->barrier[_CHN_SENDER])) != thrd_success) {
-				cnd_destroy(&self->barrier[_CHN_RECEIVER]);
+			if ((err=cnd_init(&self->barrier[HOLA_DON_JOSE])) != thrd_success) {
+				cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
 				return err;
 			}
 			self->size = 1; // reset value to 1!
@@ -168,9 +165,9 @@ onerror:
 		case 2: mtx_destroy(&self->lock);
 		case 1: if (self->size > 1) free(self->buffer);
 	}
-	if (_chn_flag(self, CHANNEL_BLOCKING)) {
-		cnd_destroy(&self->barrier[_CHN_RECEIVER]);
-		cnd_destroy(&self->barrier[_CHN_SENDER]);
+	if (self->flags & CHANNEL_BLOCKING) {
+		cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
+		cnd_destroy(&self->barrier[HOLA_DON_JOSE]);
 	}
 	return err;
 }
@@ -186,9 +183,9 @@ static inline void chn_destroy(Channel* self)
 	cnd_destroy(&self->non_empty);
 	cnd_destroy(&self->non_full);
 
-	if (_chn_flag(self, CHANNEL_BLOCKING)) {
-		cnd_destroy(&self->barrier[_CHN_RECEIVER]);
-		cnd_destroy(&self->barrier[_CHN_SENDER]);
+	if (self->flags & CHANNEL_BLOCKING) {
+		cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
+		cnd_destroy(&self->barrier[HOLA_DON_JOSE]);
 	} else if (self->size == 1) {
 		; // NOP
 	} else { // self->size > 1
@@ -231,11 +228,18 @@ static ALWAYS inline void chn_close(Channel* self)
 		return err_;\
 	}
 
-#define CHECK_CHANNEL_MONITOR(E)\
-	if ((E)!=thrd_success) {\
-		mtx_unlock(&self->lock);\
-		return (E);\
-	}
+#define WAIT(Ix)\
+	do {\
+		err_=cnd_wait(&self->barrier[Ix], &self->lock);\
+		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
+	} while (!self->waking[Ix]);\
+	--self->waking[Ix];\
+	assert(self->waking[Ix] >= 0);
+
+#define SIGNAL(Ix)\
+	++self->waking[Ix];\
+	err_=cnd_signal(&self->barrier[Ix]);\
+	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
 
 /*
  *
@@ -244,29 +248,22 @@ static inline int chn_send_(Channel* self, Scalar x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_full, self->non_full)
 
-	if (_chn_flag(self, CHANNEL_CLOSED)) {
+	if (self->flags & CHANNEL_CLOSED) {
 		panic("chn_send want to send an scalar to a closed channel");
 	}
 
-	if (_chn_flag(self, CHANNEL_BLOCKING)) {
+	if (self->flags & CHANNEL_BLOCKING) {
 		// assert(not_implemented);
 		assert(self->size == 1);
 		assert(_chn_empty(self));
 
-		int err;
-		do {
-			err = cnd_wait(&self->barrier[_CHN_RECEIVER], &self->lock);
-			CHECK_CHANNEL_MONITOR (err)
-		} while (!self->waking[_CHN_RECEIVER]);
-		--self->waking[_CHN_RECEIVER];
-		assert(self->waking[_CHN_RECEIVER] >= 0);
+		WAIT (HOLA_DON_PEPITO)
 
 		assert(!_chn_full(self));
 		self->value = x;
 
-		++self->waking[_CHN_SENDER];
-		err = cnd_signal(&self->barrier[_CHN_SENDER]);
-		CHECK_CHANNEL_MONITOR (err)
+		SIGNAL (HOLA_DON_JOSE)
+		//
 	} else if (self->size == 1) {
 		assert(_chn_empty(self));
 		self->value = x;
@@ -290,24 +287,17 @@ static inline int chn_receive(Channel* self, Scalar* x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
 
-	if (_chn_flag(self, CHANNEL_BLOCKING)) {
+	if (self->flags & CHANNEL_BLOCKING) {
 		// assert(not_implemented);
 		assert(self->size == 1);
 		assert(_chn_full(self));
 
-		++self->waking[_CHN_RECEIVER];
-		int err = cnd_signal(&self->barrier[_CHN_RECEIVER]);
-		CHECK_CHANNEL_MONITOR (err)
-
-		do {
-			err = cnd_wait(&self->barrier[_CHN_SENDER], &self->lock);
-			CHECK_CHANNEL_MONITOR (err)
-		} while (!self->waking[_CHN_SENDER]);
-		--self->waking[_CHN_SENDER];
-		assert(self->waking[_CHN_SENDER] >= 0);
+		SIGNAL (HOLA_DON_PEPITO)
+		WAIT   (HOLA_DON_JOSE)
 
 		assert(!_chn_empty(self));
 		if (x) *x = self->value;
+		//
 	} else if (self->size == 1) {
 		assert(_chn_full(self));
 		if (x) *x = self->value;
@@ -325,10 +315,18 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	return thrd_success;
 }
 
+#undef HOLA_DON_PEPITO
+#undef HOLA_DON_JOSE
+
 #undef ALWAYS
+
 #undef ASSERT_CHANNEL_INVARIANT
+
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
+
+#undef WAIT
+#undef SIGNAL
 
 #endif // CHANNEL_H
 
