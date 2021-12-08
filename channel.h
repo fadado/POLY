@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdlib.h> // calloc
 #include <threads.h>
+#include <stdatomic.h>
 
 #ifndef FAILURE_H
 #error To cope with failure I need "failure.h"!
@@ -23,20 +24,22 @@
 
 //
 typedef struct Channel {
-	// some properties (see enum channel_flag)
-	short unsigned flags;
-	// circular buffer
+	// channel state/properties (see enum channel_flag)
+	atomic_ushort flags;
+	// channel size and occupation
 	short size;
 	short count;
-	short front;
+	// circular buffer
+	short front; // rear is a function of count and front
 	union {
 		Scalar* buffer; // for size > 1
 		Scalar  value;  // optimize for size == 1
 	};
+	// monitor
 	mtx_t lock;
 	cnd_t non_empty;
 	cnd_t non_full;
-	// Rendez-vous
+	// rendez-vous
 	cnd_t barrier[2];
 	int   waking[2];
 } Channel;
@@ -46,6 +49,7 @@ enum channel_flag {
 	CHANNEL_BUFFERED    = (1<<0),
 	CHANNEL_BLOCKING    = (1<<1),
 	CHANNEL_CLOSED      = (1<<2),
+	CHANNEL_EXHAUSTED   = (1<<3),
 };
 
 // Constants for rendez-vous
@@ -101,11 +105,14 @@ static ALWAYS inline bool _chn_full(Channel* self)
  */
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
-	//TODO: manage errors
+#if 1
+	return self->flags & CHANNEL_EXHAUSTED;
+#else
 	mtx_lock(&self->lock);
 	bool exhaust = (self->flags & CHANNEL_CLOSED) && _chn_empty(self);
 	mtx_unlock(&self->lock);
 	return exhaust;
+#endif
 }
 
 //
@@ -118,9 +125,9 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 static inline int chn_init(Channel* self, unsigned capacity)
 {
 	int err;
-
 	self->count = self->flags = 0;
 	self->size = capacity;
+
 	switch (self->size) {
 		case 0:
 			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = 0;
@@ -139,9 +146,9 @@ static inline int chn_init(Channel* self, unsigned capacity)
 			break;
 		default: // > 1
 			self->front = 0;
-			self->flags |= CHANNEL_BUFFERED;
 			self->buffer = calloc(self->size, sizeof(Scalar));
 			if (self->buffer == (Scalar*)0) return thrd_nomem;
+			self->flags |= CHANNEL_BUFFERED;
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
@@ -199,9 +206,13 @@ static inline void chn_destroy(Channel* self)
  */
 static ALWAYS inline void chn_close(Channel* self)
 {
+#if 1
+	atomic_fetch_or(&self->flags, CHANNEL_CLOSED);
+#else
 	mtx_lock(&self->lock);
 	self->flags |= CHANNEL_CLOSED;
 	mtx_unlock(&self->lock);
+#endif
 }
 
 //
@@ -228,8 +239,9 @@ static ALWAYS inline void chn_close(Channel* self)
 		return err_;\
 	}
 
+#if 0
 #define WAIT(Ix)\
-	do {\
+	do{\
 		err_=cnd_wait(&self->barrier[Ix], &self->lock);\
 		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
 	} while (!self->waking[Ix]);\
@@ -240,6 +252,10 @@ static ALWAYS inline void chn_close(Channel* self)
 	++self->waking[Ix];\
 	err_=cnd_signal(&self->barrier[Ix]);\
 	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
+#else
+#define WAIT(Ix)	/*NOP*/
+#define SIGNAL(Ix)	/*NOP*/
+#endif
 
 /*
  *
@@ -309,6 +325,9 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	}
 	--self->count;
 	ASSERT_CHANNEL_INVARIANT
+	if ((self->flags & CHANNEL_CLOSED) && self->count == 0) {
+		self->flags |= CHANNEL_EXHAUSTED;
+	}
 
 	LEAVE_CHANNEL_MONITOR (self->non_full)
 

@@ -14,7 +14,7 @@
 // FIFO test
 ////////////////////////////////////////////////////////////////////////
 
-#define N 1
+#define N 0
 #define M 7
 
 /*
@@ -30,12 +30,14 @@ static int task_producer(void* args)
 #endif
 	Channel* channel = args;
 	for (int i=0; i < M; ++i) {
+		char c = '0'+i;
 #ifdef DEBUG
-		warn("Snd> %c", '0'+i);
+		warn("Snd> %c", c);
 #endif
-		catch (chn_send(channel, '0'+i));
+		catch (chn_send(channel, c));
 	}
 	chn_close(channel);
+	// FAILURE: chn_send(channel, '0');
 #ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif
@@ -57,6 +59,7 @@ static int task_consumer(void* args)
 	Channel* channel = args;
 	Scalar s;
 	while (!chn_exhaust(channel)) {
+		warn("!EXHAUST");
 		catch (chn_receive(channel, &s));
 		char c = cast(s, '@');
 #ifdef DEBUG
@@ -64,6 +67,7 @@ static int task_consumer(void* args)
 #endif
 		putchar(c);
 	}
+	warn("POINT 2");
 	putchar('\n');
 #ifdef DEBUG
 	warn("Exit %s", __func__);
