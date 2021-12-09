@@ -55,10 +55,16 @@ enum channel_flag {
 // Constants for rendez-vous
 #define HOLA_DON_PEPITO 0
 #define HOLA_DON_JOSE   1
+
+#ifdef DEBUG
+#define WARN(...) warn(__VA_ARGS__)
 const char* RV[2] = {
 	[HOLA_DON_PEPITO] = "HOLA_DON_PEPITO",
-	[HOLA_DON_JOSE] = "HOLA_DON_JOSE",
+	[HOLA_DON_JOSE]   = "HOLA_DON_JOSE",
 };
+#else
+#define WARN(...)
+#endif
 
 //
 #ifdef DEBUG
@@ -129,58 +135,52 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 static inline int chn_init(Channel* self, unsigned capacity)
 {
 	int err;
+
 	self->count = self->flags = 0;
 	self->size = capacity;
 
+	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
+		return err;
+	}
 	switch (self->size) {
 		case 0:
 			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = false;
 			if ((err=cnd_init(&self->barrier[HOLA_DON_PEPITO])) != thrd_success) {
+				mtx_destroy(&self->lock);
 				return err;
 			}
 			if ((err=cnd_init(&self->barrier[HOLA_DON_JOSE])) != thrd_success) {
+				mtx_destroy(&self->lock);
 				cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
 				return err;
 			}
 			self->size = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
-		case 1:
-			self->flags |= CHANNEL_BUFFERED;
-			break;
 		default: // > 1
 			self->front = 0;
 			self->buffer = calloc(self->size, sizeof(Scalar));
-			if (self->buffer == (Scalar*)0) return thrd_nomem;
+			if (self->buffer == (Scalar*)0) {
+				mtx_destroy(&self->lock);
+				return thrd_nomem;
+			}
+		case 1:
+			if ((err=cnd_init(&self->non_empty)) != thrd_success) {
+				mtx_destroy(&self->lock);
+				if (self->size > 1) free(self->buffer);
+				return err;
+			}
+			if ((err=cnd_init(&self->non_full)) != thrd_success) {
+				mtx_destroy(&self->lock);
+				cnd_destroy(&self->non_empty);
+				if (self->size > 1) free(self->buffer);
+				return err;
+			}
 			self->flags |= CHANNEL_BUFFERED;
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
-
-	// initialize mutex and conditions
-	int eN=0;
-#	define catch(X)	if ((++eN,err=(X))!=thrd_success) goto onerror
-
-	catch (mtx_init(&self->lock, mtx_plain)); // eN == 1
-	catch (cnd_init(&self->non_empty));       // eN == 2
-	catch (cnd_init(&self->non_full));        // eN == 3
-
 	return thrd_success;
-onerror:
-#	undef catch
-	assert(err != thrd_success);
-
-	assert(1 <= eN && eN <= 3);
-	switch (eN) {
-		case 3: cnd_destroy(&self->non_empty);
-		case 2: mtx_destroy(&self->lock);
-		case 1: if (self->size > 1) free(self->buffer);
-	}
-	if (self->flags & CHANNEL_BLOCKING) {
-		cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
-		cnd_destroy(&self->barrier[HOLA_DON_JOSE]);
-	}
-	return err;
 }
 
 /*
@@ -191,15 +191,14 @@ static inline void chn_destroy(Channel* self)
 	assert(_chn_empty(self)); // ???
 
 	mtx_destroy(&self->lock);
-	cnd_destroy(&self->non_empty);
-	cnd_destroy(&self->non_full);
-
-	if (self->flags & CHANNEL_BLOCKING) {
+	if (self->flags & CHANNEL_BUFFERED) {
+		cnd_destroy(&self->non_empty);
+		cnd_destroy(&self->non_full);
+	} else if (self->flags & CHANNEL_BLOCKING) {
 		cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
 		cnd_destroy(&self->barrier[HOLA_DON_JOSE]);
-	} else if (self->size == 1) {
-		; // NOP
-	} else { // self->size > 1
+	}
+	if (self->size > 1) {
 		free(self->buffer);
 		self->buffer = (Scalar*)0; // sanitize
 	}
@@ -246,7 +245,7 @@ static ALWAYS inline void chn_close(Channel* self)
 	}
 
 #define WAIT(Ix)\
-	warn("WAIT   @ %s",RV[Ix]);\
+	WARN("WAIT   @ %s",RV[Ix]);\
 	while (!self->waking[Ix]) {\
 		err_=cnd_wait(&self->barrier[Ix], &self->lock);\
 		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
@@ -255,7 +254,7 @@ static ALWAYS inline void chn_close(Channel* self)
 	assert(self->waking[Ix] >= 0);
 
 #define SIGNAL(Ix)\
-	warn("SIGNAL @ %s", RV[Ix]);\
+	WARN("SIGNAL @ %s", RV[Ix]);\
 	self->waking[Ix]=true;\
 	err_=cnd_signal(&self->barrier[Ix]);\
 	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
@@ -272,9 +271,8 @@ static inline int chn_send_(Channel* self, Scalar x)
 	}
 
 	if (self->flags & CHANNEL_BLOCKING) {
-		// assert(not_implemented);
 		assert(self->size == 1);
-		//BUG: assert(_chn_empty(self));
+		//BUG:assert(_chn_empty(self));
 
 		WAIT (HOLA_DON_PEPITO)
 
@@ -307,9 +305,8 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
 
 	if (self->flags & CHANNEL_BLOCKING) {
-		// assert(not_implemented);
 		assert(self->size == 1);
-		//BUG: assert(_chn_full(self));
+		//BUG:assert(_chn_empty(self));
 
 		SIGNAL (HOLA_DON_PEPITO)
 		WAIT   (HOLA_DON_JOSE)
