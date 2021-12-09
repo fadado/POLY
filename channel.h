@@ -55,6 +55,10 @@ enum channel_flag {
 // Constants for rendez-vous
 #define HOLA_DON_PEPITO 0
 #define HOLA_DON_JOSE   1
+const char* RV[2] = {
+	[HOLA_DON_PEPITO] = "HOLA_DON_PEPITO",
+	[HOLA_DON_JOSE] = "HOLA_DON_JOSE",
+};
 
 //
 #ifdef DEBUG
@@ -223,7 +227,8 @@ static ALWAYS inline void chn_close(Channel* self)
 	if ((err_=mtx_lock(&self->lock))!=thrd_success) {\
 		return err_;\
 	}\
-	while (PREDICATE(self)) {\
+	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
+	else while (PREDICATE(self)) {\
 		if ((err_=cnd_wait(&CONDITION, &self->lock))!=thrd_success) {\
 			mtx_destroy(&self->lock);\
 			return err_;\
@@ -231,7 +236,8 @@ static ALWAYS inline void chn_close(Channel* self)
 	}
 
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
-	if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
+	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
+	else if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
 		mtx_unlock(&self->lock);\
 		return err_;\
 	}\
@@ -239,23 +245,20 @@ static ALWAYS inline void chn_close(Channel* self)
 		return err_;\
 	}
 
-#if 0
 #define WAIT(Ix)\
-	do{\
+	warn("WAIT   @ %s",RV[Ix]);\
+	while (!self->waking[Ix]) {\
 		err_=cnd_wait(&self->barrier[Ix], &self->lock);\
 		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
-	} while (!self->waking[Ix]);\
+	}\
 	--self->waking[Ix];\
 	assert(self->waking[Ix] >= 0);
 
 #define SIGNAL(Ix)\
+	warn("SIGNAL @ %s", RV[Ix]);\
 	++self->waking[Ix];\
 	err_=cnd_signal(&self->barrier[Ix]);\
 	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
-#else
-#define WAIT(Ix)	/*NOP*/
-#define SIGNAL(Ix)	/*NOP*/
-#endif
 
 /*
  *
@@ -271,7 +274,7 @@ static inline int chn_send_(Channel* self, Scalar x)
 	if (self->flags & CHANNEL_BLOCKING) {
 		// assert(not_implemented);
 		assert(self->size == 1);
-		assert(_chn_empty(self));
+		//BUG: assert(_chn_empty(self));
 
 		WAIT (HOLA_DON_PEPITO)
 
@@ -306,7 +309,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	if (self->flags & CHANNEL_BLOCKING) {
 		// assert(not_implemented);
 		assert(self->size == 1);
-		assert(_chn_full(self));
+		//BUG: assert(_chn_full(self));
 
 		SIGNAL (HOLA_DON_PEPITO)
 		WAIT   (HOLA_DON_JOSE)

@@ -31,10 +31,10 @@ static int task_producer(void* args)
 	Channel* channel = args;
 	for (int i=0; i < M; ++i) {
 		char c = '0'+i;
-#ifdef DEBUG
-		warn("Snd> %c", c);
-#endif
 		catch (chn_send(channel, c));
+#ifdef DEBUG
+		//warn("Snd> %c", c);
+#endif
 	}
 	chn_close(channel);
 	// FAILURE: chn_send(channel, '0');
@@ -59,15 +59,13 @@ static int task_consumer(void* args)
 	Channel* channel = args;
 	Scalar s;
 	while (!chn_exhaust(channel)) {
-		warn("!EXHAUST");
 		catch (chn_receive(channel, &s));
 		char c = cast(s, '@');
 #ifdef DEBUG
-		warn("Rcv< %c", s);
+		//warn("Rcv< %c", s);
 #endif
 		putchar(c);
 	}
-	warn("POINT 2");
 	putchar('\n');
 #ifdef DEBUG
 	warn("Exit %s", __func__);
