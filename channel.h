@@ -41,7 +41,7 @@ typedef struct Channel {
 	cnd_t non_full;
 	// rendez-vous
 	cnd_t barrier[2];
-	int   waking[2];
+	bool  waking[2];
 } Channel;
 
 // Constants for flags
@@ -134,7 +134,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	switch (self->size) {
 		case 0:
-			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = 0;
+			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = false;
 			if ((err=cnd_init(&self->barrier[HOLA_DON_PEPITO])) != thrd_success) {
 				return err;
 			}
@@ -251,12 +251,12 @@ static ALWAYS inline void chn_close(Channel* self)
 		err_=cnd_wait(&self->barrier[Ix], &self->lock);\
 		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
 	}\
-	--self->waking[Ix];\
+	self->waking[Ix]=false;\
 	assert(self->waking[Ix] >= 0);
 
 #define SIGNAL(Ix)\
 	warn("SIGNAL @ %s", RV[Ix]);\
-	++self->waking[Ix];\
+	self->waking[Ix]=true;\
 	err_=cnd_signal(&self->barrier[Ix]);\
 	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
 

@@ -131,11 +131,12 @@ static inline int sem_P(Semaphore* self)
 	ENTER_SEMAPHORE_MONITOR
 
 	--self->counter;
-	if (self->counter < 0) { // Do I have to block?
+	int blocked = self->counter < 0 ? -self->counter : 0;
+	if (blocked > 0) { // Do I have to block?
 		do {
 			int err = cnd_wait(&self->queue, &self->lock);
 			CHECK_SEMAPHORE_MONITOR (err)
-		} while (!self->waking);
+		} while (self->waking == 0);
 		--self->waking;
 		assert(self->waking >= 0);
 	}
@@ -153,8 +154,9 @@ static inline int sem_V(Semaphore* self)
 { // V, up, signal, release
 	ENTER_SEMAPHORE_MONITOR
 
+	int blocked = self->counter < 0 ? -self->counter : 0;
 	++self->counter;
-	if (self->counter <= 0) { // There are threads blocked?
+	if (blocked > 0) { // There are threads blocked?
 		++self->waking;
 		int err = cnd_signal(&self->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
