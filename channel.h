@@ -40,7 +40,7 @@ typedef struct Channel {
 	cnd_t non_empty;
 	cnd_t non_full;
 	// rendez-vous
-	cnd_t barrier[2];
+	cnd_t queue[2];
 	bool  waking[2];
 } Channel;
 
@@ -145,13 +145,13 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	switch (self->size) {
 		case 0:
 			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = false;
-			if ((err=cnd_init(&self->barrier[HOLA_DON_PEPITO])) != thrd_success) {
+			if ((err=cnd_init(&self->queue[HOLA_DON_PEPITO])) != thrd_success) {
 				mtx_destroy(&self->lock);
 				return err;
 			}
-			if ((err=cnd_init(&self->barrier[HOLA_DON_JOSE])) != thrd_success) {
+			if ((err=cnd_init(&self->queue[HOLA_DON_JOSE])) != thrd_success) {
 				mtx_destroy(&self->lock);
-				cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
+				cnd_destroy(&self->queue[HOLA_DON_PEPITO]);
 				return err;
 			}
 			self->size = 1; // reset value to 1!
@@ -195,8 +195,8 @@ static inline void chn_destroy(Channel* self)
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
 	} else if (self->flags & CHANNEL_BLOCKING) {
-		cnd_destroy(&self->barrier[HOLA_DON_PEPITO]);
-		cnd_destroy(&self->barrier[HOLA_DON_JOSE]);
+		cnd_destroy(&self->queue[HOLA_DON_PEPITO]);
+		cnd_destroy(&self->queue[HOLA_DON_JOSE]);
 	}
 	if (self->size > 1) {
 		free(self->buffer);
@@ -247,7 +247,7 @@ static ALWAYS inline void chn_close(Channel* self)
 #define WAIT(Ix)\
 	WARN("WAIT   @ %s",RV[Ix]);\
 	while (!self->waking[Ix]) {\
-		err_=cnd_wait(&self->barrier[Ix], &self->lock);\
+		err_=cnd_wait(&self->queue[Ix], &self->lock);\
 		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
 	}\
 	self->waking[Ix]=false;\
@@ -256,7 +256,7 @@ static ALWAYS inline void chn_close(Channel* self)
 #define SIGNAL(Ix)\
 	WARN("SIGNAL @ %s", RV[Ix]);\
 	self->waking[Ix]=true;\
-	err_=cnd_signal(&self->barrier[Ix]);\
+	err_=cnd_signal(&self->queue[Ix]);\
 	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
 
 /*
