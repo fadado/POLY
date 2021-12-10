@@ -37,11 +37,16 @@ typedef struct Channel {
 	};
 	// monitor
 	mtx_t lock;
-	cnd_t non_empty;
-	cnd_t non_full;
-	// rendez-vous
-	cnd_t queue[2];
-	bool  waking[2];
+	union {
+		struct { // signals for buffered channels
+			cnd_t non_empty;
+			cnd_t non_full;
+		};
+		struct { // rendez-vous for blocking channels
+			cnd_t queue[2];
+			bool  waking[2];
+		};
+	};
 } Channel;
 
 // Constants for flags
@@ -57,13 +62,10 @@ enum channel_flag {
 #define HOLA_DON_JOSE   1
 
 #ifdef DEBUG
-#define WARN(...) warn(__VA_ARGS__)
 const char* RV[2] = {
 	[HOLA_DON_PEPITO] = "HOLA_DON_PEPITO",
 	[HOLA_DON_JOSE]   = "HOLA_DON_JOSE",
 };
-#else
-#define WARN(...)
 #endif
 
 //
@@ -115,14 +117,7 @@ static ALWAYS inline bool _chn_full(Channel* self)
  */
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
-#if 1
 	return self->flags & CHANNEL_EXHAUSTED;
-#else
-	mtx_lock(&self->lock);
-	bool exhaust = (self->flags & CHANNEL_CLOSED) && _chn_empty(self);
-	mtx_unlock(&self->lock);
-	return exhaust;
-#endif
 }
 
 //
@@ -134,26 +129,31 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
  */
 static inline int chn_init(Channel* self, unsigned capacity)
 {
+#	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
+
+	void d_mutex(void)  { mtx_destroy(&self->lock); }
+	void d_empty(void)  { cnd_destroy(&self->non_empty); }
+	void d_pepito(void) { cnd_destroy(&self->queue[HOLA_DON_PEPITO]); }
+	void d_buffer(void) { free(self->buffer); }
+
+	// cleanup thunks to call before return
+	Thunk thunks[4] = { 0 };
+	int thunk_index = 0;
+#	define push(F) thunks[thunk_index++]=F
+
 	int err;
 
 	self->count = self->flags = 0;
 	self->size = capacity;
+	catch (mtx_init(&self->lock, mtx_plain));
+	push(d_mutex);
 
-	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
-		return err;
-	}
 	switch (self->size) {
 		case 0:
 			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = false;
-			if ((err=cnd_init(&self->queue[HOLA_DON_PEPITO])) != thrd_success) {
-				mtx_destroy(&self->lock);
-				return err;
-			}
-			if ((err=cnd_init(&self->queue[HOLA_DON_JOSE])) != thrd_success) {
-				mtx_destroy(&self->lock);
-				cnd_destroy(&self->queue[HOLA_DON_PEPITO]);
-				return err;
-			}
+			catch (cnd_init(&self->queue[HOLA_DON_PEPITO]));
+			push(d_pepito);
+			catch (cnd_init(&self->queue[HOLA_DON_JOSE]));
 			self->size = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
@@ -161,26 +161,28 @@ static inline int chn_init(Channel* self, unsigned capacity)
 			self->front = 0;
 			self->buffer = calloc(self->size, sizeof(Scalar));
 			if (self->buffer == (Scalar*)0) {
-				mtx_destroy(&self->lock);
-				return thrd_nomem;
+				err = thrd_nomem;
+				goto onerror;
 			}
+			push(d_buffer);
 		case 1:
-			if ((err=cnd_init(&self->non_empty)) != thrd_success) {
-				mtx_destroy(&self->lock);
-				if (self->size > 1) free(self->buffer);
-				return err;
-			}
-			if ((err=cnd_init(&self->non_full)) != thrd_success) {
-				mtx_destroy(&self->lock);
-				cnd_destroy(&self->non_empty);
-				if (self->size > 1) free(self->buffer);
-				return err;
-			}
+			catch (cnd_init(&self->non_empty));
+			push(d_empty);
+			catch (cnd_init(&self->non_full));
 			self->flags |= CHANNEL_BUFFERED;
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
+
 	return thrd_success;
+onerror:
+#	undef catch
+#	undef push
+	assert(thunk_index > 0);
+	assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
+	Thunk* t = thunks;
+	while (*t) { (*t++)(); }
+	return err;
 }
 
 /*
@@ -209,13 +211,7 @@ static inline void chn_destroy(Channel* self)
  */
 static ALWAYS inline void chn_close(Channel* self)
 {
-#if 1
 	atomic_fetch_or(&self->flags, CHANNEL_CLOSED);
-#else
-	mtx_lock(&self->lock);
-	self->flags |= CHANNEL_CLOSED;
-	mtx_unlock(&self->lock);
-#endif
 }
 
 //
@@ -250,8 +246,7 @@ static ALWAYS inline void chn_close(Channel* self)
 		err_=cnd_wait(&self->queue[Ix], &self->lock);\
 		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
 	}\
-	self->waking[Ix]=false;\
-	assert(self->waking[Ix] >= 0);
+	self->waking[Ix]=false;
 
 #define SIGNAL(Ix)\
 	WARN("SIGNAL @ %s", RV[Ix]);\

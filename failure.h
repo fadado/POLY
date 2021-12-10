@@ -32,6 +32,16 @@ enum {
 #define panic(FMT,...)\
 	error_at_line(~0,EPERM,__FILE__,__LINE__,FMT __VA_OPT__(,)__VA_ARGS__)
 
+// To easy callbacks
+typedef void (*Thunk)(void);
+
+// Warnings while debugging
+#ifdef DEBUG
+#define WARN(...) warn(__VA_ARGS__)
+#else
+#define WARN(...)
+#endif
+
 #endif // FAILURE_H
 
 // vim:ai:sw=4:ts=4:syntax=cpp

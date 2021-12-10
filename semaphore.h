@@ -29,8 +29,8 @@ typedef struct Semaphore {
 
 // Special count values to initialize semaphores
 enum {
-	SEMAPHORE_DOWN, // semaphores as signals
-	SEMAPHORE_UP    // semaphores as locks
+	SEMAPHORE_DOWN, // semaphore as event
+	SEMAPHORE_UP    // semaphore as lock
 };
 
 static inline int  sem_init(Semaphore* self, int count);
