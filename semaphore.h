@@ -7,11 +7,13 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
-#include <threads.h>
-
 #ifndef FAILURE_H
 #error To cope with failure I need "failure.h"!
 #endif
+
+#include <threads.h>
+
+#include "event.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Types
@@ -22,9 +24,8 @@ typedef struct Semaphore {
 	// counter protected with a lock
 	int   counter;
 	mtx_t lock;
-	// non-spurious condition
-	int   waking;
-	cnd_t queue;
+	// signaling wake up
+	Event waking;
 } Semaphore;
 
 // Special count values to initialize semaphores
@@ -54,7 +55,7 @@ static inline int  sem_V(Semaphore* self);
 
 /*
 // Number of available resources
-static ALWAYS inline int _sem_avail(Semaphore* self)
+static ALWAYS inline int _sem_value(Semaphore* self)
 {
 	return (self->counter > 0) ? self->counter : 0;
 }
@@ -79,13 +80,12 @@ static inline int sem_init(Semaphore* self, int count)
 {
 	assert(count >= 0);
 	self->counter = count;
-	self->waking = 0;
 
 	int err;
 	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
 		return err;
 	}
-	if ((err=cnd_init(&self->queue)) != thrd_success) {
+	if ((err=evt_init(&self->waking)) != thrd_success) {
 		mtx_destroy(&self->lock);
 		return err;
 	}
@@ -98,7 +98,7 @@ static inline int sem_init(Semaphore* self, int count)
 static inline void sem_destroy(Semaphore* self)
 {
 	mtx_destroy(&self->lock);
-	cnd_destroy(&self->queue);
+	evt_destroy(&self->waking);
 }
 
 //
@@ -133,12 +133,8 @@ static inline int sem_P(Semaphore* self)
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		do {
-			int err = cnd_wait(&self->queue, &self->lock);
-			CHECK_SEMAPHORE_MONITOR (err)
-		} while (self->waking == 0);
-		--self->waking;
-		assert(self->waking >= 0);
+		int err = evt_block(&self->waking, &self->lock);
+		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
 	LEAVE_SEMAPHORE_MONITOR
@@ -157,8 +153,7 @@ static inline int sem_V(Semaphore* self)
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	++self->counter;
 	if (blocked > 0) { // There are threads blocked?
-		++self->waking;
-		int err = cnd_signal(&self->queue);
+		int err = evt_signal(&self->waking);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -169,7 +164,7 @@ static inline int sem_V(Semaphore* self)
 #undef ASSERT_SEMAPHORE_INVARIANT
 #undef ENTER_SEMAPHORE_MONITOR
 #undef LEAVE_SEMAPHORE_MONITOR
-#undef BREAK_SEMAPHORE_MONITOR
+#undef CHECK_SEMAPHORE_MONITOR
 
 #endif // SEMAPHORE_H
 

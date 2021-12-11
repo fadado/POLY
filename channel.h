@@ -7,16 +7,16 @@
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
-#include <stdbool.h>
-#include <stdlib.h> // calloc
-#include <threads.h>
-#include <stdatomic.h>
-
 #ifndef FAILURE_H
 #error To cope with failure I need "failure.h"!
 #endif
 
+#include <stdbool.h>
+#include <stdlib.h> // calloc
+#include <threads.h>
+
 #include "scalar.h"
+#include "event.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -25,12 +25,10 @@
 //
 typedef struct Channel {
 	// channel state/properties (see enum channel_flag)
-	atomic_ushort flags;
+	short flags;
 	// channel size and occupation
 	short size;
 	short count;
-	// circular buffer
-	short front; // rear is a function of count and front
 	union {
 		Scalar* buffer; // for size > 1
 		Scalar  value;  // optimize for size == 1
@@ -38,14 +36,14 @@ typedef struct Channel {
 	// monitor
 	mtx_t lock;
 	union {
-		struct { // signals for buffered channels
+		// buffered channels
+		struct {
+			short front; // rear is a function of count and front
 			cnd_t non_empty;
 			cnd_t non_full;
 		};
-		struct { // rendez-vous for blocking channels
-			cnd_t queue[2];
-			bool  waking[2];
-		};
+		// blocking channels
+		Event rendezvous[2];
 	};
 } Channel;
 
@@ -62,7 +60,7 @@ enum channel_flag {
 #define HOLA_DON_JOSE   1
 
 #ifdef DEBUG
-const char* RV[2] = {
+const char* _RV_[2] = {
 	[HOLA_DON_PEPITO] = "HOLA_DON_PEPITO",
 	[HOLA_DON_JOSE]   = "HOLA_DON_JOSE",
 };
@@ -72,8 +70,10 @@ const char* RV[2] = {
 #ifdef DEBUG
 #	define ASSERT_CHANNEL_INVARIANT\
 		assert(0 <= self->count && self->count <= self->size);\
-		assert(0 <= self->front && self->front <  self->size);\
-		assert(self->size < 2 || self->buffer != (Scalar*)0);\
+		if (self->size > 1) {\
+			assert(0 <= self->front && self->front <  self->size);\
+			assert(self->buffer != (Scalar*)0);\
+		}\
 		assert(!(_chn_empty(self) && _chn_full(self)));
 #else
 #	define ASSERT_CHANNEL_INVARIANT
@@ -117,12 +117,17 @@ static ALWAYS inline bool _chn_full(Channel* self)
  */
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
-	return self->flags & CHANNEL_EXHAUSTED;
+	mtx_lock(&self->lock); // assume the lock cannot fail...
+	bool b = self->flags & CHANNEL_EXHAUSTED;
+	mtx_unlock(&self->lock);
+	return b;
 }
 
 //
 // Channel life
 //
+
+//#define rv_init(R_V)\
 
 /*
  *
@@ -133,7 +138,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	void d_mutex(void)  { mtx_destroy(&self->lock); }
 	void d_empty(void)  { cnd_destroy(&self->non_empty); }
-	void d_pepito(void) { cnd_destroy(&self->queue[HOLA_DON_PEPITO]); }
+	void d_pepito(void) { evt_destroy(&self->rendezvous[HOLA_DON_PEPITO]); }
 	void d_buffer(void) { free(self->buffer); }
 
 	// cleanup thunks to call before return
@@ -150,10 +155,9 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	switch (self->size) {
 		case 0:
-			self->waking[HOLA_DON_PEPITO] = self->waking[HOLA_DON_JOSE] = false;
-			catch (cnd_init(&self->queue[HOLA_DON_PEPITO]));
+			catch (evt_init(&self->rendezvous[HOLA_DON_PEPITO]));
 			push(d_pepito);
-			catch (cnd_init(&self->queue[HOLA_DON_JOSE]));
+			catch (evt_init(&self->rendezvous[HOLA_DON_JOSE]));
 			self->size = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
@@ -188,6 +192,10 @@ onerror:
 /*
  *
  */
+#define rv_destroy(R_V)\
+		evt_destroy(&R_V[0]);\
+		evt_destroy(&R_V[1])
+
 static inline void chn_destroy(Channel* self)
 {
 	assert(_chn_empty(self)); // ???
@@ -197,8 +205,7 @@ static inline void chn_destroy(Channel* self)
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
 	} else if (self->flags & CHANNEL_BLOCKING) {
-		cnd_destroy(&self->queue[HOLA_DON_PEPITO]);
-		cnd_destroy(&self->queue[HOLA_DON_JOSE]);
+		rv_destroy(self->rendezvous);
 	}
 	if (self->size > 1) {
 		free(self->buffer);
@@ -211,7 +218,12 @@ static inline void chn_destroy(Channel* self)
  */
 static ALWAYS inline void chn_close(Channel* self)
 {
-	atomic_fetch_or(&self->flags, CHANNEL_CLOSED);
+	mtx_lock(&self->lock); // assume the lock cannot fail...
+	self->flags |= CHANNEL_CLOSED;
+	if (self->size == 0) { // empty?
+		self->flags |= CHANNEL_EXHAUSTED;
+	}
+	mtx_unlock(&self->lock);
 }
 
 //
@@ -240,19 +252,17 @@ static ALWAYS inline void chn_close(Channel* self)
 		return err_;\
 	}
 
-#define WAIT(Ix)\
-	WARN("WAIT   @ %s",RV[Ix]);\
-	while (!self->waking[Ix]) {\
-		err_=cnd_wait(&self->queue[Ix], &self->lock);\
-		if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
-	}\
-	self->waking[Ix]=false;
+#define rv_wait(R_V,Ix) do {\
+	trace("WAIT   @ %s",_RV_[Ix]);\
+	err_=evt_wait(&R_V[Ix], &self->lock);\
+	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
+} while (0)
 
-#define SIGNAL(Ix)\
-	WARN("SIGNAL @ %s", RV[Ix]);\
-	self->waking[Ix]=true;\
-	err_=cnd_signal(&self->queue[Ix]);\
-	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}
+#define rv_signal(R_V,Ix) do {\
+	trace("SIGNAL @ %s", _RV_[Ix]);\
+	err_=evt_signal(&R_V[Ix]);\
+	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
+} while (0)
 
 /*
  *
@@ -269,12 +279,12 @@ static inline int chn_send_(Channel* self, Scalar x)
 		assert(self->size == 1);
 		//BUG:assert(_chn_empty(self));
 
-		WAIT (HOLA_DON_PEPITO)
+		rv_wait(self->rendezvous, HOLA_DON_PEPITO);
 
 		assert(!_chn_full(self));
 		self->value = x;
 
-		SIGNAL (HOLA_DON_JOSE)
+		rv_signal(self->rendezvous, HOLA_DON_JOSE);
 		//
 	} else if (self->size == 1) {
 		assert(_chn_empty(self));
@@ -303,8 +313,8 @@ static inline int chn_receive(Channel* self, Scalar* x)
 		assert(self->size == 1);
 		//BUG:assert(_chn_empty(self));
 
-		SIGNAL (HOLA_DON_PEPITO)
-		WAIT   (HOLA_DON_JOSE)
+		rv_signal(self->rendezvous, HOLA_DON_PEPITO);
+		rv_wait(self->rendezvous, HOLA_DON_JOSE);
 
 		assert(!_chn_empty(self));
 		if (x) *x = self->value;
@@ -339,8 +349,9 @@ static inline int chn_receive(Channel* self, Scalar* x)
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
 
-#undef WAIT
-#undef SIGNAL
+#undef rv_destroy
+#undef rv_wait
+#undef rv_signal
 
 #endif // CHANNEL_H
 

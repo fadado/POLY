@@ -37,9 +37,9 @@ typedef void (*Thunk)(void);
 
 // Warnings while debugging
 #ifdef DEBUG
-#define WARN(...) warn(__VA_ARGS__)
+#define trace(...) warn(__VA_ARGS__)
 #else
-#define WARN(...)
+#define trace(...)
 #endif
 
 #endif // FAILURE_H
