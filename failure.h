@@ -1,12 +1,6 @@
 /*
  * To cope with failure.
  *
- * Typical usage:
- *
- *  // uncomment next line to enable assertions
- *  //#define DEBUG
- *  #include "failure.h"
- *
  */
 #ifndef FAILURE_H
 #define FAILURE_H

@@ -28,12 +28,6 @@ typedef struct Semaphore {
 	Event waking;
 } Semaphore;
 
-// Special count values to initialize semaphores
-enum {
-	SEMAPHORE_DOWN, // semaphore as event
-	SEMAPHORE_UP    // semaphore as mutex
-};
-
 static inline int  sem_init(Semaphore* self, int count);
 static inline void sem_destroy(Semaphore* self);
 static inline int  sem_P(Semaphore* self);
@@ -61,40 +55,34 @@ static ALWAYS inline int _sem_value(Semaphore* self)
 }
 
 // Number of blocked threads
-static ALWAYS inline int _sem_waiting(Semaphore* self)
+static ALWAYS inline int _sem_blocked(Semaphore* self)
 {
 	return (self->counter < 0) ? -self->counter : 0;
 }
 
-// Idle state?
+// Idle state? value==0 and blocked==0
 static ALWAYS inline int _sem_idle(Semaphore* self)
 {
 	return self->counter == 0;
 }
 */
 
-/*
- *
- */
 static inline int sem_init(Semaphore* self, int count)
 {
 	assert(count >= 0);
 	self->counter = count;
 
 	int err;
-	if ((err=mtx_init(&self->mutex, mtx_plain)) != thrd_success) {
-		return err;
+	if ((err=mtx_init(&self->mutex, mtx_plain)) == thrd_success) {
+		if ((err=evt_init(&self->waking)) == thrd_success) {
+			return thrd_success;
+		} else {
+			mtx_destroy(&self->mutex);
+		}
 	}
-	if ((err=evt_init(&self->waking)) != thrd_success) {
-		mtx_destroy(&self->mutex);
-		return err;
-	}
-	return thrd_success;
+	return err;
 }
 
-/*
- *
- */
 static inline void sem_destroy(Semaphore* self)
 {
 	mtx_destroy(&self->mutex);

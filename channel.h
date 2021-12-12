@@ -16,7 +16,7 @@
 #include <threads.h>
 
 #include "scalar.h"
-#include "event.h"
+#include "rendezvous.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -54,17 +54,6 @@ enum channel_flag {
 	CHANNEL_CLOSED      = (1<<2),
 	CHANNEL_EXHAUSTED   = (1<<3),
 };
-
-// Constants for rendez-vous
-#define HOLA_DON_PEPITO 0
-#define HOLA_DON_JOSE   1
-
-#ifdef DEBUG
-const char* _RV_[2] = {
-	[HOLA_DON_PEPITO] = "HOLA_DON_PEPITO",
-	[HOLA_DON_JOSE]   = "HOLA_DON_JOSE",
-};
-#endif
 
 //
 #ifdef DEBUG
@@ -112,33 +101,15 @@ static ALWAYS inline bool _chn_full(Channel* self)
 	return self->count == self->size;
 }
 
-/*
- *
- */
-static ALWAYS inline bool chn_exhaust(Channel* self)
-{
-	mtx_lock(&self->mutex); // assume the mutex cannot fail...
-	bool b = self->flags & CHANNEL_EXHAUSTED;
-	mtx_unlock(&self->mutex);
-	return b;
-}
-
 //
 // Channel life
 //
 
-//#define rv_init(R_V)
-
-/*
- *
- */
 static inline int chn_init(Channel* self, unsigned capacity)
 {
-#	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
-
 	void d_mutex(void)  { mtx_destroy(&self->mutex); }
 	void d_empty(void)  { cnd_destroy(&self->non_empty); }
-	void d_pepito(void) { evt_destroy(&self->rendezvous[HOLA_DON_PEPITO]); }
+	void d_rv(void)     { rv_destroy(self->rendezvous); }
 	void d_buffer(void) { free(self->buffer); }
 
 	// cleanup thunks to call before return
@@ -147,6 +118,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 #	define push(F) thunks[thunk_index++]=F
 
 	int err;
+#	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
 	self->count = self->flags = 0;
 	self->size = capacity;
@@ -155,9 +127,8 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	switch (self->size) {
 		case 0:
-			catch (evt_init(&self->rendezvous[HOLA_DON_PEPITO]));
-			push(d_pepito);
-			catch (evt_init(&self->rendezvous[HOLA_DON_JOSE]));
+			catch (rv_init(self->rendezvous));
+			push(d_rv);
 			self->size = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
@@ -182,19 +153,13 @@ static inline int chn_init(Channel* self, unsigned capacity)
 onerror:
 #	undef catch
 #	undef push
-	assert(thunk_index > 0);
-	assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
-	Thunk* t = thunks;
-	while (*t) { (*t++)(); }
+	if (thunk_index > 0) {
+		assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
+		Thunk* t = thunks;
+		while (*t) { (*t++)(); }
+	}
 	return err;
 }
-
-/*
- *
- */
-#define rv_destroy(R_V)\
-		evt_destroy(&R_V[0]);\
-		evt_destroy(&R_V[1])
 
 static inline void chn_destroy(Channel* self)
 {
@@ -213,9 +178,6 @@ static inline void chn_destroy(Channel* self)
 	}
 }
 
-/*
- *
- */
 static ALWAYS inline void chn_close(Channel* self)
 {
 	mtx_lock(&self->mutex); // assume the mutex cannot fail...
@@ -224,6 +186,14 @@ static ALWAYS inline void chn_close(Channel* self)
 		self->flags |= CHANNEL_EXHAUSTED;
 	}
 	mtx_unlock(&self->mutex);
+}
+
+static ALWAYS inline bool chn_exhaust(Channel* self)
+{
+	mtx_lock(&self->mutex); // assume the mutex cannot fail...
+	bool b = self->flags & CHANNEL_EXHAUSTED;
+	mtx_unlock(&self->mutex);
+	return b;
 }
 
 //
@@ -252,21 +222,6 @@ static ALWAYS inline void chn_close(Channel* self)
 		return err_;\
 	}
 
-#define rv_wait(R_V,Ix) do {\
-	trace("WAIT   @ %s",_RV_[Ix]);\
-	err_=evt_wait(&R_V[Ix], &self->mutex);\
-	if (err_!=thrd_success) {mtx_unlock(&self->mutex);return err_;}\
-} while (0)
-
-#define rv_signal(R_V,Ix) do {\
-	trace("SIGNAL @ %s", _RV_[Ix]);\
-	err_=evt_signal(&R_V[Ix]);\
-	if (err_!=thrd_success) {mtx_unlock(&self->mutex);return err_;}\
-} while (0)
-
-/*
- *
- */
 static inline int chn_send_(Channel* self, Scalar x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_full, self->non_full)
@@ -279,12 +234,14 @@ static inline int chn_send_(Channel* self, Scalar x)
 		assert(self->size == 1);
 		//BUG:assert(_chn_empty(self));
 
-		rv_wait(self->rendezvous, HOLA_DON_PEPITO);
+#		define catch(X)	if ((err_=(X))!=thrd_success) goto onerror
 
-		assert(!_chn_full(self));
+		// protocol
+		//    thread a: wait(0)-A-signal(1)
+		//    thread b: signal(0)-wait(1)-B
+		catch (rv_wait(self->rendezvous, 0, &self->mutex));
 		self->value = x;
-
-		rv_signal(self->rendezvous, HOLA_DON_JOSE);
+		catch (rv_signal(self->rendezvous, 1));
 		//
 	} else if (self->size == 1) {
 		assert(_chn_empty(self));
@@ -300,23 +257,28 @@ static inline int chn_send_(Channel* self, Scalar x)
 	LEAVE_CHANNEL_MONITOR (self->non_empty)
 
 	return thrd_success;
+
+onerror:
+#	undef catch
+	mtx_unlock(&self->mutex);
+	return err_;
 }
 
-/*
- *
- */
 static inline int chn_receive(Channel* self, Scalar* x)
 {
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
+
+#	define catch(X)	if ((err_=(X))!=thrd_success) goto onerror
 
 	if (self->flags & CHANNEL_BLOCKING) {
 		assert(self->size == 1);
 		//BUG:assert(_chn_empty(self));
 
-		rv_signal(self->rendezvous, HOLA_DON_PEPITO);
-		rv_wait(self->rendezvous, HOLA_DON_JOSE);
-
-		assert(!_chn_empty(self));
+		// protocol
+		//    thread a: wait(0)-ACTION-signal(1)
+		//    thread b: signal(0)-wait(1)-ACTION
+		catch (rv_signal(self->rendezvous, 0));
+		catch (rv_wait(self->rendezvous, 1, &self->mutex));
 		if (x) *x = self->value;
 		//
 	} else if (self->size == 1) {
@@ -337,10 +299,12 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	LEAVE_CHANNEL_MONITOR (self->non_full)
 
 	return thrd_success;
-}
 
-#undef HOLA_DON_PEPITO
-#undef HOLA_DON_JOSE
+onerror:
+#	undef catch
+	mtx_unlock(&self->mutex);
+	return err_;
+}
 
 #undef ALWAYS
 
@@ -348,11 +312,6 @@ static inline int chn_receive(Channel* self, Scalar* x)
 
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
-
-#undef rv_init
-#undef rv_destroy
-#undef rv_wait
-#undef rv_signal
 
 #endif // CHANNEL_H
 

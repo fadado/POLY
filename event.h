@@ -7,16 +7,31 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#include <threads.h>
-
 #ifndef FAILURE_H
 #error To cope with failure I need "failure.h"!
 #endif
+
+#include <threads.h>
+
+////////////////////////////////////////////////////////////////////////
+// Type Event
+// Interface
+////////////////////////////////////////////////////////////////////////
 
 typedef struct Event {
 	int   state;
 	cnd_t queue;
 } Event;
+
+static inline int  evt_init(Event* self);
+static inline void evt_destroy(Event* self);
+static inline int  evt_wait(Event* self, mtx_t* mutex);
+static inline int  evt_block(Event* self, mtx_t* mutex);
+static inline int  evt_signal(Event* self);
+
+////////////////////////////////////////////////////////////////////////
+// Implementation
+////////////////////////////////////////////////////////////////////////
 
 #define ALWAYS __attribute__((always_inline))
 

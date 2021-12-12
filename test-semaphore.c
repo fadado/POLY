@@ -40,7 +40,7 @@ static void test_lock(void)
 #endif
 	test_lock_counter = 0;
 
-	sem_init(&test_lock_mutex, SEMAPHORE_UP);
+	sem_init(&test_lock_mutex, 1);
 
 	thrd_t t[N];
 	for (int i=0; i < N; ++i) {
