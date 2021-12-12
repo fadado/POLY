@@ -21,9 +21,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	// counter protected with a lock
+	// counter protected with a mutex
 	int   counter;
-	mtx_t lock;
+	mtx_t mutex;
 	// signaling wake up
 	Event waking;
 } Semaphore;
@@ -31,7 +31,7 @@ typedef struct Semaphore {
 // Special count values to initialize semaphores
 enum {
 	SEMAPHORE_DOWN, // semaphore as event
-	SEMAPHORE_UP    // semaphore as lock
+	SEMAPHORE_UP    // semaphore as mutex
 };
 
 static inline int  sem_init(Semaphore* self, int count);
@@ -82,11 +82,11 @@ static inline int sem_init(Semaphore* self, int count)
 	self->counter = count;
 
 	int err;
-	if ((err=mtx_init(&self->lock, mtx_plain)) != thrd_success) {
+	if ((err=mtx_init(&self->mutex, mtx_plain)) != thrd_success) {
 		return err;
 	}
 	if ((err=evt_init(&self->waking)) != thrd_success) {
-		mtx_destroy(&self->lock);
+		mtx_destroy(&self->mutex);
 		return err;
 	}
 	return thrd_success;
@@ -97,7 +97,7 @@ static inline int sem_init(Semaphore* self, int count)
  */
 static inline void sem_destroy(Semaphore* self)
 {
-	mtx_destroy(&self->lock);
+	mtx_destroy(&self->mutex);
 	evt_destroy(&self->waking);
 }
 
@@ -106,17 +106,17 @@ static inline void sem_destroy(Semaphore* self)
 //
 #define ENTER_SEMAPHORE_MONITOR\
 	int err_;\
-	if ((err_=mtx_lock(&self->lock))!=thrd_success)\
+	if ((err_=mtx_lock(&self->mutex))!=thrd_success)\
 	return err_;
 
 #define LEAVE_SEMAPHORE_MONITOR\
-	if ((err_=mtx_unlock(&self->lock))!=thrd_success)\
+	if ((err_=mtx_unlock(&self->mutex))!=thrd_success)\
 	return err_;\
 	else return thrd_success;
 
 #define CHECK_SEMAPHORE_MONITOR(E)\
 	if ((E)!=thrd_success) {\
-		mtx_unlock(&self->lock);\
+		mtx_unlock(&self->mutex);\
 		return (E);\
 	}
 
@@ -133,7 +133,7 @@ static inline int sem_P(Semaphore* self)
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_block(&self->waking, &self->lock);
+		int err = evt_block(&self->waking, &self->mutex);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

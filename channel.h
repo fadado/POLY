@@ -34,7 +34,7 @@ typedef struct Channel {
 		Scalar  value;  // optimize for size == 1
 	};
 	// monitor
-	mtx_t lock;
+	mtx_t mutex;
 	union {
 		// buffered channels
 		struct {
@@ -117,9 +117,9 @@ static ALWAYS inline bool _chn_full(Channel* self)
  */
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
-	mtx_lock(&self->lock); // assume the lock cannot fail...
+	mtx_lock(&self->mutex); // assume the mutex cannot fail...
 	bool b = self->flags & CHANNEL_EXHAUSTED;
-	mtx_unlock(&self->lock);
+	mtx_unlock(&self->mutex);
 	return b;
 }
 
@@ -127,7 +127,7 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 // Channel life
 //
 
-//#define rv_init(R_V)\
+//#define rv_init(R_V)
 
 /*
  *
@@ -136,7 +136,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 {
 #	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
-	void d_mutex(void)  { mtx_destroy(&self->lock); }
+	void d_mutex(void)  { mtx_destroy(&self->mutex); }
 	void d_empty(void)  { cnd_destroy(&self->non_empty); }
 	void d_pepito(void) { evt_destroy(&self->rendezvous[HOLA_DON_PEPITO]); }
 	void d_buffer(void) { free(self->buffer); }
@@ -150,7 +150,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	self->count = self->flags = 0;
 	self->size = capacity;
-	catch (mtx_init(&self->lock, mtx_plain));
+	catch (mtx_init(&self->mutex, mtx_plain));
 	push(d_mutex);
 
 	switch (self->size) {
@@ -200,7 +200,7 @@ static inline void chn_destroy(Channel* self)
 {
 	assert(_chn_empty(self)); // ???
 
-	mtx_destroy(&self->lock);
+	mtx_destroy(&self->mutex);
 	if (self->flags & CHANNEL_BUFFERED) {
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
@@ -218,12 +218,12 @@ static inline void chn_destroy(Channel* self)
  */
 static ALWAYS inline void chn_close(Channel* self)
 {
-	mtx_lock(&self->lock); // assume the lock cannot fail...
+	mtx_lock(&self->mutex); // assume the mutex cannot fail...
 	self->flags |= CHANNEL_CLOSED;
 	if (self->size == 0) { // empty?
 		self->flags |= CHANNEL_EXHAUSTED;
 	}
-	mtx_unlock(&self->lock);
+	mtx_unlock(&self->mutex);
 }
 
 //
@@ -231,13 +231,13 @@ static ALWAYS inline void chn_close(Channel* self)
 //
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
 	int err_;\
-	if ((err_=mtx_lock(&self->lock))!=thrd_success) {\
+	if ((err_=mtx_lock(&self->mutex))!=thrd_success) {\
 		return err_;\
 	}\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else while (PREDICATE(self)) {\
-		if ((err_=cnd_wait(&CONDITION, &self->lock))!=thrd_success) {\
-			mtx_destroy(&self->lock);\
+		if ((err_=cnd_wait(&CONDITION, &self->mutex))!=thrd_success) {\
+			mtx_destroy(&self->mutex);\
 			return err_;\
 		}\
 	}
@@ -245,23 +245,23 @@ static ALWAYS inline void chn_close(Channel* self)
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
-		mtx_unlock(&self->lock);\
+		mtx_unlock(&self->mutex);\
 		return err_;\
 	}\
-	if ((err_=mtx_unlock(&self->lock))!=thrd_success) {\
+	if ((err_=mtx_unlock(&self->mutex))!=thrd_success) {\
 		return err_;\
 	}
 
 #define rv_wait(R_V,Ix) do {\
 	trace("WAIT   @ %s",_RV_[Ix]);\
-	err_=evt_wait(&R_V[Ix], &self->lock);\
-	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
+	err_=evt_wait(&R_V[Ix], &self->mutex);\
+	if (err_!=thrd_success) {mtx_unlock(&self->mutex);return err_;}\
 } while (0)
 
 #define rv_signal(R_V,Ix) do {\
 	trace("SIGNAL @ %s", _RV_[Ix]);\
 	err_=evt_signal(&R_V[Ix]);\
-	if (err_!=thrd_success) {mtx_unlock(&self->lock);return err_;}\
+	if (err_!=thrd_success) {mtx_unlock(&self->mutex);return err_;}\
 } while (0)
 
 /*
@@ -349,6 +349,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
 
+#undef rv_init
 #undef rv_destroy
 #undef rv_wait
 #undef rv_signal

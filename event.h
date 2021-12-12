@@ -31,22 +31,22 @@ static inline void evt_destroy(Event* self)
 	cnd_destroy(&self->queue);
 }
 
-static ALWAYS inline int evt_wait(Event* self, mtx_t* lock)
+static ALWAYS inline int evt_wait(Event* self, mtx_t* mutex)
 {
-	// assume `lock` is locked
+	// assume `mutex` is locked
 	while (self->state == 0) {
-		int err = cnd_wait(&self->queue, lock);
+		int err = cnd_wait(&self->queue, mutex);
 		if (err != thrd_success) return err;
 	}
 	--self->state;
 	return thrd_success;
 }
 
-static ALWAYS inline int evt_block(Event* self, mtx_t* lock)
+static ALWAYS inline int evt_block(Event* self, mtx_t* mutex)
 {
-	// assume `lock` is locked
+	// assume `mutex` is locked
 	do {
-		int err = cnd_wait(&self->queue, lock);
+		int err = cnd_wait(&self->queue, mutex);
 		if (err != thrd_success) return err;
 	} while (self->state == 0);
 	--self->state;
