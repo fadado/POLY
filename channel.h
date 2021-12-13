@@ -7,8 +7,8 @@
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
-#ifndef FAILURE_H
-#error To cope with failure I need "failure.h"!
+#ifndef POLY_H
+#error To conduct the choir I need "poly.h"!
 #endif
 
 #include <stdbool.h>
@@ -22,7 +22,6 @@
 // Type Channel (of scalars)
 ////////////////////////////////////////////////////////////////////////
 
-//
 typedef struct Channel {
 	// channel state/properties (see enum channel_flag)
 	short flags;
@@ -55,7 +54,6 @@ enum channel_flag {
 	CHANNEL_EXHAUSTED   = (1<<3),
 };
 
-//
 #ifdef DEBUG
 #	define ASSERT_CHANNEL_INVARIANT\
 		assert(0 <= self->count && self->count <= self->size);\
@@ -86,7 +84,8 @@ static inline bool chn_exhaust(Channel* self);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-#define ALWAYS __attribute__((always_inline))
+// same strategy in all this module
+#define catch(X) if ((err=(X))!=thrd_success) goto onerror
 
 //
 // Predicates
@@ -118,7 +117,6 @@ static inline int chn_init(Channel* self, unsigned capacity)
 #	define push(F) thunks[thunk_index++]=F
 
 	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
 	self->count = self->flags = 0;
 	self->size = capacity;
@@ -151,7 +149,6 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	return thrd_success;
 onerror:
-#	undef catch
 #	undef push
 	if (thunk_index > 0) {
 		assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
@@ -200,30 +197,30 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 // Monitor helpers
 //
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
-	int err_;\
-	if ((err_=mtx_lock(&self->mutex))!=thrd_success) {\
-		return err_;\
+	if ((err=mtx_lock(&self->mutex))!=thrd_success) {\
+		return err;\
 	}\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else while (PREDICATE(self)) {\
-		if ((err_=cnd_wait(&CONDITION, &self->mutex))!=thrd_success) {\
+		if ((err=cnd_wait(&CONDITION, &self->mutex))!=thrd_success) {\
 			mtx_destroy(&self->mutex);\
-			return err_;\
+			return err;\
 		}\
 	}
 
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
-	else if ((err_=cnd_signal(&CONDITION))!=thrd_success) {\
+	else if ((err=cnd_signal(&CONDITION))!=thrd_success) {\
 		mtx_unlock(&self->mutex);\
-		return err_;\
+		return err;\
 	}\
-	if ((err_=mtx_unlock(&self->mutex))!=thrd_success) {\
-		return err_;\
+	if ((err=mtx_unlock(&self->mutex))!=thrd_success) {\
+		return err;\
 	}
 
 static inline int chn_send_(Channel* self, Scalar x)
 {
+	int err;
 	ENTER_CHANNEL_MONITOR (_chn_full, self->non_full)
 
 	if (self->flags & CHANNEL_CLOSED) {
@@ -233,8 +230,6 @@ static inline int chn_send_(Channel* self, Scalar x)
 	if (self->flags & CHANNEL_BLOCKING) {
 		assert(self->size == 1);
 		//BUG:assert(_chn_empty(self));
-
-#		define catch(X)	if ((err_=(X))!=thrd_success) goto onerror
 
 		// protocol
 		//    thread a: wait(0)-A-signal(1)
@@ -257,18 +252,15 @@ static inline int chn_send_(Channel* self, Scalar x)
 	LEAVE_CHANNEL_MONITOR (self->non_empty)
 
 	return thrd_success;
-
 onerror:
-#	undef catch
 	mtx_unlock(&self->mutex);
-	return err_;
+	return err;
 }
 
 static inline int chn_receive(Channel* self, Scalar* x)
 {
+	int err;
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
-
-#	define catch(X)	if ((err_=(X))!=thrd_success) goto onerror
 
 	if (self->flags & CHANNEL_BLOCKING) {
 		assert(self->size == 1);
@@ -299,14 +291,12 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	LEAVE_CHANNEL_MONITOR (self->non_full)
 
 	return thrd_success;
-
 onerror:
-#	undef catch
 	mtx_unlock(&self->mutex);
-	return err_;
+	return err;
 }
 
-#undef ALWAYS
+#undef catch
 
 #undef ASSERT_CHANNEL_INVARIANT
 

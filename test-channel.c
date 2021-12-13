@@ -6,9 +6,8 @@
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "failure.h"
-#include "scalar.h"
-#include "channel.h"
+#include "poly.h"
+#include "channel.h" // include scalar.h
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test

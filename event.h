@@ -7,8 +7,8 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#ifndef FAILURE_H
-#error To cope with failure I need "failure.h"!
+#ifndef POLY_H
+#error To conduct the choir I need "poly.h"!
 #endif
 
 #include <threads.h>
@@ -33,20 +33,18 @@ static inline int  evt_signal(Event* self);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-#define ALWAYS __attribute__((always_inline))
-
-static inline int evt_init(Event* self)
+static ALWAYS inline int evt_init(Event* self)
 {
 	self->state = 0;
 	return cnd_init(&self->queue);
 }
 
-static inline void evt_destroy(Event* self)
+static ALWAYS inline void evt_destroy(Event* self)
 {
 	cnd_destroy(&self->queue);
 }
 
-static ALWAYS inline int evt_wait(Event* self, mtx_t* mutex)
+static inline int evt_wait(Event* self, mtx_t* mutex)
 {
 	// assume `mutex` is locked
 	while (self->state == 0) {
@@ -57,7 +55,7 @@ static ALWAYS inline int evt_wait(Event* self, mtx_t* mutex)
 	return thrd_success;
 }
 
-static ALWAYS inline int evt_block(Event* self, mtx_t* mutex)
+static inline int evt_block(Event* self, mtx_t* mutex)
 {
 	// assume `mutex` is locked
 	do {
@@ -73,8 +71,6 @@ static ALWAYS inline int evt_signal(Event* self)
 	++self->state;
 	return cnd_signal(&self->queue);
 }
-
-#undef ALWAYS
 
 #endif // EVENT_H
 

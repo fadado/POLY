@@ -1,9 +1,9 @@
 /*
- * To cope with failure.
+ * POLY
  *
  */
-#ifndef FAILURE_H
-#define FAILURE_H
+#ifndef POLY_H
+#define POLY_H
 
 #include <errno.h>
 #include <error.h>
@@ -13,6 +13,13 @@
 #define NDEBUG
 #endif
 #include <assert.h>
+
+// GCC optimization
+#ifdef __GNUC__
+#	define ALWAYS __attribute__((always_inline))
+#else
+#	define ALWAYS /*NOP*/
+#endif
 
 // for assert unconditional failure
 enum {
@@ -36,6 +43,6 @@ typedef void (*Thunk)(void);
 #define trace(...)
 #endif
 
-#endif // FAILURE_H
+#endif // POLY_H
 
 // vim:ai:sw=4:ts=4:syntax=cpp

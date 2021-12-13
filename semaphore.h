@@ -7,13 +7,11 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
-#ifndef FAILURE_H
-#error To cope with failure I need "failure.h"!
+#ifndef POLY_H
+#error To conduct the choir I need "poly.h"!
 #endif
 
-#include <threads.h>
-
-#include "event.h"
+#include "event.h" // include <thread.h>
 
 ////////////////////////////////////////////////////////////////////////
 // Types
@@ -44,8 +42,6 @@ static inline int  sem_V(Semaphore* self);
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
-
-#define ALWAYS __attribute__((always_inline))
 
 /*
 // Number of available resources
@@ -148,7 +144,6 @@ static inline int sem_V(Semaphore* self)
 	LEAVE_SEMAPHORE_MONITOR
 }
 
-#undef ALWAYS
 #undef ASSERT_SEMAPHORE_INVARIANT
 #undef ENTER_SEMAPHORE_MONITOR
 #undef LEAVE_SEMAPHORE_MONITOR

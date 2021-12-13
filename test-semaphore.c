@@ -6,7 +6,7 @@
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "failure.h"
+#include "poly.h"
 #include "scalar.h"
 #include "semaphore.h"
 

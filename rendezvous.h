@@ -7,8 +7,8 @@
 #ifndef RENDEZVOUS_H
 #define RENDEZVOUS_H
 
-#ifndef FAILURE_H
-#error To cope with failure I need "failure.h"!
+#ifndef POLY_H
+#error To conduct the choir I need "poly.h"!
 #endif
 
 #include "event.h" // include <thread.h>
@@ -49,25 +49,23 @@ static inline int rv_init(RendezVous self)
 	return err;
 }
 
-static inline void rv_destroy(RendezVous self)
+static ALWAYS inline void rv_destroy(RendezVous self)
 {
 	evt_destroy(&self[0]);
 	evt_destroy(&self[1]);
 }
 
-static inline int rv_wait(RendezVous self, int i, mtx_t* mutex)
+static ALWAYS inline int rv_wait(RendezVous self, int i, mtx_t* mutex)
 {
 	assert(i==0 || i==1);
-
 	trace("WAIT   @ %s", _RV_[i]);
 
 	return evt_wait(&self[i], mutex);
 }
 
-static inline int rv_signal(RendezVous self, int i)
+static ALWAYS inline int rv_signal(RendezVous self, int i)
 {
 	assert(i==0 || i==1);
-
 	trace("SIGNAL @ %s", _RV_[i]);
 
 	return evt_signal(&self[i]);

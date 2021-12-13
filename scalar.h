@@ -5,12 +5,12 @@
 #ifndef SCALAR_H
 #define SCALAR_H
 
-#ifndef FAILURE_H
-#error To cope with failure I need "failure.h"!
+#ifndef POLY_H
+#error To conduct the choir I need "poly.h"!
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// Type Scalar and 64 bit members
+// Scalar type and 64 bit scalar types
 ////////////////////////////////////////////////////////////////////////
 
 typedef signed long long   Integer; // like int64_t; assume LP64 or LLP64
@@ -23,6 +23,10 @@ static_assert(sizeof(Real) == sizeof(Word));
 static_assert(sizeof(Real) == sizeof(Pointer));
 static_assert(sizeof(Real) == 8);
 
+//#ifndef __GNUC__
+//#warning Type Scalar needs transparent union attribute.
+//#endif
+
 typedef union Scalar {
 	Integer integer;
 	Word    word;
@@ -33,7 +37,10 @@ __attribute__((__transparent_union__));
 
 static_assert(sizeof(Scalar) == 8);
 
-// Cast from any scalar value to an Scalar
+// union_scalar  coerce(native_scalar);
+// native_scalar cast(union_scalar, native_scalar_exemple_for_type);
+
+// Cast from any native scalar EXPRESSION to an Scalar
 #define coerce(EXPRESSION) _Generic((EXPRESSION),\
 	Scalar: (EXPRESSION),\
 	_Bool: (Word)(EXPRESSION),\
@@ -53,7 +60,7 @@ static_assert(sizeof(Scalar) == 8);
 	long double: (Real)(EXPRESSION),\
 	default: (Pointer)(Word)(EXPRESSION))
 
-// Cast an Scalar to the same type as the example expression type
+// Cast an union SCALAR to the same type as the EXAMPLE expression type
 #define cast(SCALAR,EXAMPLE) _Generic((EXAMPLE),\
 	_Bool: (_Bool)(SCALAR).word,\
 	char: (char)(SCALAR).word,\
