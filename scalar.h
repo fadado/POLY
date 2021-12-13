@@ -37,6 +37,10 @@ __attribute__((__transparent_union__));
 
 static_assert(sizeof(Scalar) == 8);
 
+////////////////////////////////////////////////////////////////////////
+// Cast to and from Scalar
+////////////////////////////////////////////////////////////////////////
+
 // union_scalar  coerce(native_scalar);
 // native_scalar cast(union_scalar, native_scalar_exemple_for_type);
 

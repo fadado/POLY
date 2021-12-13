@@ -2,11 +2,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <threads.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "poly.h"
+#include "POLY.h"
 #include "channel.h" // include scalar.h
 
 ////////////////////////////////////////////////////////////////////////

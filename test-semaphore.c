@@ -2,11 +2,10 @@
 
 #include <stdlib.h>
 //#include <time.h>
-#include <threads.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "poly.h"
+#include "POLY.h"
 #include "scalar.h"
 #include "semaphore.h"
 

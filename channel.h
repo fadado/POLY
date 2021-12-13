@@ -13,13 +13,13 @@
 
 #include <stdbool.h>
 #include <stdlib.h> // calloc
-#include <threads.h>
 
 #include "scalar.h"
 #include "rendezvous.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
+// Interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
@@ -30,7 +30,7 @@ typedef struct Channel {
 	short count;
 	union {
 		Scalar* buffer; // for size > 1
-		Scalar  value;  // optimize for size == 1
+		Scalar  value;  // for size == 1
 	};
 	// monitor
 	mtx_t mutex;
@@ -42,9 +42,23 @@ typedef struct Channel {
 			cnd_t non_full;
 		};
 		// blocking channels
-		Event rendezvous[2];
+		RendezVous rendezvous;
 	};
 } Channel;
+
+static inline int  chn_init(Channel* self, unsigned capacity);
+static inline void chn_destroy(Channel* self);
+static inline int  chn_send_(Channel* self, Scalar x);
+static inline int  chn_receive(Channel* self, Scalar* x);
+static inline void chn_close(Channel* self);
+static inline bool chn_exhaust(Channel* self);
+
+// Accept any scalar type
+#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce((EXPRESSION)))
+
+////////////////////////////////////////////////////////////////////////
+// Implementation
+////////////////////////////////////////////////////////////////////////
 
 // Constants for flags
 enum channel_flag {
@@ -66,25 +80,7 @@ enum channel_flag {
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
 
-////////////////////////////////////////////////////////////////////////
-// Interface
-////////////////////////////////////////////////////////////////////////
-
-static inline int  chn_init(Channel* self, unsigned capacity);
-static inline void chn_destroy(Channel* self);
-static inline int  chn_send_(Channel* self, Scalar x);
-static inline int  chn_receive(Channel* self, Scalar* x);
-static inline void chn_close(Channel* self);
-static inline bool chn_exhaust(Channel* self);
-
-// Accept any scalar type
-#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce((EXPRESSION)))
-
-////////////////////////////////////////////////////////////////////////
-// Implementation
-////////////////////////////////////////////////////////////////////////
-
-// same strategy in all this module
+// Same error management strategy in all this module
 #define catch(X) if ((err=(X))!=thrd_success) goto onerror
 
 //
@@ -108,7 +104,6 @@ static inline int chn_init(Channel* self, unsigned capacity)
 {
 	void d_mutex(void)  { mtx_destroy(&self->mutex); }
 	void d_empty(void)  { cnd_destroy(&self->non_empty); }
-	void d_rv(void)     { rv_destroy(self->rendezvous); }
 	void d_buffer(void) { free(self->buffer); }
 
 	// cleanup thunks to call before return
@@ -125,8 +120,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	switch (self->size) {
 		case 0:
-			catch (rv_init(self->rendezvous));
-			push(d_rv);
+			catch (rv_init(&self->rendezvous));
 			self->size = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
@@ -167,7 +161,7 @@ static inline void chn_destroy(Channel* self)
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
 	} else if (self->flags & CHANNEL_BLOCKING) {
-		rv_destroy(self->rendezvous);
+		rv_destroy(&self->rendezvous);
 	}
 	if (self->size > 1) {
 		free(self->buffer);
@@ -175,7 +169,7 @@ static inline void chn_destroy(Channel* self)
 	}
 }
 
-static ALWAYS inline void chn_close(Channel* self)
+static inline void chn_close(Channel* self)
 {
 	mtx_lock(&self->mutex); // assume the mutex cannot fail...
 	self->flags |= CHANNEL_CLOSED;
@@ -229,14 +223,12 @@ static inline int chn_send_(Channel* self, Scalar x)
 
 	if (self->flags & CHANNEL_BLOCKING) {
 		assert(self->size == 1);
-		//BUG:assert(_chn_empty(self));
-
 		// protocol
 		//    thread a: wait(0)-A-signal(1)
 		//    thread b: signal(0)-wait(1)-B
-		catch (rv_wait(self->rendezvous, 0, &self->mutex));
+		catch (rv_wait(&self->rendezvous, 0, &self->mutex));
 		self->value = x;
-		catch (rv_signal(self->rendezvous, 1));
+		catch (rv_signal(&self->rendezvous, 1));
 		//
 	} else if (self->size == 1) {
 		assert(_chn_empty(self));
@@ -264,13 +256,11 @@ static inline int chn_receive(Channel* self, Scalar* x)
 
 	if (self->flags & CHANNEL_BLOCKING) {
 		assert(self->size == 1);
-		//BUG:assert(_chn_empty(self));
-
 		// protocol
-		//    thread a: wait(0)-ACTION-signal(1)
-		//    thread b: signal(0)-wait(1)-ACTION
-		catch (rv_signal(self->rendezvous, 0));
-		catch (rv_wait(self->rendezvous, 1, &self->mutex));
+		//    thread a: wait(0)-A-signal(1)
+		//    thread b: signal(0)-wait(1)-B
+		catch (rv_signal(&self->rendezvous, 0));
+		catch (rv_wait(&self->rendezvous, 1, &self->mutex));
 		if (x) *x = self->value;
 		//
 	} else if (self->size == 1) {

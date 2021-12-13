@@ -11,8 +11,6 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include <threads.h>
-
 ////////////////////////////////////////////////////////////////////////
 // Type Event
 // Interface
@@ -26,20 +24,20 @@ typedef struct Event {
 static inline int  evt_init(Event* self);
 static inline void evt_destroy(Event* self);
 static inline int  evt_wait(Event* self, mtx_t* mutex);
-static inline int  evt_block(Event* self, mtx_t* mutex);
+static inline int  evt_wait_after(Event* self, mtx_t* mutex);
 static inline int  evt_signal(Event* self);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int evt_init(Event* self)
+static inline int evt_init(Event* self)
 {
 	self->state = 0;
 	return cnd_init(&self->queue);
 }
 
-static ALWAYS inline void evt_destroy(Event* self)
+static inline void evt_destroy(Event* self)
 {
 	cnd_destroy(&self->queue);
 }
@@ -55,7 +53,7 @@ static inline int evt_wait(Event* self, mtx_t* mutex)
 	return thrd_success;
 }
 
-static inline int evt_block(Event* self, mtx_t* mutex)
+static inline int evt_wait_after(Event* self, mtx_t* mutex)
 {
 	// assume `mutex` is locked
 	do {

@@ -11,14 +11,25 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include "event.h" // include <thread.h>
+#include "event.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type RendezVous
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-typedef Event RendezVous[2];
+typedef struct RendezVous {
+	Event pair[2];
+} RendezVous;
+
+static inline int  rv_init(RendezVous* self);
+static inline void rv_destroy(RendezVous* self);
+static inline int  rv_wait(RendezVous* self, int i, mtx_t* mutex);
+static inline int  rv_signal(RendezVous* self, int i);
+
+////////////////////////////////////////////////////////////////////////
+// Implementation
+////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
 const char* _RV_[2] = {
@@ -27,48 +38,39 @@ const char* _RV_[2] = {
 };
 #endif
 
-static inline int  rv_init(RendezVous self);
-static inline void rv_destroy(RendezVous self);
-static inline int  rv_wait(RendezVous self, int i, mtx_t* mutex);
-static inline int  rv_signal(RendezVous self, int i);
-
-////////////////////////////////////////////////////////////////////////
-// Implementation
-////////////////////////////////////////////////////////////////////////
-
-static inline int rv_init(RendezVous self)
+static inline int rv_init(RendezVous* self)
 {
 	int err;
-	if ((err=evt_init(&self[0])) == thrd_success) {
-		if ((err=evt_init(&self[1])) == thrd_success) {
+	if ((err=evt_init(&self->pair[0])) == thrd_success) {
+		if ((err=evt_init(&self->pair[1])) == thrd_success) {
 			return thrd_success;
 		} else {
-			evt_destroy(&self[0]);
+			evt_destroy(&self->pair[0]);
 		}
 	}
 	return err;
 }
 
-static ALWAYS inline void rv_destroy(RendezVous self)
+static inline void rv_destroy(RendezVous* self)
 {
-	evt_destroy(&self[0]);
-	evt_destroy(&self[1]);
+	evt_destroy(&self->pair[0]);
+	evt_destroy(&self->pair[1]);
 }
 
-static ALWAYS inline int rv_wait(RendezVous self, int i, mtx_t* mutex)
+static ALWAYS inline int rv_wait(RendezVous* self, int i, mtx_t* mutex)
 {
 	assert(i==0 || i==1);
 	trace("WAIT   @ %s", _RV_[i]);
 
-	return evt_wait(&self[i], mutex);
+	return evt_wait(&self->pair[i], mutex);
 }
 
-static ALWAYS inline int rv_signal(RendezVous self, int i)
+static ALWAYS inline int rv_signal(RendezVous* self, int i)
 {
 	assert(i==0 || i==1);
 	trace("SIGNAL @ %s", _RV_[i]);
 
-	return evt_signal(&self[i]);
+	return evt_signal(&self->pair[i]);
 }
 
 #endif // RENDEZVOUS_H

@@ -11,7 +11,7 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include "event.h" // include <thread.h>
+#include "event.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Types
@@ -117,7 +117,7 @@ static inline int sem_P(Semaphore* self)
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_block(&self->waking, &self->mutex);
+		int err = evt_wait_after(&self->waking, &self->mutex);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
