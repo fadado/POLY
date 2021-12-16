@@ -1,5 +1,5 @@
 /*
- * Locks
+ * Locks (wrapper to mtx_t)
  *
  * Compile: gcc -O2 -lpthread ...
  *

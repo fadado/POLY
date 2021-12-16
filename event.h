@@ -1,5 +1,5 @@
 /*
- * Events
+ * Event (wrapper to cnd_t)
  *
  * Compile: gcc -O2 -lpthread ...
  *
@@ -28,6 +28,7 @@ static inline void evt_destroy(Event* self);
 static inline int  evt_wait(Event* self, union lck_ptr mutex);
 static inline int  evt_wait_after(Event* self, union lck_ptr mutex);
 static inline int  evt_signal(Event* self);
+static inline int  evt_watch(Event* self, union lck_ptr mutex, struct timespec* ts);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -60,6 +61,17 @@ static inline int evt_wait_after(Event* self, union lck_ptr mutex)
 	// assume `mutex` is locked
 	do {
 		int err = cnd_wait(&self->queue, mutex.mutex);
+		if (err != thrd_success) return err;
+	} while (self->state == 0);
+	--self->state;
+	return thrd_success;
+}
+
+static inline int evt_watch(Event* self, union lck_ptr mutex, struct timespec* ts)
+{
+	// assume `mutex` is locked
+	do {
+		int err = cnd_timedwait(&self->queue, mutex.mutex, ts);
 		if (err != thrd_success) return err;
 	} while (self->state == 0);
 	--self->state;

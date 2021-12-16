@@ -11,8 +11,8 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include "event.h"
 #include "lock.h"
+#include "event.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Types
