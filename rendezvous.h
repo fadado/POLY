@@ -24,7 +24,7 @@ typedef struct RendezVous {
 
 static inline int  rv_init(RendezVous* self);
 static inline void rv_destroy(RendezVous* self);
-static inline int  rv_wait(RendezVous* self, int i, union lck_ptr mutex);
+static inline int  rv_wait(RendezVous* self, int i, union lck_ptr lock);
 static inline int  rv_signal(RendezVous* self, int i);
 
 ////////////////////////////////////////////////////////////////////////
@@ -57,19 +57,15 @@ static inline void rv_destroy(RendezVous* self)
 	evt_destroy(&self->pair[1]);
 }
 
-static ALWAYS inline int rv_wait(RendezVous* self, int i, union lck_ptr mutex)
+static ALWAYS inline int rv_wait(RendezVous* self, int i, union lck_ptr lock)
 {
 	assert(i==0 || i==1);
-	trace("WAIT   @ %s", _RV_[i]);
-
-	return evt_wait(&self->pair[i], mutex);
+	return evt_wait(&self->pair[i], lock);
 }
 
 static ALWAYS inline int rv_signal(RendezVous* self, int i)
 {
 	assert(i==0 || i==1);
-	trace("SIGNAL @ %s", _RV_[i]);
-
 	return evt_signal(&self->pair[i]);
 }
 

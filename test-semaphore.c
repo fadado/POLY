@@ -31,6 +31,7 @@ int test_lock_task(void* args)
 
 	//thrd_sleep(&ts, NULL);
 	//thrd_yield();
+	return 0;
 }
 static void test_lock(void)
 {
@@ -51,7 +52,7 @@ static void test_lock(void)
 		assert(e == thrd_success);
 	}
 	assert(test_lock_counter == N*M);
-	warn("COUNT: %d\n", test_lock_counter);
+	warn("COUNT: %lld\n", test_lock_counter);
 }
 
 int main(int argc, char* argv[])

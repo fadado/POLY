@@ -67,6 +67,7 @@ static ALWAYS inline int _sem_idle(Semaphore* self)
 static inline int sem_init(Semaphore* self, int count)
 {
 	assert(count >= 0);
+
 	self->counter = count;
 
 	int err;
@@ -82,6 +83,8 @@ static inline int sem_init(Semaphore* self, int count)
 
 static inline void sem_destroy(Semaphore* self)
 {
+	assert(self->counter == 0 ); // idle state
+
 	lck_destroy(&self->lock);
 	evt_destroy(&self->waking);
 }
@@ -111,14 +114,14 @@ self->counter is negative, the process executing wait is blocked (i.e.,
 added to the semaphore's queue). Otherwise, the process continues execution,
 having used a unit of the resource.
 */
-static inline int sem_P(Semaphore* self)
-{ // P, down, wait, acquire
+static inline int sem_P(Semaphore* self) // P, down, wait, acquire
+{
 	ENTER_SEMAPHORE_MONITOR
 
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_wait_after(&self->waking, &self->lock.mutex);//TODO: hide .mutex?
+		int err = evt_wait_next(&self->waking, &self->lock.mutex);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -131,8 +134,8 @@ value is negative or zero (meaning there are processes waiting for a
 resource), it transfers a blocked process from the semaphore's waiting queue
 to the ready queue.
 */
-static inline int sem_V(Semaphore* self)
-{ // V, up, signal, release
+static inline int sem_V(Semaphore* self) // V, up, signal, release
+{
 	ENTER_SEMAPHORE_MONITOR
 
 	int blocked = self->counter < 0 ? -self->counter : 0;
@@ -145,7 +148,6 @@ static inline int sem_V(Semaphore* self)
 	LEAVE_SEMAPHORE_MONITOR
 }
 
-#undef ASSERT_SEMAPHORE_INVARIANT
 #undef ENTER_SEMAPHORE_MONITOR
 #undef LEAVE_SEMAPHORE_MONITOR
 #undef CHECK_SEMAPHORE_MONITOR

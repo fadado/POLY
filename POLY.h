@@ -49,9 +49,11 @@ enum {
 #ifdef __GNUC__
 #	define ALWAYS __attribute__((always_inline))
 #	define TRANSPARENT __attribute__((__transparent_union__))
+#	define fallthrough __attribute__((fallthrough))
 #else
-#	define ALWAYS /*NOP*/
-#	define TRANSPARENT /*NOP*/
+#	define ALWAYS       /*NOP*/
+#	define TRANSPARENT  /*NOP*/
+#	define fallthrough  /*NOP*/
 #endif
 
 // To easy callbacks declaration
