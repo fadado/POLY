@@ -11,6 +11,8 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
+#include "lock.h"
+
 ////////////////////////////////////////////////////////////////////////
 // Type Event
 // Interface
@@ -23,8 +25,8 @@ typedef struct Event {
 
 static inline int  evt_init(Event* self);
 static inline void evt_destroy(Event* self);
-static inline int  evt_wait(Event* self, mtx_t* mutex);
-static inline int  evt_wait_after(Event* self, mtx_t* mutex);
+static inline int  evt_wait(Event* self, union lck_ptr mutex);
+static inline int  evt_wait_after(Event* self, union lck_ptr mutex);
 static inline int  evt_signal(Event* self);
 
 ////////////////////////////////////////////////////////////////////////
@@ -42,22 +44,22 @@ static inline void evt_destroy(Event* self)
 	cnd_destroy(&self->queue);
 }
 
-static inline int evt_wait(Event* self, mtx_t* mutex)
+static inline int evt_wait(Event* self, union lck_ptr mutex)
 {
 	// assume `mutex` is locked
 	while (self->state == 0) {
-		int err = cnd_wait(&self->queue, mutex);
+		int err = cnd_wait(&self->queue, mutex.mutex);
 		if (err != thrd_success) return err;
 	}
 	--self->state;
 	return thrd_success;
 }
 
-static inline int evt_wait_after(Event* self, mtx_t* mutex)
+static inline int evt_wait_after(Event* self, union lck_ptr mutex)
 {
 	// assume `mutex` is locked
 	do {
-		int err = cnd_wait(&self->queue, mutex);
+		int err = cnd_wait(&self->queue, mutex.mutex);
 		if (err != thrd_success) return err;
 	} while (self->state == 0);
 	--self->state;

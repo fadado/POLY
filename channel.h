@@ -15,7 +15,7 @@
 #include <stdlib.h> // calloc
 
 #include "scalar.h"
-#include "rendezvous.h"
+#include "rendezvous.h" // include event.h, lock.h
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -33,7 +33,7 @@ typedef struct Channel {
 		Scalar  value;  // for size == 1
 	};
 	// monitor
-	mtx_t mutex;
+	Lock lock;
 	union {
 		// buffered channels
 		struct {
@@ -102,7 +102,7 @@ static ALWAYS inline bool _chn_full(Channel* self)
 
 static inline int chn_init(Channel* self, unsigned capacity)
 {
-	void d_mutex(void)  { mtx_destroy(&self->mutex); }
+	void d_lock(void)   { lck_destroy(&self->lock); }
 	void d_empty(void)  { cnd_destroy(&self->non_empty); }
 	void d_buffer(void) { free(self->buffer); }
 
@@ -115,8 +115,8 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	self->count = self->flags = 0;
 	self->size = capacity;
-	catch (mtx_init(&self->mutex, mtx_plain));
-	push(d_mutex);
+	catch (lck_init(&self->lock));
+	push(d_lock);
 
 	switch (self->size) {
 		case 0:
@@ -156,7 +156,7 @@ static inline void chn_destroy(Channel* self)
 {
 	assert(_chn_empty(self)); // ???
 
-	mtx_destroy(&self->mutex);
+	lck_destroy(&self->lock);
 	if (self->flags & CHANNEL_BUFFERED) {
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
@@ -171,19 +171,19 @@ static inline void chn_destroy(Channel* self)
 
 static inline void chn_close(Channel* self)
 {
-	mtx_lock(&self->mutex); // assume the mutex cannot fail...
+	lck_acquire(&self->lock); // assume the mutex cannot fail...
 	self->flags |= CHANNEL_CLOSED;
 	if (self->size == 0) { // empty?
 		self->flags |= CHANNEL_EXHAUSTED;
 	}
-	mtx_unlock(&self->mutex);
+	lck_release(&self->lock);
 }
 
 static ALWAYS inline bool chn_exhaust(Channel* self)
 {
-	mtx_lock(&self->mutex); // assume the mutex cannot fail...
+	lck_acquire(&self->lock); // assume the mutex cannot fail...
 	bool b = self->flags & CHANNEL_EXHAUSTED;
-	mtx_unlock(&self->mutex);
+	lck_release(&self->lock);
 	return b;
 }
 
@@ -191,13 +191,13 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 // Monitor helpers
 //
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
-	if ((err=mtx_lock(&self->mutex))!=thrd_success) {\
+	if ((err=lck_acquire(&self->lock))!=thrd_success) {\
 		return err;\
 	}\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else while (PREDICATE(self)) {\
-		if ((err=cnd_wait(&CONDITION, &self->mutex))!=thrd_success) {\
-			mtx_destroy(&self->mutex);\
+		if ((err=cnd_wait(&CONDITION, &self->lock.mutex))!=thrd_success) {\
+			lck_destroy(&self->lock);\
 			return err;\
 		}\
 	}
@@ -205,10 +205,10 @@ static ALWAYS inline bool chn_exhaust(Channel* self)
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else if ((err=cnd_signal(&CONDITION))!=thrd_success) {\
-		mtx_unlock(&self->mutex);\
+		lck_release(&self->lock);\
 		return err;\
 	}\
-	if ((err=mtx_unlock(&self->mutex))!=thrd_success) {\
+	if ((err=lck_release(&self->lock))!=thrd_success) {\
 		return err;\
 	}
 
@@ -226,7 +226,7 @@ static inline int chn_send_(Channel* self, Scalar x)
 		// protocol
 		//    thread a: wait(0)-A-signal(1)
 		//    thread b: signal(0)-wait(1)-B
-		catch (rv_wait(&self->rendezvous, 0, &self->mutex));
+		catch (rv_wait(&self->rendezvous, 0, &self->lock));
 		self->value = x;
 		catch (rv_signal(&self->rendezvous, 1));
 		//
@@ -245,7 +245,7 @@ static inline int chn_send_(Channel* self, Scalar x)
 
 	return thrd_success;
 onerror:
-	mtx_unlock(&self->mutex);
+	lck_release(&self->lock);
 	return err;
 }
 
@@ -260,7 +260,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 		//    thread a: wait(0)-A-signal(1)
 		//    thread b: signal(0)-wait(1)-B
 		catch (rv_signal(&self->rendezvous, 0));
-		catch (rv_wait(&self->rendezvous, 1, &self->mutex));
+		catch (rv_wait(&self->rendezvous, 1, &self->lock));
 		if (x) *x = self->value;
 		//
 	} else if (self->size == 1) {
@@ -282,7 +282,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 
 	return thrd_success;
 onerror:
-	mtx_unlock(&self->mutex);
+	lck_release(&self->lock);
 	return err;
 }
 

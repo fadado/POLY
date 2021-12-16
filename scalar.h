@@ -23,17 +23,12 @@ static_assert(sizeof(Real) == sizeof(Word));
 static_assert(sizeof(Real) == sizeof(Pointer));
 static_assert(sizeof(Real) == 8);
 
-//#ifndef __GNUC__
-//#warning Type Scalar needs transparent union attribute.
-//#endif
-
-typedef union Scalar {
+typedef union TRANSPARENT Scalar {
 	Integer integer;
 	Word    word;
 	Real    real;
 	Pointer pointer;
-} Scalar
-__attribute__((__transparent_union__));
+} Scalar;
 
 static_assert(sizeof(Scalar) == 8);
 

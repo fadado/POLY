@@ -43,13 +43,15 @@ enum {
 // Other facilities
 ////////////////////////////////////////////////////////////////////////
 
-#include <threads.h>
+#include <threads.h> // include <time.h>
 
 // GCC optimization
 #ifdef __GNUC__
 #	define ALWAYS __attribute__((always_inline))
+#	define TRANSPARENT __attribute__((__transparent_union__))
 #else
 #	define ALWAYS /*NOP*/
+#	define TRANSPARENT /*NOP*/
 #endif
 
 // To easy callbacks declaration

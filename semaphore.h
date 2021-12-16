@@ -12,6 +12,7 @@
 #endif
 
 #include "event.h"
+#include "lock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Types
@@ -19,9 +20,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	// counter protected with a mutex
+	// counter protected with a lock
 	int   counter;
-	mtx_t mutex;
+	Lock  lock;
 	// signaling wake up
 	Event waking;
 } Semaphore;
@@ -69,11 +70,11 @@ static inline int sem_init(Semaphore* self, int count)
 	self->counter = count;
 
 	int err;
-	if ((err=mtx_init(&self->mutex, mtx_plain)) == thrd_success) {
+	if ((err=lck_init(&self->lock)) == thrd_success) {
 		if ((err=evt_init(&self->waking)) == thrd_success) {
 			return thrd_success;
 		} else {
-			mtx_destroy(&self->mutex);
+			lck_destroy(&self->lock);
 		}
 	}
 	return err;
@@ -81,7 +82,7 @@ static inline int sem_init(Semaphore* self, int count)
 
 static inline void sem_destroy(Semaphore* self)
 {
-	mtx_destroy(&self->mutex);
+	lck_destroy(&self->lock);
 	evt_destroy(&self->waking);
 }
 
@@ -90,17 +91,17 @@ static inline void sem_destroy(Semaphore* self)
 //
 #define ENTER_SEMAPHORE_MONITOR\
 	int err_;\
-	if ((err_=mtx_lock(&self->mutex))!=thrd_success)\
+	if ((err_=lck_acquire(&self->lock))!=thrd_success)\
 	return err_;
 
 #define LEAVE_SEMAPHORE_MONITOR\
-	if ((err_=mtx_unlock(&self->mutex))!=thrd_success)\
+	if ((err_=lck_release(&self->lock))!=thrd_success)\
 	return err_;\
 	else return thrd_success;
 
 #define CHECK_SEMAPHORE_MONITOR(E)\
 	if ((E)!=thrd_success) {\
-		mtx_unlock(&self->mutex);\
+		lck_release(&self->lock);\
 		return (E);\
 	}
 
@@ -117,7 +118,7 @@ static inline int sem_P(Semaphore* self)
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_wait_after(&self->waking, &self->mutex);
+		int err = evt_wait_after(&self->waking, &self->lock.mutex);//TODO: hide .mutex?
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
