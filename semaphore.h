@@ -20,11 +20,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	// counter protected with a lock
 	int   counter;
 	Lock  lock;
-	// signaling wake up
-	Event waking;
+	Event one_can_wakeup;
 } Semaphore;
 
 static inline int  sem_init(Semaphore* self, int count);
@@ -57,7 +55,7 @@ static ALWAYS inline int _sem_blocked(Semaphore* self)
 	return (self->counter < 0) ? -self->counter : 0;
 }
 
-// Idle state? value==0 and blocked==0
+// Idle state ("red" semaphore)? value==0 and blocked==0
 static ALWAYS inline int _sem_idle(Semaphore* self)
 {
 	return self->counter == 0;
@@ -72,7 +70,7 @@ static inline int sem_init(Semaphore* self, int count)
 
 	int err;
 	if ((err=lck_init(&self->lock)) == thrd_success) {
-		if ((err=evt_init(&self->waking)) == thrd_success) {
+		if ((err=evt_init(&self->one_can_wakeup)) == thrd_success) {
 			return thrd_success;
 		} else {
 			lck_destroy(&self->lock);
@@ -86,7 +84,7 @@ static inline void sem_destroy(Semaphore* self)
 	assert(self->counter == 0 ); // idle state
 
 	lck_destroy(&self->lock);
-	evt_destroy(&self->waking);
+	evt_destroy(&self->one_can_wakeup);
 }
 
 //
@@ -121,7 +119,7 @@ static inline int sem_P(Semaphore* self) // P, down, wait, acquire
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_wait_next(&self->waking, &self->lock.mutex);
+		int err = evt_wait_next(&self->one_can_wakeup, &self->lock.mutex);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -141,7 +139,7 @@ static inline int sem_V(Semaphore* self) // V, up, signal, release
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	++self->counter;
 	if (blocked > 0) { // There are threads blocked?
-		int err = evt_signal(&self->waking);
+		int err = evt_signal(&self->one_can_wakeup);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

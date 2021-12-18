@@ -19,8 +19,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Event {
-	short permits;
-	short waiting;
+	short permits; // # of threads allowed to leave the queue
+	short waiting; // # of threads waiting in the queue
 	cnd_t queue;
 } Event;
 
@@ -30,7 +30,6 @@ static inline int  evt_wait(Event* self, union lck_ptr lock);
 static inline int  evt_signal(Event* self);
 static inline int  evt_broadcast(Event* self);
 static inline int  evt_wait_next(Event* self, union lck_ptr lock);
-static inline int  evt_watch(Event* self, union lck_ptr lock, struct timespec* ts);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -67,18 +66,6 @@ static inline int evt_wait_next(Event* self, union lck_ptr lock)
 	do {
 		++self->waiting;
 		int err = cnd_wait(&self->queue, lock.mutex);
-		--self->waiting;
-		if (err != thrd_success) return err;
-	} while (self->permits == 0);
-	--self->permits;
-	return thrd_success;
-}
-
-static inline int evt_watch(Event* self, union lck_ptr lock, struct timespec* ts)
-{
-	do {
-		++self->waiting;
-		int err = cnd_timedwait(&self->queue, lock.mutex, ts);
 		--self->waiting;
 		if (err != thrd_success) return err;
 	} while (self->permits == 0);
