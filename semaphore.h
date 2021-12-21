@@ -70,7 +70,7 @@ static inline int sem_init(Semaphore* self, int count)
 
 	int err;
 	if ((err=lck_init(&self->lock)) == thrd_success) {
-		if ((err=evt_init(&self->one_can_wakeup)) == thrd_success) {
+		if ((err=evt_init(&self->one_can_wakeup, &self->lock)) == thrd_success) {
 			return thrd_success;
 		} else {
 			lck_destroy(&self->lock);
@@ -119,7 +119,7 @@ static inline int sem_P(Semaphore* self) // P, down, wait, acquire
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_wait_next(&self->one_can_wakeup, &self->lock.mutex);
+		int err = evt_stay(&self->one_can_wakeup);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

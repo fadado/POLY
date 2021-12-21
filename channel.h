@@ -15,7 +15,8 @@
 #include <stdlib.h> // calloc
 
 #include "scalar.h"
-#include "rendezvous.h" // include event.h, lock.h
+#include "lock.h"
+#include "rendezvous.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -117,7 +118,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	switch (self->capacity) {
 		case 0:
-			catch (rv_init(&self->rendezvous));
+			catch (rv_init(&self->rendezvous, &self->lock));
 			self->capacity = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
@@ -224,7 +225,7 @@ static inline int chn_send_(Channel* self, Scalar x)
 		// protocol
 		//    thread a: wait(0)-A-signal(1)
 		//    thread b: signal(0)-wait(1)-B
-		catch (rv_wait(&self->rendezvous, 0, &self->lock));
+		catch (rv_wait(&self->rendezvous, 0));
 		self->value = x;
 		catch (rv_signal(&self->rendezvous, 1));
 		//
@@ -258,7 +259,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 		//    thread a: wait(0)-A-signal(1)
 		//    thread b: signal(0)-wait(1)-B
 		catch (rv_signal(&self->rendezvous, 0));
-		catch (rv_wait(&self->rendezvous, 1, &self->lock));
+		catch (rv_wait(&self->rendezvous, 1));
 		if (x) *x = self->value;
 		//
 	} else if (self->capacity == 1) {
@@ -285,9 +286,7 @@ onerror:
 }
 
 #undef catch
-
 #undef ASSERT_CHANNEL_INVARIANT
-
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
 

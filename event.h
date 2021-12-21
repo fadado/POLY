@@ -19,25 +19,27 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Event {
-	short permits; // # of threads allowed to leave the queue
-	short waiting; // # of threads waiting in the queue
-	cnd_t queue;
+	short  permits; // # of threads allowed to leave the queue
+	short  waiting; // # of threads waiting in the queue
+	mtx_t* mutex;
+	cnd_t  queue;
 } Event;
 
-static inline int  evt_init(Event* self);
+static inline int  evt_init(Event* self, union lck_ptr lock);
 static inline void evt_destroy(Event* self);
-static inline int  evt_wait(Event* self, union lck_ptr lock);
+static inline int  evt_wait(Event* self);
 static inline int  evt_signal(Event* self);
 static inline int  evt_broadcast(Event* self);
-static inline int  evt_wait_next(Event* self, union lck_ptr lock);
+static inline int  evt_stay(Event* self);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int evt_init(Event* self)
+static inline int evt_init(Event* self, union lck_ptr lock)
 {
 	self->waiting = self->permits = 0;
+	self->mutex = lock.mutex;
 	return cnd_init(&self->queue);
 }
 
@@ -46,14 +48,15 @@ static inline void evt_destroy(Event* self)
 	assert(self->permits == 0);
 	assert(self->waiting == 0);
 
+	self->mutex = (mtx_t*)0; // sanitze
 	cnd_destroy(&self->queue);
 }
 
-static inline int evt_wait(Event* self, union lck_ptr lock)
+static inline int evt_wait(Event* self)
 {
 	while (self->permits == 0) {
 		++self->waiting;
-		int err = cnd_wait(&self->queue, lock.mutex);
+		int err = cnd_wait(&self->queue, self->mutex);
 		--self->waiting;
 		if (err != thrd_success) return err;
 	}
@@ -61,11 +64,11 @@ static inline int evt_wait(Event* self, union lck_ptr lock)
 	return thrd_success;
 }
 
-static inline int evt_wait_next(Event* self, union lck_ptr lock)
+static inline int evt_stay(Event* self)
 {
 	do {
 		++self->waiting;
-		int err = cnd_wait(&self->queue, lock.mutex);
+		int err = cnd_wait(&self->queue, self->mutex);
 		--self->waiting;
 		if (err != thrd_success) return err;
 	} while (self->permits == 0);
