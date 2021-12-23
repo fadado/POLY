@@ -6,6 +6,10 @@
 #define DEBUG
 #include "POLY.h"
 
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
 static int slow_fib(int x)
 {
 	if (x < 2) {
@@ -14,30 +18,70 @@ static int slow_fib(int x)
 	return slow_fib(x-1) + slow_fib(x-2);
 }
 
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
 static int spinner(void* args)
 {
-	int delay = *(int*)args;
+	struct timespec ts = {0};
+	ts.tv_nsec = *(int*)args;
 
-	char s[5] = "-\\|/";
+	char s[] = "-\\|/";
+	ALWAYS inline void spin(int i) {
+		putchar('\r'); putchar(' '); putchar(s[i]);
+		thrd_sleep(&ts, (void*)0);
+	}
+
+	spin(0);
 	while (1) {
 		for (int i = 0; s[i] != '\0'; ++i) {
-			printf("\r%c", s[i]);
-			thrd_sleep(&(struct timespec){.tv_nsec=delay*10}, 0);
+			spin(i);
 		}
 	}
 	return 0;
 }
 
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
+#define CSI "\x1b["
+#define SHOW CSI "?25h"
+#define HIDE CSI "?25l"
+
+#define hide_cursor() printf(HIDE)
+#define show_cursor() printf(SHOW)
+
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
+#define task_run(F,A)\
+	do {\
+		thrd_t t;\
+		int e = thrd_create(&t,&(F),&(A));\
+		assert(e==0);\
+		thrd_detach(t);\
+	} while(0)
+
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char** argv)
 {
-	enum { N=45 };
-	int delay = 1000000;
+	enum { N=46 };
+	int delay = 500000;
 
-	thrd_t t;
-	thrd_create(&t, &spinner, &delay);
-	thrd_detach(t);
+	hide_cursor();
+
+	task_run(spinner, delay);
 
 	int f = slow_fib(N);
+
+	show_cursor();
+
 	printf("\rFibonacci(%d) = %d\n", N, f);
 	return 0;
 }
