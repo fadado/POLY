@@ -31,6 +31,7 @@ static inline int  evt_wait(Event* self);
 static inline int  evt_signal(Event* self);
 static inline int  evt_broadcast(Event* self);
 static inline int  evt_stay(Event* self);
+static inline int  evt_watch(Event* self, unsigned long long nanoseconds);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -58,10 +59,10 @@ static inline int evt_wait(Event* self)
 		++self->waiting;
 		int err = cnd_wait(&self->queue, self->mutex);
 		--self->waiting;
-		if (err != thrd_success) return err;
+		if (err != STATUS_SUCCESS) return err;
 	}
 	--self->permits;
-	return thrd_success;
+	return STATUS_SUCCESS;
 }
 
 static inline int evt_stay(Event* self)
@@ -70,10 +71,10 @@ static inline int evt_stay(Event* self)
 		++self->waiting;
 		int err = cnd_wait(&self->queue, self->mutex);
 		--self->waiting;
-		if (err != thrd_success) return err;
+		if (err != STATUS_SUCCESS) return err;
 	} while (self->permits == 0);
 	--self->permits;
-	return thrd_success;
+	return STATUS_SUCCESS;
 }
 
 static ALWAYS inline int evt_signal(Event* self)
@@ -88,6 +89,14 @@ static ALWAYS inline int evt_broadcast(Event* self)
 		self->permits += self->waiting;
 		return cnd_broadcast(&self->queue);
 	}
+}
+
+static ALWAYS inline int evt_watch(Event* self, unsigned long long nanoseconds)
+{
+	time_t s = nanoseconds/1000000000;
+	long n   = nanoseconds%1000000000;
+	return cnd_timedwait(&self->queue, self->mutex,
+						 &(struct timespec){.tv_sec=s, .tv_nsec=n});
 }
 
 #endif // EVENT_H

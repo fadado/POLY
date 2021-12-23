@@ -41,6 +41,15 @@ enum {
 #define panic(FMT,...)\
 	error_at_line(~0,EPERM,__FILE__,__LINE__,FMT __VA_OPT__(,)__VA_ARGS__)
 
+// aliases
+enum {
+	STATUS_SUCCESS  = thrd_success,
+	STATUS_BUSY     = thrd_busy,
+	STATUS_ERROR    = thrd_error,
+	STATUS_NOMEM    = thrd_nomem,
+	STATUS_TIMEDOUT = thrd_timedout,
+};
+
 ////////////////////////////////////////////////////////////////////////
 // Other facilities
 ////////////////////////////////////////////////////////////////////////

@@ -42,9 +42,9 @@ const char* _RV_[2] = {
 static inline int rv_init(RendezVous* self, union lck_ptr lock)
 {
 	int err;
-	if ((err=evt_init(&self->pair[0], lock.mutex)) == thrd_success) {
-		if ((err=evt_init(&self->pair[1], lock.mutex)) == thrd_success) {
-			return thrd_success;
+	if ((err=evt_init(&self->pair[0], lock.mutex)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&self->pair[1], lock.mutex)) == STATUS_SUCCESS) {
+			return STATUS_SUCCESS;
 		} else {
 			evt_destroy(&self->pair[0]);
 		}

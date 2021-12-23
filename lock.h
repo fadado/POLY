@@ -35,7 +35,7 @@ static inline void lck_destroy(union lck_ptr self);
 static inline int  lck_acquire(union lck_ptr self);
 static inline int  lck_release(union lck_ptr self);
 static inline int  lck_try(union lck_ptr self);
-static inline int  lck_watch(union lck_ptr self, struct timespec* ts);
+static inline int  lck_watch(union lck_ptr self, unsigned long long nanoseconds);
 
 // Deduce mask from lock type
 #define lck_init(L) lck_init_((L), \
@@ -64,8 +64,12 @@ static ALWAYS inline int lck_release(union lck_ptr self)
 static ALWAYS inline int lck_try(union lck_ptr self)
 { return mtx_trylock(self.mutex); }
 
-static ALWAYS inline int lck_watch(union lck_ptr self, struct timespec* ts)
-{ return mtx_timedlock(self.mutex, ts); }
+static ALWAYS inline int lck_watch(union lck_ptr self, unsigned long long nanoseconds)
+{
+	time_t s = nanoseconds/1000000000;
+	long n   = nanoseconds%1000000000;
+	return mtx_timedlock(self.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=n});
+}
 
 #endif // LOCK_H
 

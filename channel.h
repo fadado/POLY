@@ -32,7 +32,7 @@ typedef struct Channel {
 		Scalar* buffer; // for capacity > 1
 		Scalar  value;  // for capacity == 1
 	};
-	Lock lock;
+	Lock entry;
 	union {
 		// buffered channel
 		struct {
@@ -79,7 +79,7 @@ enum channel_flag {
 #endif
 
 // Same error management strategy in all this module
-#define catch(X) if ((err=(X))!=thrd_success) goto onerror
+#define catch(X) if ((err=(X))!=STATUS_SUCCESS) goto onerror
 
 //
 // Predicates
@@ -100,7 +100,7 @@ static ALWAYS inline bool _chn_full(Channel* self)
 
 static inline int chn_init(Channel* self, unsigned capacity)
 {
-	void d_lock(void)   { lck_destroy(&self->lock); }
+	void d_lock(void)   { lck_destroy(&self->entry); }
 	void d_empty(void)  { cnd_destroy(&self->non_empty); }
 	void d_buffer(void) { free(self->buffer); }
 
@@ -113,12 +113,12 @@ static inline int chn_init(Channel* self, unsigned capacity)
 
 	self->occupation = self->flags = 0;
 	self->capacity = capacity;
-	catch (lck_init(&self->lock));
+	catch (lck_init(&self->entry));
 	push(d_lock);
 
 	switch (self->capacity) {
 		case 0:
-			catch (rv_init(&self->rendezvous, &self->lock));
+			catch (rv_init(&self->rendezvous, &self->entry));
 			self->capacity = 1; // reset value to 1!
 			self->flags |= CHANNEL_BLOCKING;
 			break;
@@ -126,7 +126,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 			self->front = 0;
 			self->buffer = calloc(self->capacity, sizeof(Scalar));
 			if (self->buffer == (Scalar*)0) {
-				err = thrd_nomem;
+				err = STATUS_NOMEM;
 				goto onerror;
 			}
 			push(d_buffer);
@@ -140,7 +140,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	}
 	ASSERT_CHANNEL_INVARIANT
 
-	return thrd_success;
+	return STATUS_SUCCESS;
 onerror:
 #	undef push
 	if (thunk_index > 0) {
@@ -155,7 +155,7 @@ static inline void chn_destroy(Channel* self)
 {
 	assert(_chn_empty(self)); // ???
 
-	lck_destroy(&self->lock);
+	lck_destroy(&self->entry);
 	if (self->flags & CHANNEL_BUFFERED) {
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
@@ -170,19 +170,19 @@ static inline void chn_destroy(Channel* self)
 
 static inline void chn_close(Channel* self)
 {
-	lck_acquire(&self->lock); // assume the mutex cannot fail...
+	lck_acquire(&self->entry); // assume the mutex cannot fail...
 	self->flags |= CHANNEL_CLOSED;
 	if (self->occupation == 0) { // empty?
 		self->flags |= CHANNEL_DRAINED;
 	}
-	lck_release(&self->lock);
+	lck_release(&self->entry);
 }
 
 static ALWAYS inline bool chn_drained(Channel* self)
 {
-	lck_acquire(&self->lock); // assume the mutex cannot fail...
+	lck_acquire(&self->entry); // assume the mutex cannot fail...
 	bool b = self->flags & CHANNEL_DRAINED;
-	lck_release(&self->lock);
+	lck_release(&self->entry);
 	return b;
 }
 
@@ -190,24 +190,24 @@ static ALWAYS inline bool chn_drained(Channel* self)
 // Monitor helpers
 //
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
-	if ((err=lck_acquire(&self->lock))!=thrd_success) {\
+	if ((err=lck_acquire(&self->entry))!=STATUS_SUCCESS) {\
 		return err;\
 	}\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else while (PREDICATE(self)) {\
-		if ((err=cnd_wait(&CONDITION, &self->lock.mutex))!=thrd_success) {\
-			lck_destroy(&self->lock);\
+		if ((err=cnd_wait(&CONDITION, &self->entry.mutex))!=STATUS_SUCCESS) {\
+			lck_destroy(&self->entry);\
 			return err;\
 		}\
 	}
 
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if (self->flags & CHANNEL_BLOCKING) /*NOP*/;\
-	else if ((err=cnd_signal(&CONDITION))!=thrd_success) {\
-		lck_release(&self->lock);\
+	else if ((err=cnd_signal(&CONDITION))!=STATUS_SUCCESS) {\
+		lck_release(&self->entry);\
 		return err;\
 	}\
-	if ((err=lck_release(&self->lock))!=thrd_success) {\
+	if ((err=lck_release(&self->entry))!=STATUS_SUCCESS) {\
 		return err;\
 	}
 
@@ -242,9 +242,9 @@ static inline int chn_send_(Channel* self, Scalar x)
 
 	LEAVE_CHANNEL_MONITOR (self->non_empty)
 
-	return thrd_success;
+	return STATUS_SUCCESS;
 onerror:
-	lck_release(&self->lock);
+	lck_release(&self->entry);
 	return err;
 }
 
@@ -280,9 +280,9 @@ static inline int chn_receive(Channel* self, Scalar* x)
 
 	LEAVE_CHANNEL_MONITOR (self->non_full)
 
-	return thrd_success;
+	return STATUS_SUCCESS;
 onerror:
-	lck_release(&self->lock);
+	lck_release(&self->entry);
 	return err;
 }
 

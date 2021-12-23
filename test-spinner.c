@@ -5,6 +5,7 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "POLY.h"
+#include "task.h"
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -22,15 +23,15 @@ static int slow_fib(int x)
 //
 ////////////////////////////////////////////////////////////////////////
 
-static int spinner(void* args)
+static int task_spinner(void* args)
 {
-	struct timespec ts = {0};
-	ts.tv_nsec = *(int*)args;
+	int delay = *(int*)args;
 
-	char s[] = "-\\|/";
+	const char s[] = "-\\|/-";
+
 	ALWAYS inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		thrd_sleep(&ts, (void*)0);
+		tsk_sleep(delay);
 	}
 
 	spin(0);
@@ -57,18 +58,6 @@ static int spinner(void* args)
 //
 ////////////////////////////////////////////////////////////////////////
 
-#define task_run(F,A)\
-	do {\
-		thrd_t t;\
-		int e = thrd_create(&t,&(F),&(A));\
-		assert(e==0);\
-		thrd_detach(t);\
-	} while(0)
-
-////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////
-
 int main(int argc, char** argv)
 {
 	enum { N=46 };
@@ -76,7 +65,7 @@ int main(int argc, char** argv)
 
 	hide_cursor();
 
-	task_run(spinner, delay);
+	tsk_run(task_spinner, &delay);
 
 	int f = slow_fib(N);
 

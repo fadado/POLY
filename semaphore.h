@@ -21,8 +21,8 @@
 
 typedef struct Semaphore {
 	int   counter;
-	Lock  lock;
-	Event one_can_wakeup;
+	Lock  entry;
+	Event queue;
 } Semaphore;
 
 static inline int  sem_init(Semaphore* self, int count);
@@ -69,11 +69,11 @@ static inline int sem_init(Semaphore* self, int count)
 	self->counter = count;
 
 	int err;
-	if ((err=lck_init(&self->lock)) == thrd_success) {
-		if ((err=evt_init(&self->one_can_wakeup, &self->lock)) == thrd_success) {
-			return thrd_success;
+	if ((err=lck_init(&self->entry)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&self->queue, &self->entry)) == STATUS_SUCCESS) {
+			return STATUS_SUCCESS;
 		} else {
-			lck_destroy(&self->lock);
+			lck_destroy(&self->entry);
 		}
 	}
 	return err;
@@ -83,8 +83,8 @@ static inline void sem_destroy(Semaphore* self)
 {
 	assert(self->counter == 0 ); // idle state
 
-	lck_destroy(&self->lock);
-	evt_destroy(&self->one_can_wakeup);
+	lck_destroy(&self->entry);
+	evt_destroy(&self->queue);
 }
 
 //
@@ -92,17 +92,17 @@ static inline void sem_destroy(Semaphore* self)
 //
 #define ENTER_SEMAPHORE_MONITOR\
 	int err_;\
-	if ((err_=lck_acquire(&self->lock))!=thrd_success)\
+	if ((err_=lck_acquire(&self->entry))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_SEMAPHORE_MONITOR\
-	if ((err_=lck_release(&self->lock))!=thrd_success)\
+	if ((err_=lck_release(&self->entry))!=STATUS_SUCCESS)\
 	return err_;\
-	else return thrd_success;
+	else return STATUS_SUCCESS;
 
 #define CHECK_SEMAPHORE_MONITOR(E)\
-	if ((E)!=thrd_success) {\
-		lck_release(&self->lock);\
+	if ((E)!=STATUS_SUCCESS) {\
+		lck_release(&self->entry);\
 		return (E);\
 	}
 
@@ -119,7 +119,7 @@ static inline int sem_P(Semaphore* self) // P, down, wait, acquire
 	--self->counter;
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	if (blocked > 0) { // Do I have to block?
-		int err = evt_stay(&self->one_can_wakeup);
+		int err = evt_stay(&self->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -139,7 +139,7 @@ static inline int sem_V(Semaphore* self) // V, up, signal, release
 	int blocked = self->counter < 0 ? -self->counter : 0;
 	++self->counter;
 	if (blocked > 0) { // There are threads blocked?
-		int err = evt_signal(&self->one_can_wakeup);
+		int err = evt_signal(&self->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

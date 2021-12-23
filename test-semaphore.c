@@ -6,19 +6,18 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "POLY.h"
+#include "task.h"
 #include "scalar.h"
 #include "semaphore.h"
 
 static Semaphore test_lock_mutex;
 static Integer test_lock_counter;
 enum { N=10, M=10000 };
-int test_lock_task(void* args)
+int task_test(void* args)
 {
 #ifdef DEBUG
 	//warn("Enter %s", __func__);
 #endif
-	//struct timespec ts = {.tv_sec=0, .tv_nsec=1000, };
-	//
 	for (int i=0; i < M; ++i) {
 		sem_acquire(&test_lock_mutex);
 		Integer* pi = &test_lock_counter;
@@ -27,10 +26,8 @@ int test_lock_task(void* args)
 		**ppi = tmp;
 		sem_release(&test_lock_mutex);
 	}
-	thrd_yield();
+	tsk_yield();
 
-	//thrd_sleep(&ts, NULL);
-	//thrd_yield();
 	return 0;
 }
 static void test_lock(void)
@@ -42,14 +39,14 @@ static void test_lock(void)
 
 	sem_init(&test_lock_mutex, 1);
 
-	thrd_t t[N];
+	Task t[N];
 	for (int i=0; i < N; ++i) {
-		int e = thrd_create(&t[i], test_lock_task, NULL);
-		assert(e == thrd_success);
+		int e = tsk_fork(&t[i], task_test, (void*)0);
+		assert(e == STATUS_SUCCESS);
 	}
 	for (int i=0; i < N; ++i) {
-		int e = thrd_join(t[i], NULL);
-		assert(e == thrd_success);
+		int e = tsk_join(t[i]);
+		assert(e == STATUS_SUCCESS);
 	}
 	assert(test_lock_counter == N*M);
 	warn("COUNT: %lld\n", test_lock_counter);

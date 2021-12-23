@@ -22,7 +22,7 @@
 typedef struct Barrier {
 	short capacity;
 	short places;
-	Lock  lock;
+	Lock  entry;
 	Event move_on;
 } Barrier;
 
@@ -51,11 +51,11 @@ static inline int brr_init(Barrier* self, int capacity)
 	self->places = self->capacity = capacity;
 
 	int err;
-	if ((err=lck_init(&self->lock)) == thrd_success) {
-		if ((err=evt_init(&self->move_on, &self->lock)) == thrd_success) {
-			return thrd_success;
+	if ((err=lck_init(&self->entry)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&self->move_on, &self->entry)) == STATUS_SUCCESS) {
+			return STATUS_SUCCESS;
 		} else {
-			lck_destroy(&self->lock);
+			lck_destroy(&self->entry);
 		}
 	}
 	return err;
@@ -65,7 +65,7 @@ static inline void brr_destroy(Barrier* self)
 {
 	assert(self->places == 0 ); // idle state
 
-	lck_destroy(&self->lock);
+	lck_destroy(&self->entry);
 	evt_destroy(&self->move_on);
 }
 
@@ -74,22 +74,22 @@ static inline void brr_destroy(Barrier* self)
 //
 #define ENTER_BARRIER_MONITOR\
 	int err_;\
-	if ((err_=lck_acquire(&self->lock))!=thrd_success)\
+	if ((err_=lck_acquire(&self->entry))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_BARRIER_MONITOR\
-	if ((err_=lck_release(&self->lock))!=thrd_success)\
+	if ((err_=lck_release(&self->entry))!=STATUS_SUCCESS)\
 	return err_;\
 
 #define CHECK_BARRIER_MONITOR(E)\
-	if ((E)!=thrd_success) {\
-		lck_release(&self->lock);\
+	if ((E)!=STATUS_SUCCESS) {\
+		lck_release(&self->entry);\
 		return (E);\
 	}
 
 static inline int brr_wait(Event* self)
 {
-	int status = thrd_success;
+	int status = STATUS_SUCCESS;
 	ENTER_BARRIER_MONITOR
 
 	--self->places;
