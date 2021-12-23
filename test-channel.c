@@ -56,7 +56,7 @@ static int task_consumer(void* args)
 #endif
 	Channel* channel = args;
 	Scalar s;
-	while (!chn_exhaust(channel)) {
+	while (!chn_drained(channel)) {
 		catch (chn_receive(channel, &s));
 		char c = cast(s, '@');
 #ifdef DEBUG

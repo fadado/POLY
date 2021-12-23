@@ -52,7 +52,7 @@ static inline int brr_init(Barrier* self, int capacity)
 
 	int err;
 	if ((err=lck_init(&self->lock)) == thrd_success) {
-		if ((err=evt_init(&self->move_on)) == thrd_success) {
+		if ((err=evt_init(&self->move_on, &self->lock)) == thrd_success) {
 			return thrd_success;
 		} else {
 			lck_destroy(&self->lock);
@@ -100,7 +100,7 @@ static inline int brr_wait(Event* self)
 		CHECK_SEMAPHORE_MONITOR (err)
 		status = BARRIER_FULL; // barrier complete phase/cycle
 	} else {
-		int err = evt_wait(&self->move_on, &self->lock.mutex);
+		int err = evt_wait(&self->move_on);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

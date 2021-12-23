@@ -49,7 +49,7 @@ static inline void chn_destroy(Channel* self);
 static inline int  chn_send_(Channel* self, Scalar x);
 static inline int  chn_receive(Channel* self, Scalar* x);
 static inline void chn_close(Channel* self);
-static inline bool chn_exhaust(Channel* self);
+static inline bool chn_drained(Channel* self);
 
 // Accept any scalar type
 #define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce((EXPRESSION)))
@@ -60,10 +60,10 @@ static inline bool chn_exhaust(Channel* self);
 
 // Constants for flags
 enum channel_flag {
-	CHANNEL_BUFFERED    = (1<<0),
-	CHANNEL_BLOCKING    = (1<<1),
-	CHANNEL_CLOSED      = (1<<2),
-	CHANNEL_EXHAUSTED   = (1<<3),
+	CHANNEL_BUFFERED  = (1<<0),
+	CHANNEL_BLOCKING  = (1<<1),
+	CHANNEL_CLOSED    = (1<<2),
+	CHANNEL_DRAINED   = (1<<3),
 };
 
 #ifdef DEBUG
@@ -173,15 +173,15 @@ static inline void chn_close(Channel* self)
 	lck_acquire(&self->lock); // assume the mutex cannot fail...
 	self->flags |= CHANNEL_CLOSED;
 	if (self->occupation == 0) { // empty?
-		self->flags |= CHANNEL_EXHAUSTED;
+		self->flags |= CHANNEL_DRAINED;
 	}
 	lck_release(&self->lock);
 }
 
-static ALWAYS inline bool chn_exhaust(Channel* self)
+static ALWAYS inline bool chn_drained(Channel* self)
 {
 	lck_acquire(&self->lock); // assume the mutex cannot fail...
-	bool b = self->flags & CHANNEL_EXHAUSTED;
+	bool b = self->flags & CHANNEL_DRAINED;
 	lck_release(&self->lock);
 	return b;
 }
@@ -250,6 +250,7 @@ onerror:
 
 static inline int chn_receive(Channel* self, Scalar* x)
 {
+	//?? if (self->flags & CHANNEL_DRAINED) { return 0000 }
 	int err;
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
 
@@ -274,7 +275,7 @@ static inline int chn_receive(Channel* self, Scalar* x)
 	--self->occupation;
 	ASSERT_CHANNEL_INVARIANT
 	if ((self->flags & CHANNEL_CLOSED) && self->occupation == 0) {
-		self->flags |= CHANNEL_EXHAUSTED;
+		self->flags |= CHANNEL_DRAINED;
 	}
 
 	LEAVE_CHANNEL_MONITOR (self->non_full)
