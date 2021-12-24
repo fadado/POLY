@@ -250,7 +250,11 @@ onerror:
 
 static inline int chn_receive(Channel* self, Scalar* x)
 {
-	//?? if (self->flags & CHANNEL_DRAINED) { return 0000 }
+	if (self->flags & CHANNEL_DRAINED) { // atomic?
+		if (x) x->word = 0x0;
+		return STATUS_SUCCESS; // ???
+	}
+
 	int err;
 	ENTER_CHANNEL_MONITOR (_chn_empty, self->non_empty)
 

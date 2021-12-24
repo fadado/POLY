@@ -16,8 +16,8 @@
 
 typedef thrd_t Task;
 
-static inline int  tsk_run(int(*function)(void*), void* argument);
-static inline int  tsk_fork(Task* task_id, int(*function)(void*), void* argument);
+static inline int  tsk_run(int(*root)(void*), void* argument);
+static inline int  tsk_fork(Task* new_task, int(*root)(void*), void* argument);
 static inline int  tsk_join(Task task);
 static inline int  tsk_detach(Task task);
 static inline int  tsk_equal(Task task1, Task task2);
@@ -30,17 +30,17 @@ static inline void tsk_exit(int result);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int tsk_run(int(*function)(void*), void* argument)
+static ALWAYS inline int tsk_run(int(*root)(void*), void* argument)
 {
 	Task task;
-	int err = thrd_create(&task, function, argument);
+	int err = thrd_create(&task, root, argument);
 	if (err != STATUS_SUCCESS) return err;
 	return thrd_detach(task);
 }
 
-static ALWAYS inline int tsk_fork(Task* task_id, int(*function)(void*), void* argument)
+static ALWAYS inline int tsk_fork(Task* new_task, int(*root)(void*), void* argument)
 {
-	return thrd_create(task_id, function, argument);
+	return thrd_create(new_task, root, argument);
 }
 
 static ALWAYS inline int tsk_join(Task task)
