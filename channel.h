@@ -1,5 +1,5 @@
 /*
- * Channels of scalars
+ * Channel
  *
  * Compile: gcc -O2 -lpthread ...
  *

@@ -1,5 +1,5 @@
 /*
- * Locks (wrapper to mtx_t)
+ * Locks
  *
  * Compile: gcc -O2 -lpthread ...
  *
@@ -17,10 +17,13 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct { mtx_t mutex; } PlainLock;
-typedef PlainLock               Lock;
 typedef struct { mtx_t mutex; } TimedLock;
 typedef struct { mtx_t mutex; } RecursiveLock;
 typedef struct { mtx_t mutex; } TimedRecursiveLock;
+
+// handy aliases
+typedef PlainLock               Lock;
+typedef TimedRecursiveLock      RecursiveTimedLock;
 
 union TRANSPARENT lck_ptr {
 	mtx_t* mutex;

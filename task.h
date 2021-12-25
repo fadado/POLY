@@ -1,5 +1,5 @@
 /*
- * Task (wrapper to thrd_t)
+ * Task
  *
  */
 #ifndef TASK_H
@@ -17,7 +17,7 @@
 typedef thrd_t Task;
 
 static inline int  tsk_run(int(*root)(void*), void* argument);
-static inline int  tsk_fork(Task* new_task, int(*root)(void*), void* argument);
+static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);
 static inline int  tsk_join(Task task);
 static inline int  tsk_detach(Task task);
 static inline int  tsk_equal(Task task1, Task task2);
@@ -38,7 +38,7 @@ static ALWAYS inline int tsk_run(int(*root)(void*), void* argument)
 	return thrd_detach(task);
 }
 
-static ALWAYS inline int tsk_fork(Task* new_task, int(*root)(void*), void* argument)
+static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_task)
 {
 	return thrd_create(new_task, root, argument);
 }

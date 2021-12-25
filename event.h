@@ -1,5 +1,5 @@
 /*
- * Event (wrapper to cnd_t)
+ * Event
  *
  * Compile: gcc -O2 -lpthread ...
  *

@@ -41,7 +41,7 @@ static void test_lock(void)
 
 	Task t[N];
 	for (int i=0; i < N; ++i) {
-		int e = tsk_fork(&t[i], task_test, (void*)0);
+		int e = tsk_fork(task_test, (void*)0, &t[i]);
 		assert(e == STATUS_SUCCESS);
 	}
 	for (int i=0; i < N; ++i) {
