@@ -49,13 +49,13 @@ static ALWAYS inline int _sem_value(Semaphore* self)
 	return (self->counter > 0) ? self->counter : 0;
 }
 
-// Number of blocked threads
-static ALWAYS inline int _sem_queue_size(Semaphore* self)
+// Number of blocked threads in the queue
+static ALWAYS inline int _sem_length(Semaphore* self)
 {
 	return (self->counter < 0) ? -self->counter : 0;
 }
 
-// Idle state ("red" semaphore)? value==0 and queue_size==0
+// Idle state ("red" semaphore)? value==0 and length==0
 static ALWAYS inline int _sem_idle(Semaphore* self)
 {
 	return self->counter == 0;
@@ -117,8 +117,8 @@ static inline int sem_P(Semaphore* self) // P, down, wait, acquire
 	ENTER_SEMAPHORE_MONITOR
 
 	--self->counter;
-	int queue_size = self->counter < 0 ? -self->counter : 0;
-	if (queue_size > 0) { // Do I have to block?
+	int length = self->counter < 0 ? -self->counter : 0;
+	if (length > 0) { // Do I have to block?
 		int err = evt_stay(&self->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
@@ -136,9 +136,9 @@ static inline int sem_V(Semaphore* self) // V, up, signal, release
 {
 	ENTER_SEMAPHORE_MONITOR
 
-	int queue_size = self->counter < 0 ? -self->counter : 0;
+	int length = self->counter < 0 ? -self->counter : 0;
 	++self->counter;
-	if (queue_size > 0) { // There are threads blocked?
+	if (length > 0) { // There are threads blocked?
 		int err = evt_signal(&self->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}

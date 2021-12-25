@@ -12,7 +12,7 @@
 #endif
 
 #include "lock.h"
-//#include "event.h"
+#include "event.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type
@@ -22,7 +22,8 @@
 typedef struct RWLock {
 	int   counter;
 	Lock  entry;
-	cnd_t queue;
+	Event readers;
+	Event writers;
 } RWLock;
 
 static inline int  rwl_init(RWLock* self);
@@ -42,8 +43,13 @@ static inline int rwl_init(RWLock* self)
 
 	int err;
 	if ((err=lck_init(&self->entry)) == STATUS_SUCCESS) {
-		if ((err=cnd_init(&self->queue)) == STATUS_SUCCESS) {
-			return STATUS_SUCCESS;
+		if ((err=evt_init(&self->readers, &self->entry)) == STATUS_SUCCESS) {
+			if ((err=evt_init(&self->writers, &self->entry)) == STATUS_SUCCESS) {
+				return STATUS_SUCCESS;
+			} else {
+				evt_destroy(&self->readers);
+				lck_destroy(&self->entry);
+			}
 		} else {
 			lck_destroy(&self->entry);
 		}
@@ -56,7 +62,8 @@ static inline void rwl_destroy(RWLock* self)
 	assert(self->counter == 0 ); // idle state
 
 	lck_destroy(&self->entry);
-	cnd_destroy(&self->queue);
+	evt_destroy(&self->readers);
+	evt_destroy(&self->writers);
 }
 
 //
@@ -85,11 +92,13 @@ static inline int rwl_acquire(RWLock* self)
 {
 	ENTER_RWLOCK_MONITOR
 
-	while (self->counter != 0) {
-		int err = cnd_wait(&self->queue, &self->entry.mutex);
+	if (self->counter != 0) {
+		int err = evt_wait(&self->writers);
 		CHECK_RWLOCK_MONITOR (err)
+		// after signaling writers the counter must be zero
+		assert(self->counter == 0);
 	}
-	self->counter = -1;
+	self->counter = -1; // the writer holds the lock
 
 	LEAVE_RWLOCK_MONITOR
 }
@@ -98,8 +107,16 @@ static inline int rwl_release(RWLock* self)
 {
 	ENTER_RWLOCK_MONITOR
 
-	self->counter = 0;
-	cnd_broadcast(&self->queue);
+	self->counter = 0; // the writer unholds the lock
+	// writers waiting?
+	if (_evt_length(&self->writers) > 0) {
+		int err = evt_signal(&self->writers);
+		CHECK_RWLOCK_MONITOR (err)
+	// readers waiting?
+	} else if (_evt_length(&self->readers) > 0) {
+		int err = evt_broadcast(&self->readers);
+		CHECK_RWLOCK_MONITOR (err)
+	}
 
 	LEAVE_RWLOCK_MONITOR
 }
@@ -111,8 +128,9 @@ static inline int rwl_enter(RWLock* self)
 {
 	ENTER_RWLOCK_MONITOR
 
-	while (self->counter < 0) {
-		int err = cnd_wait(&self->queue, &self->entry.mutex);
+	// while a writer holds the lock
+	while (self->counter == -1) {
+		int err = evt_wait(&self->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
 	++self->counter;
@@ -125,8 +143,11 @@ static inline int rwl_leave(RWLock* self)
 	ENTER_RWLOCK_MONITOR
 
 	--self->counter;
-	if (self->counter == 0) {
-		cnd_broadcast(&self->queue);
+	if (self->counter == 0) { // no readers reading
+		if (_evt_length(&self->writers) > 0) {
+			int err = evt_signal(&self->writers);
+			CHECK_RWLOCK_MONITOR (err)
+		}
 	}
 
 	LEAVE_RWLOCK_MONITOR

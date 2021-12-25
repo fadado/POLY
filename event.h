@@ -37,6 +37,9 @@ static inline int  evt_watch(Event* self, unsigned long long nanoseconds);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
+static ALWAYS inline int _evt_length(Event* self)
+{ return self->waiting; }
+
 static inline int evt_init(Event* self, union lck_ptr lock)
 {
 	self->waiting = self->permits = 0;
@@ -93,8 +96,8 @@ static ALWAYS inline int evt_broadcast(Event* self)
 
 static ALWAYS inline int evt_watch(Event* self, unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000;
-	long n   = nanoseconds%1000000000;
+	time_t s = nanoseconds/1000000000ULL;
+	long   n = nanoseconds%1000000000ULL;
 	return cnd_timedwait(&self->queue, self->mutex,
 						 &(struct timespec){.tv_sec=s, .tv_nsec=n});
 }

@@ -6,7 +6,7 @@
 #define DEBUG
 #include "POLY.h"
 #include "task.h"
-#include "rwlock.h"
+#include "rwlock.h" // not used
 
 ////////////////////////////////////////////////////////////////////////
 //
