@@ -105,7 +105,7 @@ static inline int chn_init(Channel* self, unsigned capacity)
 	void d_buffer(void) { free(self->buffer); }
 
 	// cleanup thunks to call before return
-	Thunk thunks[4] = { 0 };
+	void(*thunks[4])(void) = { 0 };
 	int thunk_index = 0;
 #	define push(F) thunks[thunk_index++]=F
 
@@ -145,8 +145,9 @@ onerror:
 #	undef push
 	if (thunk_index > 0) {
 		assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
-		Thunk* t = thunks;
-		while (*t) { (*t++)(); }
+		int i;
+		for (i=0; thunks[i] != (void(*)(void))0; ++i) ;
+		for (--i; i >= 0; --i) (*thunks[i])();
 	}
 	return err;
 }

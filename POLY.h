@@ -65,9 +65,6 @@ enum {
 #	define fallthrough  /*NOP*/
 #endif
 
-// To easy callbacks declaration
-typedef void (*Thunk)(void);
-
 #endif // POLY_H
 
 // vim:ai:sw=4:ts=4:syntax=cpp

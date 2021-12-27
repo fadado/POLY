@@ -39,9 +39,7 @@ static ALWAYS inline int tsk_run(int(*root)(void*), void* argument)
 }
 
 static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_task)
-{
-	return thrd_create(new_task, root, argument);
-}
+{ return thrd_create(new_task, root, argument); }
 
 static ALWAYS inline int tsk_join(Task task)
 { return thrd_join(task, (void*)0); }
