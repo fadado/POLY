@@ -18,7 +18,7 @@
 /*
  *
  */
-static int task_producer(void* args)
+static int task_producer(void* arg)
 {
 	int err;
 #	define catch(X)	if ((err=(X))!=thrd_success) return err
@@ -26,7 +26,7 @@ static int task_producer(void* args)
 #ifdef DEBUG
 	warn("Enter %s", __func__);
 #endif
-	Channel* channel = args;
+	Channel* channel = arg;
 	for (int i=0; i < M; ++i) {
 		char c = '0'+i;
 		catch (chn_send(channel, c));
@@ -46,7 +46,7 @@ static int task_producer(void* args)
 /*
  *
  */
-static int task_consumer(void* args)
+static int task_consumer(void* arg)
 {
 	int err;
 #	define catch(X)	if ((err=(X))!=thrd_success) return err
@@ -54,7 +54,7 @@ static int task_consumer(void* args)
 #ifdef DEBUG
 	warn("Enter %s", __func__);
 #endif
-	Channel* channel = args;
+	Channel* channel = arg;
 	Scalar s;
 	while (!chn_drained(channel)) {
 		catch (chn_receive(channel, &s));

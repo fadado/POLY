@@ -20,8 +20,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	short capacity;
-	short places;
+	int   capacity;
+	int   places;
 	Lock  entry;
 	Event move_on;
 } Barrier;

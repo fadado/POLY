@@ -5,22 +5,28 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "POLY.h"
+#include "scalar.h"
 #include "task.h"
-#include "rwlock.h" // not used
+#include "channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////
 
-static int task_spinner(void* args)
+#define run(T,...) tsk_run(T, &(struct T){__VA_ARGS__})
+
+struct task_spinner {
+	int delay;
+};
+static int task_spinner(void* arg)
 {
-	int delay = *(int*)args;
+	struct task_spinner* my = arg;
 
 	const char s[] = "-\\|/-";
 
 	ALWAYS inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		tsk_sleep(delay);
+		tsk_sleep(my->delay);
 	}
 
 	spin(0);
@@ -36,13 +42,59 @@ static int task_spinner(void* args)
 //
 ////////////////////////////////////////////////////////////////////////
 
-static int slow_fib(int x)
+static long slow_fib(long x)
 {
 	if (x < 2) {
 		return x;
 	}
 	return slow_fib(x-1) + slow_fib(x-2);
 }
+
+#define UsingPromises 1
+
+#if UsingPromises
+
+typedef struct Future {
+	Channel channel;
+	Scalar  result;
+	int     solved; // bool
+	int     status;
+} Future;
+
+struct void_pair {
+	void* fut;
+	void* arg;
+};
+
+#define async(F,U,...)\
+	tsk_run(F, &(struct void_pair){U,&(struct F){__VA_ARGS__}})
+
+struct promise_fib {
+	long n;
+};
+
+static int promise_fib(void* arg)
+{
+	warn("Enter %s", __func__);
+	struct Future* future  = ((struct void_pair*)arg)->fut;
+	struct promise_fib* my = ((struct void_pair*)arg)->arg;
+
+	tsk_detach(tsk_self());
+	chn_init(&future->channel, 0);
+
+	warn("call slow_fib");
+	long fib = slow_fib(46);
+	//long fib = slow_fib(my->n);
+	warn("return slow_fib");
+
+	chn_send(&future->channel, fib);
+
+	//chn_destroy(&future->channel);
+
+	return 0; // tsk_exit(0);
+}
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -61,18 +113,26 @@ static int slow_fib(int x)
 
 int main(int argc, char** argv)
 {
-	enum { N=46 };
-	int delay = 500000;
+	enum { N=46, DELAY=500000}; // fib(46)=1836311903
 
 	hide_cursor();
 
-	tsk_run(task_spinner, &delay);
+	run(task_spinner, .delay=DELAY);
 
-	int f = slow_fib(N);
+#if UsingPromises
+	Future future;
+	async(promise_fib, &future, .n=DELAY);
+	chn_receive(&future.channel, &future.result);
+	long n = cast(future.result, 0L);
+	//long n = 1836311903;
+	tsk_sleep(1000000000);
+#else
+	long n = slow_fib(N);
+#endif
 
 	show_cursor();
 
-	printf("\rFibonacci(%d) = %d\n", N, f);
+	printf("\rFibonacci(%d) = %ld\n", N, n);
 	return 0;
 }
 

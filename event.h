@@ -19,8 +19,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Event {
-	short  permits; // # of threads allowed to leave the queue
-	short  waiting; // # of threads waiting in the queue
+	int    permits; // # of threads allowed to leave the queue
+	int    waiting; // # of threads waiting in the queue
 	mtx_t* mutex;
 	cnd_t  queue;
 } Event;

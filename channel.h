@@ -24,10 +24,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
-	short flags;
-	short capacity;
-	short occupation;
-	short front;
+	int flags;
+	int capacity;
+	int occupation;
+	int front;
 	union {
 		Scalar* buffer; // for capacity > 1
 		Scalar  value;  // for capacity == 1
