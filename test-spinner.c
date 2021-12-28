@@ -50,6 +50,10 @@ static long slow_fib(long x)
 	return slow_fib(x-1) + slow_fib(x-2);
 }
 
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
 #define UsingPromises 1
 
 #if UsingPromises
@@ -69,27 +73,22 @@ struct void_pair {
 #define async(F,U,...)\
 	tsk_run(F, &(struct void_pair){U,&(struct F){__VA_ARGS__}})
 
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
+
 struct promise_fib {
 	long n;
 };
 
 static int promise_fib(void* arg)
 {
-	warn("Enter %s", __func__);
 	struct Future* future  = ((struct void_pair*)arg)->fut;
 	struct promise_fib* my = ((struct void_pair*)arg)->arg;
 
-	tsk_detach(tsk_self());
-	chn_init(&future->channel, 0);
-
-	warn("call slow_fib");
-	long fib = slow_fib(46);
-	//long fib = slow_fib(my->n);
-	warn("return slow_fib");
+	long fib = slow_fib(my->n);
 
 	chn_send(&future->channel, fib);
-
-	//chn_destroy(&future->channel);
 
 	return 0; // tsk_exit(0);
 }
@@ -121,11 +120,13 @@ int main(int argc, char** argv)
 
 #if UsingPromises
 	Future future;
-	async(promise_fib, &future, .n=DELAY);
+	chn_init(&future.channel, 1);
+
+	async(promise_fib, &future, .n=N);
 	chn_receive(&future.channel, &future.result);
+	chn_destroy(&future.channel);
+
 	long n = cast(future.result, 0L);
-	//long n = 1836311903;
-	tsk_sleep(1000000000);
 #else
 	long n = slow_fib(N);
 #endif
