@@ -38,6 +38,9 @@ static ALWAYS inline int tsk_run(int(*root)(void*), void* argument)
 	return thrd_detach(task);
 }
 
+// handy macro
+#define run(T,...)     tsk_run(T, &(struct T){__VA_ARGS__})
+
 static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_task)
 { return thrd_create(new_task, root, argument); }
 

@@ -13,7 +13,43 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-#define run(T,...) tsk_run(T, &(struct T){__VA_ARGS__})
+typedef struct Future {
+	Channel channel;
+	Scalar  result;
+	short   solved; // bool
+	short   status;
+} Future;
+
+static ALWAYS inline int ftr_run(Future* future, int(*root)(void*), void* argument)
+{
+	future->solved = future->status = 0;
+	int err = chn_init(&future->channel, 0);
+	if (err == STATUS_SUCCESS) {
+		err = tsk_run(root, (void*[2]){future, argument});
+	}
+	return err;
+}
+
+static ALWAYS inline int ftr_get(Future* future)
+{
+	if (!future->solved) {
+		future->status = chn_receive(&future->channel, &future->result);
+		future->solved = 1;
+		chn_destroy(&future->channel);
+	}
+	return future->status;
+}
+
+#define ftr_set(F,S)    chn_send(&(F)->channel,(S))
+#define ftr_resolved(F) (F)->solved
+#define ftr_pending(F)  !(F)->solved
+#define ftr_result(F,E) cast((F)->result,E)
+
+#define async(F,R,...)  ftr_run(F, R, &(struct R){__VA_ARGS__})
+
+////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////
 
 struct task_spinner {
 	int delay;
@@ -54,46 +90,20 @@ static long slow_fib(long x)
 //
 ////////////////////////////////////////////////////////////////////////
 
-#define UsingPromises 1
-
-#if UsingPromises
-
-typedef struct Future {
-	Channel channel;
-	Scalar  result;
-	int     solved; // bool
-	int     status;
-} Future;
-
-struct void_pair {
-	void* fut;
-	void* arg;
-};
-
-#define async(F,U,...)\
-	tsk_run(F, &(struct void_pair){U,&(struct F){__VA_ARGS__}})
-
-////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////
-
 struct promise_fib {
 	long n;
 };
-
 static int promise_fib(void* arg)
 {
-	struct Future* future  = ((struct void_pair*)arg)->fut;
-	struct promise_fib* my = ((struct void_pair*)arg)->arg;
+	struct Future* future  = ((void**)arg)[0];
+	struct promise_fib* my = ((void**)arg)[1];
 
 	long fib = slow_fib(my->n);
 
-	chn_send(&future->channel, fib);
+	ftr_set(future, fib);
 
 	return 0; // tsk_exit(0);
 }
-
-#endif
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -112,27 +122,24 @@ static int promise_fib(void* arg)
 
 int main(int argc, char** argv)
 {
+	int err;
 	enum { N=46, DELAY=500000}; // fib(46)=1836311903
 
 	hide_cursor();
 
-	run(task_spinner, .delay=DELAY);
+	err = run(task_spinner, .delay=DELAY);
+	assert(err == STATUS_SUCCESS);
 
-#if UsingPromises
 	Future future;
-	chn_init(&future.channel, 1);
-
-	async(promise_fib, &future, .n=N);
-	chn_receive(&future.channel, &future.result);
-	chn_destroy(&future.channel);
-
-	long n = cast(future.result, 0L);
-#else
-	long n = slow_fib(N);
-#endif
+	err = async(&future, promise_fib, .n=N); assert(err == STATUS_SUCCESS);
+	err = ftr_get(&future);                  assert(err == STATUS_SUCCESS);
+	long n = ftr_result(&future, 0L);
 
 	show_cursor();
 
+	printf("\rFibonacci(%d) = %ld\n", N, n);
+	err = ftr_get(&future);                  assert(err == STATUS_SUCCESS);
+	n = ftr_result(&future, 0L);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 	return 0;
 }
