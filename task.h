@@ -26,20 +26,20 @@ static inline void tsk_yield(void);
 static inline int  tsk_sleep(unsigned long long nanoseconds);
 static inline void tsk_exit(int result);
 
+// handy macro
+#define tsk_spawn(T,...) tsk_run(T, &(struct T){__VA_ARGS__})
+
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int tsk_run(int(*root)(void*), void* argument)
+static inline int tsk_run(int(*root)(void*), void* argument)
 {
 	Task task;
 	int err = thrd_create(&task, root, argument);
 	if (err != STATUS_SUCCESS) return err;
 	return thrd_detach(task);
 }
-
-// handy macro
-#define run(T,...)     tsk_run(T, &(struct T){__VA_ARGS__})
 
 static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_task)
 { return thrd_create(new_task, root, argument); }

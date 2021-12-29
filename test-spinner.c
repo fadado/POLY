@@ -7,45 +7,7 @@
 #include "POLY.h"
 #include "scalar.h"
 #include "task.h"
-#include "channel.h"
-
-////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////
-
-typedef struct Future {
-	Channel channel;
-	Scalar  result;
-	short   solved; // bool
-	short   status;
-} Future;
-
-static ALWAYS inline int ftr_run(Future* future, int(*root)(void*), void* argument)
-{
-	future->solved = future->status = 0;
-	int err = chn_init(&future->channel, 0);
-	if (err == STATUS_SUCCESS) {
-		err = tsk_run(root, (void*[2]){future, argument});
-	}
-	return err;
-}
-
-static ALWAYS inline int ftr_get(Future* future)
-{
-	if (!future->solved) {
-		future->status = chn_receive(&future->channel, &future->result);
-		future->solved = 1;
-		chn_destroy(&future->channel);
-	}
-	return future->status;
-}
-
-#define ftr_set(F,S)    chn_send(&(F)->channel,(S))
-#define ftr_resolved(F) (F)->solved
-#define ftr_pending(F)  !(F)->solved
-#define ftr_result(F,E) cast((F)->result,E)
-
-#define async(F,R,...)  ftr_run(F, R, &(struct R){__VA_ARGS__})
+#include "future.h"
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -122,25 +84,26 @@ static int promise_fib(void* arg)
 
 int main(int argc, char** argv)
 {
-	int err;
+	int err = 0;
 	enum { N=46, DELAY=500000}; // fib(46)=1836311903
 
 	hide_cursor();
 
-	err = run(task_spinner, .delay=DELAY);
-	assert(err == STATUS_SUCCESS);
+	err += tsk_spawn(task_spinner, .delay=DELAY);
 
 	Future future;
-	err = async(&future, promise_fib, .n=N); assert(err == STATUS_SUCCESS);
-	err = ftr_get(&future);                  assert(err == STATUS_SUCCESS);
-	long n = ftr_result(&future, 0L);
+	err += ftr_spawn(&future, promise_fib, .n=N);
+	err += ftr_wait(&future);
+
+	assert(err==0);
+
+	long n = cast(ftr_get(&future), 0L);
+	printf("\rFibonacci(%d) = %ld\n", N, n);
+	n = cast(ftr_get(&future), 0L);
+	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	show_cursor();
 
-	printf("\rFibonacci(%d) = %ld\n", N, n);
-	err = ftr_get(&future);                  assert(err == STATUS_SUCCESS);
-	n = ftr_result(&future, 0L);
-	printf("\rFibonacci(%d) = %ld\n", N, n);
 	return 0;
 }
 

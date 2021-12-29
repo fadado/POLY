@@ -52,7 +52,7 @@ static inline void chn_close(Channel* self);
 static inline bool chn_drained(Channel* self);
 
 // Accept any scalar type
-#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce((EXPRESSION)))
+#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce(EXPRESSION))
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
