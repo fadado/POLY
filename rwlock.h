@@ -61,9 +61,9 @@ static inline void rwl_destroy(RWLock* self)
 {
 	assert(self->counter == 0 ); // idle state
 
-	lck_destroy(&self->entry);
 	evt_destroy(&self->readers);
 	evt_destroy(&self->writers);
+	lck_destroy(&self->entry);
 }
 
 //

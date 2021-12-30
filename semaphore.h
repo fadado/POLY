@@ -83,8 +83,8 @@ static inline void sem_destroy(Semaphore* self)
 {
 	assert(self->counter == 0 ); // idle state
 
-	lck_destroy(&self->entry);
 	evt_destroy(&self->queue);
+	lck_destroy(&self->entry);
 }
 
 //

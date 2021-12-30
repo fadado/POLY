@@ -65,8 +65,8 @@ static inline void brr_destroy(Barrier* self)
 {
 	assert(self->places == 0 ); // idle state
 
-	lck_destroy(&self->entry);
 	evt_destroy(&self->move_on);
+	lck_destroy(&self->entry);
 }
 
 //

@@ -155,13 +155,13 @@ static inline void chn_destroy(Channel* self)
 {
 	assert(_chn_empty(self)); // ???
 
-	lck_destroy(&self->entry);
 	if (self->flags & CHANNEL_BUFFERED) {
 		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
 	} else if (self->flags & CHANNEL_BLOCKING) {
 		rv_destroy(&self->rendezvous);
 	}
+	lck_destroy(&self->entry);
 	if (self->capacity > 1) {
 		free(self->buffer);
 		self->buffer = (Scalar*)0; // sanitize
