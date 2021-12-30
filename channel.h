@@ -11,7 +11,6 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include <stdbool.h>
 #include <stdlib.h> // calloc
 
 #include "scalar.h"

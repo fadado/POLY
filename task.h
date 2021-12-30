@@ -20,7 +20,7 @@ static inline int  tsk_run(int(*root)(void*), void* argument);
 static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);
 static inline int  tsk_join(Task task);
 static inline int  tsk_detach(Task task);
-static inline int  tsk_equal(Task task1, Task task2);
+static inline bool tsk_equal(Task task1, Task task2);
 static inline Task tsk_self(void);
 static inline void tsk_yield(void);
 static inline int  tsk_sleep(unsigned long long nanoseconds);
@@ -50,7 +50,7 @@ static ALWAYS inline int tsk_join(Task task)
 static ALWAYS inline int tsk_detach(Task task)
 { return thrd_detach(task); }
 
-static ALWAYS inline int tsk_equal(Task task1, Task task2)
+static ALWAYS inline bool tsk_equal(Task task1, Task task2)
 { return thrd_equal(task1, task2); }
 
 static ALWAYS inline Task tsk_self(void)

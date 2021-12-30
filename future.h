@@ -11,8 +11,6 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include <stdbool.h>
-
 #include "lock.h"
 #include "channel.h"
 #include "scalar.h"

@@ -56,7 +56,7 @@ static ALWAYS inline int _sem_length(Semaphore* self)
 }
 
 // Idle state ("red" semaphore)? value==0 and length==0
-static ALWAYS inline int _sem_idle(Semaphore* self)
+static ALWAYS inline bool _sem_idle(Semaphore* self)
 {
 	return self->counter == 0;
 }

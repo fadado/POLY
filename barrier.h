@@ -38,7 +38,7 @@ enum { BARRIER_FULL = -1 };
 
 /*
 //
-static ALWAYS inline bool _brr_empty(Barrier* self)
+static ALWAYS inline int _brr_empty(Barrier* self)
 {
 	return self->places == self->capacity;
 }
