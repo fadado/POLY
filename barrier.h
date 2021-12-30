@@ -92,16 +92,15 @@ static inline int brr_wait(Event* self)
 	int status = STATUS_SUCCESS;
 	ENTER_BARRIER_MONITOR
 
-	--self->places;
-	if (self->places == 0) {
+	if (--self->places > 0) {
+		int err = evt_wait(&self->move_on);
+		CHECK_BARRIER_MONITOR (err)
+	} else {
 		// I'm the leader, the choosen!
 		self->places = self->capacity;
-		int err = evt_broadcast(&self->move_on);
-		CHECK_SEMAPHORE_MONITOR (err)
 		status = BARRIER_FULL; // barrier complete phase/cycle
-	} else {
-		int err = evt_wait(&self->move_on);
-		CHECK_SEMAPHORE_MONITOR (err)
+		int err = evt_broadcast(&self->move_on);
+		CHECK_BARRIER_MONITOR (err)
 	}
 
 	LEAVE_BARRIER_MONITOR

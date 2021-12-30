@@ -11,7 +11,7 @@
 #error To conduct the choir I need "poly.h"!
 #endif
 
-#include "lock.h"
+#include "task.h"
 #include "channel.h"
 #include "scalar.h"
 
@@ -21,9 +21,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Future {
-	Channel channel;
-	Scalar  result;
 	short   status; // -1: pending; 0: OK; >0: error
+	Scalar  result;
+	Channel channel;
 } Future;
 
 static inline int    ftr_run(Future* self, int(*root)(void*), void* argument);

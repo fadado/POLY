@@ -52,7 +52,7 @@ static inline void evt_destroy(Event* self)
 	assert(self->permits == 0);
 	assert(self->waiting == 0);
 
-	self->mutex = (mtx_t*)0; // sanitze
+	self->mutex = (mtx_t*)0; // sanitize
 	cnd_destroy(&self->queue);
 }
 
