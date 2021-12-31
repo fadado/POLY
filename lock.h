@@ -8,7 +8,7 @@
 #define LOCK_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
 
 ////////////////////////////////////////////////////////////////////////
@@ -41,8 +41,8 @@ static inline int  lck_try(union lck_ptr self);
 static inline int  lck_watch(union lck_ptr self, unsigned long long nanoseconds);
 
 // Deduce mask from lock type
-#define lck_init(L) lck_init_((L), \
-	_Generic((L),\
+#define lck_init(LOCK) lck_init_((LOCK), \
+	_Generic((LOCK),\
 		PlainLock*: mtx_plain,\
 		TimedLock*: mtx_timed,\
 		RecursiveLock*: mtx_plain|mtx_recursive,\
@@ -69,8 +69,8 @@ static ALWAYS inline int lck_try(union lck_ptr self)
 
 static ALWAYS inline int lck_watch(union lck_ptr self, unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000;
-	long n   = nanoseconds%1000000000;
+	time_t s = nanoseconds/1000000000ull;
+	long n   = nanoseconds%1000000000ull;
 	return mtx_timedlock(self.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=n});
 }
 

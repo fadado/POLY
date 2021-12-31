@@ -8,9 +8,8 @@
 #define RENDEZVOUS_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
-
 #include "lock.h"
 #include "event.h"
 
@@ -32,13 +31,6 @@ static inline int  rv_signal(RendezVous* self, int i);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-#ifdef DEBUG
-const char* _RV_[2] = {
-	[0] = "HOLA_DON_PEPITO",
-	[1] = "HOLA_DON_JOSE",
-};
-#endif
-
 static inline int rv_init(RendezVous* self, union lck_ptr lock)
 {
 	int err;
@@ -54,8 +46,8 @@ static inline int rv_init(RendezVous* self, union lck_ptr lock)
 
 static inline void rv_destroy(RendezVous* self)
 {
-	evt_destroy(&self->pair[0]);
 	evt_destroy(&self->pair[1]);
+	evt_destroy(&self->pair[0]);
 }
 
 static ALWAYS inline int rv_wait(RendezVous* self, int i)

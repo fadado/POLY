@@ -5,9 +5,8 @@
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "POLY.h"
-#include "task.h"
 #include "scalar.h"
+#include "task.h"
 #include "semaphore.h"
 
 static Semaphore test_lock_mutex;

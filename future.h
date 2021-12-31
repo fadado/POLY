@@ -8,9 +8,8 @@
 #define FUTURE_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
-
 #include "task.h"
 #include "channel.h"
 #include "scalar.h"
@@ -21,8 +20,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Future {
-	short   status; // -1: pending; 0: OK; >0: error
-	Scalar  result;
+	short   status;  // -1: pending; 0: OK; >0: error
+	Scalar  result;  // memoized result
 	Channel channel;
 } Future;
 

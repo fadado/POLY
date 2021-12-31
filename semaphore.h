@@ -8,9 +8,8 @@
 #define SEMAPHORE_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
-
 #include "lock.h"
 #include "event.h"
 
@@ -20,7 +19,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	int   counter;
+	int   counter; // <0: -# of blocked threads; 0: idle; >0: available resources
 	Lock  entry;
 	Event queue;
 } Semaphore;

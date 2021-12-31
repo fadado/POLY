@@ -8,9 +8,8 @@
 #define EVENT_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
-
 #include "lock.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -96,8 +95,8 @@ static ALWAYS inline int evt_broadcast(Event* self)
 
 static ALWAYS inline int evt_watch(Event* self, unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000ULL;
-	long   n = nanoseconds%1000000000ULL;
+	time_t s = nanoseconds/1000000000ull;
+	long   n = nanoseconds%1000000000ull;
 	return cnd_timedwait(&self->queue, self->mutex,
 						 &(struct timespec){.tv_sec=s, .tv_nsec=n});
 }

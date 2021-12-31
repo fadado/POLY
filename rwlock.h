@@ -8,9 +8,8 @@
 #define RWLOCK_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
-
 #include "lock.h"
 #include "event.h"
 
@@ -20,7 +19,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct RWLock {
-	int   counter;
+	int   counter; // -1: a reader holds the lock; 0: ; >0: # of active writers
 	Lock  entry;
 	Event readers;
 	Event writers;
@@ -108,11 +107,9 @@ static inline int rwl_release(RWLock* self)
 	ENTER_RWLOCK_MONITOR
 
 	self->counter = 0; // the writer unholds the lock
-	// writers waiting?
 	if (_evt_length(&self->writers) > 0) {
 		int err = evt_signal(&self->writers);
 		CHECK_RWLOCK_MONITOR (err)
-	// readers waiting?
 	} else if (_evt_length(&self->readers) > 0) {
 		int err = evt_broadcast(&self->readers);
 		CHECK_RWLOCK_MONITOR (err)
@@ -142,8 +139,7 @@ static inline int rwl_leave(RWLock* self)
 {
 	ENTER_RWLOCK_MONITOR
 
-	--self->counter;
-	if (self->counter == 0) { // no readers reading
+	if (--self->counter == 0) { // no readers reading
 		if (_evt_length(&self->writers) > 0) {
 			int err = evt_signal(&self->writers);
 			CHECK_RWLOCK_MONITOR (err)

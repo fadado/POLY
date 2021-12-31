@@ -4,7 +4,6 @@
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "POLY.h"
 #include "scalar.h"
 #include "task.h"
 #include "future.h"

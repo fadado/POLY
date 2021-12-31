@@ -5,7 +5,6 @@
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "POLY.h"
 #include "channel.h" // include scalar.h
 
 ////////////////////////////////////////////////////////////////////////

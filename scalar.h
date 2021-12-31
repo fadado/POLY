@@ -6,7 +6,7 @@
 #define SCALAR_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
 
 ////////////////////////////////////////////////////////////////////////

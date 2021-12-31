@@ -7,12 +7,11 @@
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
-#ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
-#endif
-
 #include <stdlib.h> // calloc
 
+#ifndef POLY_H
+#include "POLY.h"
+#endif
 #include "scalar.h"
 #include "lock.h"
 #include "rendezvous.h"
@@ -156,8 +155,8 @@ static inline void chn_destroy(Channel* self)
 	assert(_chn_empty(self)); // ???
 
 	if (self->flags & CHANNEL_BUFFERED) {
-		cnd_destroy(&self->non_empty);
 		cnd_destroy(&self->non_full);
+		cnd_destroy(&self->non_empty);
 	} else if (self->flags & CHANNEL_BLOCKING) {
 		rv_destroy(&self->rendezvous);
 	}

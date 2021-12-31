@@ -6,7 +6,7 @@
 #define TASK_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
 
 ////////////////////////////////////////////////////////////////////////
@@ -14,7 +14,7 @@
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-typedef thrd_t Task;
+typedef thrd_t Task; // pure synonym
 
 static inline int  tsk_run(int(*root)(void*), void* argument);
 static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);

@@ -8,9 +8,8 @@
 #define BARRIER_H
 
 #ifndef POLY_H
-#error To conduct the choir I need "poly.h"!
+#include "POLY.h"
 #endif
-
 #include "lock.h"
 #include "event.h"
 
@@ -20,8 +19,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	int   capacity;
-	int   places;
+	int   capacity; // # of threads to wait before opening the barrier
+	int   places;   // # of threads still expected to wait
 	Lock  entry;
 	Event move_on;
 } Barrier;
