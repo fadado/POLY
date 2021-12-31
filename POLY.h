@@ -16,7 +16,6 @@
 
 #include <errno.h>
 #include <error.h>
-#include <err.h>
 
 #ifndef DEBUG
 #define NDEBUG
@@ -31,10 +30,12 @@ enum {
 
 // Warnings while debugging
 #ifdef DEBUG
-#define trace(...) warn(__VA_ARGS__)
+#define trace(...) error(0, 0, __VA_ARGS__)
 #else
 #define trace(...)
 #endif
+
+#define warn(...) error(0, 0, __VA_ARGS__)
 
 //
 // Ahhhhhhhhhhhg!
