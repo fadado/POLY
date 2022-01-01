@@ -9,62 +9,53 @@
 #include "future.h"
 
 ////////////////////////////////////////////////////////////////////////
-//
+// Spinner task
 ////////////////////////////////////////////////////////////////////////
 
-struct task_spinner {
-	int delay;
-};
-static int task_spinner(void* arg)
+TASK_BODY(spinner)
 {
-	struct task_spinner* my = arg;
-
+	int delay; // nanoseconds
+}
+TASK_BEGIN(spinner)
+{
 	const char s[] = "-\\|/-";
 
-	ALWAYS inline void spin(int i) {
+	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		tsk_sleep(my->delay);
+		tsk_sleep(self->delay);
 	}
 
 	spin(0);
-	while (1) {
+	for (;;)  {
 		for (int i = 0; s[i] != '\0'; ++i) {
 			spin(i);
 		}
 	}
 	return 0;
 }
+TASK_END(spinner)
 
 ////////////////////////////////////////////////////////////////////////
-//
+// Fibonacci promise
 ////////////////////////////////////////////////////////////////////////
 
-static long slow_fib(long x)
+PROMISE_BODY(fibonacci)
 {
-	if (x < 2) {
-		return x;
-	}
-	return slow_fib(x-1) + slow_fib(x-2);
-}
-
-////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////
-
-struct promise_fib {
 	long n;
-};
-static int promise_fib(void* arg)
-{
-	struct Future* future  = ((void**)arg)[0];
-	struct promise_fib* my = ((void**)arg)[1];
-
-	long fib = slow_fib(my->n);
-
-	ftr_set(future, fib);
-
-	return 0; // tsk_exit(0);
 }
+PROMISE_BEGIN(fibonacci, future)
+{
+	auto long slow_fib(long x) {
+		if (x < 2) { return x; }
+		return slow_fib(x-1) + slow_fib(x-2);
+	}
+
+	long result = slow_fib(self->n);
+	ftr_set(future, result); // check error?
+
+	return 0;
+}
+PROMISE_END(fibonacci)
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -77,26 +68,23 @@ static int promise_fib(void* arg)
 #define hide_cursor() printf(HIDE)
 #define show_cursor() printf(SHOW)
 
-////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////
-
 int main(int argc, char** argv)
 {
 	int err = 0;
-	enum { N=46, DELAY=500000}; // fib(46)=1836311903
+	enum { N=46, DELAY=Microseconds(500)}; // fib(46)=1836311903
 
 	hide_cursor();
 
-	err += tsk_spawn(task_spinner, .delay=DELAY);
+	err += tsk_spawn(spinner, .delay=DELAY);
 
 	Future future;
-	err += ftr_spawn(&future, promise_fib, .n=N);
+	err += ftr_spawn(&future, fibonacci, .n=N);
 	err += ftr_wait(&future);
 
 	assert(err==0);
 
 	long n = cast(ftr_get(&future), 0L);
+	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 	n = cast(ftr_get(&future), 0L);
 	printf("\rFibonacci(%d) = %ld\n", N, n);

@@ -45,7 +45,7 @@ static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_t
 { return thrd_create(new_task, root, argument); }
 
 static ALWAYS inline int tsk_join(Task task)
-{ return thrd_join(task, (void*)0); }
+{ return thrd_join(task, (int*)0); }
 
 static ALWAYS inline int tsk_detach(Task task)
 { return thrd_detach(task); }
@@ -61,13 +61,41 @@ static ALWAYS inline void tsk_yield(void)
 
 static ALWAYS inline int tsk_sleep(unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000ULL;
-	long   n = nanoseconds%1000000000ULL;
+	time_t s = nanoseconds/1000000000ull;
+	long   n = nanoseconds%1000000000ull;
 	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=n}, (void*)0);
 }
 
 static ALWAYS inline void tsk_exit(int result)
 { thrd_exit(result); }
+
+////////////////////////////////////////////////////////////////////////
+// Experimental structures
+////////////////////////////////////////////////////////////////////////
+
+#define TASK_BODY(TASK_NAME)\
+	struct TASK_NAME
+
+#define TASK_BEGIN(TASK_NAME)\
+	;\
+	static int TASK_NAME(void* a_) {\
+		struct TASK_NAME* self = a_;
+
+#define TASK_END(TASK_NAME)\
+	}
+
+// TODO: move to future.h when stabilized
+#define PROMISE_BODY(TASK_NAME)\
+	struct TASK_NAME
+
+#define PROMISE_BEGIN(TASK_NAME,FUTURE_NAME)\
+	;\
+	static int TASK_NAME(void* a_) {\
+		struct Future* FUTURE_NAME = ((void**)a_)[0];\
+		struct TASK_NAME* self = ((void**)a_)[1];
+
+#define PROMISE_END(TASK_NAME)\
+	}
 
 #endif // TASK_H
 

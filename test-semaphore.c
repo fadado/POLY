@@ -12,8 +12,10 @@
 static Semaphore test_lock_mutex;
 static Integer test_lock_counter;
 enum { N=10, M=10000 };
+
 int task_test(void* arg)
 {
+	assert(arg == (void*)0);
 #ifdef DEBUG
 	//warn("Enter %s", __func__);
 #endif
@@ -29,6 +31,7 @@ int task_test(void* arg)
 
 	return 0;
 }
+
 static void test_lock(void)
 {
 #ifdef DEBUG
