@@ -69,9 +69,9 @@ static ALWAYS inline int lck_try(union lck_ptr self)
 
 static ALWAYS inline int lck_watch(union lck_ptr self, unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000ull;
-	long n   = nanoseconds%1000000000ull;
-	return mtx_timedlock(self.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=n});
+	time_t s  = ns2s(nanoseconds);
+	long   ns = nanoseconds - s2ns(s);
+	return mtx_timedlock(self.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
 #endif // LOCK_H

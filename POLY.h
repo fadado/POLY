@@ -14,9 +14,12 @@
 // Nanoseconds constructors
 ////////////////////////////////////////////////////////////////////////
 
-#define Seconds(n)      ((n)*1000000000ull)
-#define Milliseconds(n) ((n)*1000000ull)
-#define Microseconds(n) ((n)*1000ull)
+#define s2ns(T)     ((T)*1000000000ull)
+#define ms2ns(T)    ((T)*1000000ull)
+#define us2ns(T)    ((T)*1000ull)
+#define ns2s(T)     ((T)/1000000000ull)
+#define ns2ms(T)    ((T)/1000000ull)
+#define ns2us(T)    ((T)/1000ull)
 
 ////////////////////////////////////////////////////////////////////////
 // Error management

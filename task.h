@@ -61,9 +61,9 @@ static ALWAYS inline void tsk_yield(void)
 
 static ALWAYS inline int tsk_sleep(unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000ull;
-	long   n = nanoseconds%1000000000ull;
-	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=n}, (void*)0);
+	time_t s  = ns2s(nanoseconds);
+	long   ns = nanoseconds - s2ns(s);
+	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, (void*)0);
 }
 
 static ALWAYS inline void tsk_exit(int result)

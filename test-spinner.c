@@ -71,7 +71,7 @@ PROMISE_END(fibonacci)
 int main(int argc, char** argv)
 {
 	int err = 0;
-	enum { N=46, DELAY=Microseconds(500)}; // fib(46)=1836311903
+	enum { N=46, DELAY=us2ns(500)}; // fib(46)=1836311903
 
 	hide_cursor();
 

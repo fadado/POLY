@@ -95,10 +95,10 @@ static ALWAYS inline int evt_broadcast(Event* self)
 
 static ALWAYS inline int evt_watch(Event* self, unsigned long long nanoseconds)
 {
-	time_t s = nanoseconds/1000000000ull;
-	long   n = nanoseconds%1000000000ull;
+	time_t s  = ns2s(nanoseconds);
+	long   ns = nanoseconds - s2ns(s);
 	return cnd_timedwait(&self->queue, self->mutex,
-						 &(struct timespec){.tv_sec=s, .tv_nsec=n});
+						 &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
 #endif // EVENT_H
