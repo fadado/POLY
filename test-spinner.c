@@ -8,16 +8,16 @@
 #include "task.h"
 #include "future.h"
 
+//TASK_SPEC(spinner, static)
+//TASK_SPEC(fibonacci, static)
+
 ////////////////////////////////////////////////////////////////////////
 // Spinner task
 ////////////////////////////////////////////////////////////////////////
 
 TASK_BODY(spinner)
-{
 	int delay; // nanoseconds
-}
 TASK_BEGIN(spinner)
-{
 	const char s[] = "-\\|/-";
 
 	inline void spin(int i) {
@@ -32,19 +32,15 @@ TASK_BEGIN(spinner)
 		}
 	}
 	return 0;
-}
 TASK_END(spinner)
 
 ////////////////////////////////////////////////////////////////////////
 // Fibonacci promise
 ////////////////////////////////////////////////////////////////////////
 
-PROMISE_BODY(fibonacci)
-{
+TASK_BODY(fibonacci)
 	long n;
-}
-PROMISE_BEGIN(fibonacci, future)
-{
+PROMISE_BEGIN(fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -54,8 +50,7 @@ PROMISE_BEGIN(fibonacci, future)
 	ftr_set(future, result); // check error?
 
 	return 0;
-}
-PROMISE_END(fibonacci)
+TASK_END(fibonacci)
 
 ////////////////////////////////////////////////////////////////////////
 //

@@ -43,6 +43,12 @@ static inline Scalar ftr_get(Future* self);
 static ALWAYS inline bool _ftr_pending(Future* self)
 { return self->status == -1; }
 
+static ALWAYS inline bool _ftr_suceeded(Future* self)
+{ return self->status == 0; }
+
+static ALWAYS inline bool _ftr_failed(Future* self)
+{ return self->status > 0; }
+
 static ALWAYS inline bool _ftr_resolved(Future* self)
 { return self->status >= 0; }
 
@@ -52,7 +58,7 @@ static inline int ftr_run(Future* self, int(*root)(void*), void* argument)
 
 	self->status = -1;
 	if ((err=chn_init(&self->channel, 0)) == STATUS_SUCCESS) {
-		if ((err=tsk_run(root, (void*[2]){self, argument})) == STATUS_SUCCESS) {
+		if ((err=tsk_run(root, (void*[2]){argument, self})) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
 			chn_destroy(&self->channel);

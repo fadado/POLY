@@ -16,12 +16,12 @@
 
 typedef thrd_t Task; // pure synonym
 
-static inline int  tsk_run(int(*root)(void*), void* argument);
 static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);
-static inline int  tsk_join(Task task);
+static inline int  tsk_join(Task task, int* result);
 static inline int  tsk_detach(Task task);
 static inline bool tsk_equal(Task task1, Task task2);
 static inline Task tsk_self(void);
+static inline int  tsk_run(int(*root)(void*), void* argument);
 static inline void tsk_yield(void);
 static inline int  tsk_sleep(unsigned long long nanoseconds);
 static inline void tsk_exit(int result);
@@ -36,16 +36,16 @@ static inline void tsk_exit(int result);
 static inline int tsk_run(int(*root)(void*), void* argument)
 {
 	Task task;
-	int err = thrd_create(&task, root, argument);
+	int err = tsk_fork(root, argument, &task);
 	if (err != STATUS_SUCCESS) return err;
-	return thrd_detach(task);
+	return tsk_detach(task);
 }
 
 static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_task)
 { return thrd_create(new_task, root, argument); }
 
-static ALWAYS inline int tsk_join(Task task)
-{ return thrd_join(task, (int*)0); }
+static ALWAYS inline int tsk_join(Task task, int* result)
+{ return thrd_join(task, result); }
 
 static ALWAYS inline int tsk_detach(Task task)
 { return thrd_detach(task); }
@@ -73,29 +73,27 @@ static ALWAYS inline void tsk_exit(int result)
 // Experimental structures
 ////////////////////////////////////////////////////////////////////////
 
+#define TASK_SPEC(TASK_NAME,...)\
+	struct TASK_NAME;\
+	__VA_ARGS__ int TASK_NAME(void*);
+
 #define TASK_BODY(TASK_NAME)\
-	struct TASK_NAME
+	struct TASK_NAME {
 
 #define TASK_BEGIN(TASK_NAME)\
-	;\
-	static int TASK_NAME(void* a_) {\
+	};\
+	int TASK_NAME(void* a_) {\
 		struct TASK_NAME* self = a_;
 
-#define TASK_END(TASK_NAME)\
+#define TASK_END(ignore)\
 	}
 
 // TODO: move to future.h when stabilized
-#define PROMISE_BODY(TASK_NAME)\
-	struct TASK_NAME
-
-#define PROMISE_BEGIN(TASK_NAME,FUTURE_NAME)\
-	;\
+#define PROMISE_BEGIN(TASK_NAME)\
+	};\
 	static int TASK_NAME(void* a_) {\
-		struct Future* FUTURE_NAME = ((void**)a_)[0];\
-		struct TASK_NAME* self = ((void**)a_)[1];
-
-#define PROMISE_END(TASK_NAME)\
-	}
+		struct TASK_NAME* self = ((void**)a_)[0];\
+		struct Future* future  = ((void**)a_)[1];
 
 #endif // TASK_H
 
