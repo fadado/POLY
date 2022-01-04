@@ -8,13 +8,14 @@
 #include "task.h"
 #include "future.h"
 
-//TASK_SPEC(spinner, static)
-//TASK_SPEC(fibonacci, static)
+TASK_SPEC(spinner, static)
+TASK_SPEC(fibonacci, static)
 
 ////////////////////////////////////////////////////////////////////////
-// Spinner task
+// Tasks
 ////////////////////////////////////////////////////////////////////////
 
+// run forever painting the spinner
 TASK_BODY(spinner)
 	int delay; // nanoseconds
 TASK_BEGIN(spinner)
@@ -26,18 +27,14 @@ TASK_BEGIN(spinner)
 	}
 
 	spin(0);
-	for (;;)  {
+	for (;;)  { // forever
 		for (int i = 0; s[i] != '\0'; ++i) {
 			spin(i);
 		}
 	}
-	return 0;
 TASK_END(spinner)
 
-////////////////////////////////////////////////////////////////////////
-// Fibonacci promise
-////////////////////////////////////////////////////////////////////////
-
+// compute fib(n) in the background
 TASK_BODY(fibonacci)
 	long n;
 PROMISE_BEGIN(fibonacci)
@@ -47,9 +44,8 @@ PROMISE_BEGIN(fibonacci)
 	}
 
 	long result = slow_fib(self->n);
-	ftr_set(future, result); // check error?
-
-	return 0;
+	// ...long time...
+	ftr_set(future, result); // what if return > 0 ???
 TASK_END(fibonacci)
 
 ////////////////////////////////////////////////////////////////////////
@@ -88,6 +84,5 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-
 
 // vim:ai:sw=4:ts=4:syntax=cpp

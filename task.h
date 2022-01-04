@@ -86,14 +86,7 @@ static ALWAYS inline void tsk_exit(int result)
 		struct TASK_NAME* self = a_;
 
 #define TASK_END(ignore)\
-	}
-
-// TODO: move to future.h when stabilized
-#define PROMISE_BEGIN(TASK_NAME)\
-	};\
-	static int TASK_NAME(void* a_) {\
-		struct TASK_NAME* self = ((void**)a_)[0];\
-		struct Future* future  = ((void**)a_)[1];
+	return 0; }
 
 #endif // TASK_H
 
