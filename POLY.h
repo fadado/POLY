@@ -11,17 +11,6 @@
 #include <threads.h> // include <time.h>
 
 ////////////////////////////////////////////////////////////////////////
-// Nanoseconds constructors
-////////////////////////////////////////////////////////////////////////
-
-#define s2ns(T)     ((T)*1000000000ull)
-#define ms2ns(T)    ((T)*1000000ull)
-#define us2ns(T)    ((T)*1000ull)
-#define ns2s(T)     ((T)/1000000000ull)
-#define ns2ms(T)    ((T)/1000000ull)
-#define ns2us(T)    ((T)/1000ull)
-
-////////////////////////////////////////////////////////////////////////
 // Error management
 ////////////////////////////////////////////////////////////////////////
 
@@ -71,6 +60,24 @@ enum {
 #	define TRANSPARENT  /*NOP*/
 #	define fallthrough  /*NOP*/
 #endif
+
+////////////////////////////////////////////////////////////////////////
+// Nanoseconds constructors
+////////////////////////////////////////////////////////////////////////
+
+#define s2ns(T)     (unsigned long long)((T)*1000000000ull)
+#define ms2ns(T)    (unsigned long long)((T)*1000000ull)
+#define us2ns(T)    (unsigned long long)((T)*1000ull)
+#define ns2s(T)     (unsigned long long)((T)/1000000000ull)
+#define ns2ms(T)    (unsigned long long)((T)/1000000ull)
+#define ns2us(T)    (unsigned long long)((T)/1000ull)
+
+static ALWAYS inline unsigned long long now(void)
+{
+	struct timespec ts;
+	timespec_get(&ts, TIME_UTC);
+	return s2ns(ts.tv_sec) + ts.tv_nsec;
+}
 
 #endif // POLY_H
 

@@ -61,6 +61,7 @@ TASK_END(fibonacci)
 
 int main(int argc, char** argv)
 {
+	unsigned long long s,ms,us,ns, t = now();
 	int err = 0;
 	enum { N=46, DELAY=us2ns(500)}; // fib(46)=1836311903
 
@@ -79,6 +80,13 @@ int main(int argc, char** argv)
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 	n = cast(ftr_get(&future), 0L);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
+
+	ns = now()-t;
+	s = ns2s(ns);
+	ms = ns2ms(ns - s2ns(s));
+	us = ns2us(ns - s2ns(s) - ms2ns(ms));
+	ns = (ns - s2ns(s) - ms2ns(ms) - us2ns(us));
+	printf("s: %lld; ms: %lld; un: %lld; ns: %lld\n", s, ms, us, ns);
 
 	show_cursor();
 
