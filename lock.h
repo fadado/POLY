@@ -33,9 +33,9 @@ union TRANSPARENT lck_ptr {
 	TimedRecursiveLock* _4;
 };
 
-static inline int  lck_init_(union lck_ptr self, int mask);
-static inline void lck_destroy(union lck_ptr self);
 static inline int  lck_acquire(union lck_ptr self);
+static inline void lck_destroy(union lck_ptr self);
+static inline int  lck_init_(union lck_ptr self, int mask);
 static inline int  lck_release(union lck_ptr self);
 static inline int  lck_try(union lck_ptr self);
 static inline int  lck_watch(union lck_ptr self, unsigned long long nanoseconds);

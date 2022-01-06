@@ -22,10 +22,10 @@ typedef struct RendezVous {
 	Event pair[2];
 } RendezVous;
 
-static inline int  rv_init(RendezVous* self, union lck_ptr lock);
 static inline void rv_destroy(RendezVous* self);
-static inline int  rv_wait(RendezVous* self, int i);
+static inline int  rv_init(RendezVous* self, union lck_ptr lock);
 static inline int  rv_signal(RendezVous* self, int i);
+static inline int  rv_wait(RendezVous* self, int i);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation

@@ -25,10 +25,10 @@ typedef struct Future {
 	Channel port;
 } Future;
 
-static inline int    ftr_run(Future* self, int(*root)(void*), void* argument);
-static inline int    ftr_wait(Future* self);
-static inline int    ftr_set_(Future* self, Scalar x);
 static inline Scalar ftr_get(Future* self);
+static inline int    ftr_run(Future* self, int(*root)(void*), void* argument);
+static inline int    ftr_set_(Future* self, Scalar x);
+static inline int    ftr_join(Future* self);
 
 // Accept any scalar type
 #define ftr_set(FUTURE,EXPRESSION) ftr_set_((FUTURE), coerce(EXPRESSION))
@@ -66,7 +66,7 @@ static ALWAYS inline int ftr_set_(Future* self, Scalar x)
 }
 
 // to be called once from the client
-static inline int ftr_wait(Future* self)
+static inline int ftr_join(Future* self)
 {
 	assert(self->pending);
 	int status = chn_receive(&self->port, &self->result); /*ASYNC*/
@@ -78,7 +78,7 @@ static inline int ftr_wait(Future* self)
 // to be called any number of times from the client
 static ALWAYS inline Scalar ftr_get(Future* self)
 {
-	if (self->pending) { ftr_wait(self); }
+	if (self->pending) { ftr_join(self); }
 	assert(!self->pending);
 	return self->result;
 }

@@ -47,7 +47,7 @@ static void test_lock(void)
 		assert(e == STATUS_SUCCESS);
 	}
 	for (int i=0; i < N; ++i) {
-		int e = tsk_wait(t[i], (int*)0);
+		int e = tsk_join(t[i], (int*)0);
 		assert(e == STATUS_SUCCESS);
 	}
 	assert(test_lock_counter == N*M);

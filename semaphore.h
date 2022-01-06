@@ -24,8 +24,8 @@ typedef struct Semaphore {
 	Event queue;
 } Semaphore;
 
-static inline int  sem_init(Semaphore* self, int count);
 static inline void sem_destroy(Semaphore* self);
+static inline int  sem_init(Semaphore* self, int count);
 static inline int  sem_P(Semaphore* self);
 static inline int  sem_V(Semaphore* self);
 

@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 
 	Future future;
 	err += ftr_spawn(&future, fibonacci, .n=N);
-	err += ftr_wait(&future);
+	err += ftr_join(&future);
 
 	assert(err==0);
 

@@ -25,12 +25,12 @@ typedef struct RWLock {
 	Event writers;
 } RWLock;
 
-static inline int  rwl_init(RWLock* self);
-static inline void rwl_destroy(RWLock* self);
 static inline int  rwl_acquire(RWLock* self);
-static inline int  rwl_release(RWLock* self);
+static inline void rwl_destroy(RWLock* self);
 static inline int  rwl_enter(RWLock* self);
+static inline int  rwl_init(RWLock* self);
 static inline int  rwl_leave(RWLock* self);
+static inline int  rwl_release(RWLock* self);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation

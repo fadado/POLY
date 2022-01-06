@@ -42,12 +42,12 @@ typedef struct Channel {
 	};
 } Channel;
 
-static inline int  chn_init(Channel* self, unsigned capacity);
-static inline void chn_destroy(Channel* self);
-static inline int  chn_send_(Channel* self, Scalar x);
-static inline int  chn_receive(Channel* self, Scalar* x);
 static inline void chn_close(Channel* self);
+static inline void chn_destroy(Channel* self);
 static inline bool chn_drained(Channel* self);
+static inline int  chn_init(Channel* self, unsigned capacity);
+static inline int  chn_receive(Channel* self, Scalar* x);
+static inline int  chn_send_(Channel* self, Scalar x);
 
 // Accept any scalar type
 #define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce(EXPRESSION))

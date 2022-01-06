@@ -39,13 +39,7 @@ enum {
 	internal_error  = 0,
 };
 
-// Warnings while debugging
-#ifdef DEBUG
-#define trace(...) error(0, 0, __VA_ARGS__)
-#else
-#define trace(...)
-#endif
-
+// message to stderr
 #define warn(...) error(0, 0, __VA_ARGS__)
 
 //

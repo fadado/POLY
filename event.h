@@ -24,12 +24,12 @@ typedef struct Event {
 	cnd_t  queue;
 } Event;
 
-static inline int  evt_init(Event* self, union lck_ptr lock);
-static inline void evt_destroy(Event* self);
-static inline int  evt_wait(Event* self);
-static inline int  evt_signal(Event* self);
 static inline int  evt_broadcast(Event* self);
+static inline void evt_destroy(Event* self);
+static inline int  evt_init(Event* self, union lck_ptr lock);
+static inline int  evt_signal(Event* self);
 static inline int  evt_stay(Event* self);
+static inline int  evt_wait(Event* self);
 static inline int  evt_watch(Event* self, unsigned long long nanoseconds);
 
 ////////////////////////////////////////////////////////////////////////
