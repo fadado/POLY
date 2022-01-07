@@ -34,7 +34,7 @@ static inline int    ftr_join(Future* self);
 #define ftr_set(FUTURE,EXPRESSION) ftr_set_((FUTURE), coerce(EXPRESSION))
 
 // handy macro
-#define ftr_spawn(F,R,...)  ftr_run(F, R, &(struct R){__VA_ARGS__})
+#define ftr_spawn(F,R,...) ftr_run(F,R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -48,7 +48,7 @@ static inline int ftr_run(Future* self, int(*root)(void*), void* argument)
 	self->pending = true;
 	self->result.word = 0x1aFabada;
 	if ((err=chn_init(&self->port, asyncronous)) == STATUS_SUCCESS) {
-		if ((err=tsk_run(root, (void*[2]){argument, self})) == STATUS_SUCCESS) {
+		if ((err=tsk_run(root, argument)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
 			chn_destroy(&self->port);
@@ -82,16 +82,6 @@ static ALWAYS inline Scalar ftr_get(Future* self)
 	assert(!self->pending);
 	return self->result;
 }
-
-////////////////////////////////////////////////////////////////////////
-// Experimental structures
-////////////////////////////////////////////////////////////////////////
-
-#define PROMISE_BEGIN(TASK_NAME)\
-	};\
-	static int TASK_NAME(void* a_) {\
-		struct TASK_NAME* self = ((void**)a_)[0];\
-		struct Future* future  = ((void**)a_)[1];
 
 #endif // FUTURE_H
 

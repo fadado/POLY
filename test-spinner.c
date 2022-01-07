@@ -20,7 +20,6 @@ TASK_BODY(spinner)
 	int delay; // nanoseconds
 TASK_BEGIN(spinner)
 	const char s[] = "-\\|/-";
-
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
 		tsk_sleep(self->delay);
@@ -36,8 +35,9 @@ TASK_END(spinner)
 
 // compute fib(n) in the background
 TASK_BODY(fibonacci)
-	long n;
-PROMISE_BEGIN(fibonacci)
+	Future* future;  // this is a promise: a task with future!
+	long    n;
+TASK_BEGIN(fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -45,7 +45,7 @@ PROMISE_BEGIN(fibonacci)
 
 	long result = slow_fib(self->n);
 	// ...long time...
-	ftr_set(future, result); // what if return > 0 ???
+	ftr_set(self->future, result); // what if return > 0 ???
 TASK_END(fibonacci)
 
 ////////////////////////////////////////////////////////////////////////
@@ -63,11 +63,11 @@ int main(int argc, char** argv)
 {
 	unsigned long long s,ms,us,ns, t = now();
 	int err = 0;
-	enum { N=46, DELAY=us2ns(500)}; // fib(46)=1836311903
+	enum { N=46, usDELAY=500}; // fib(46)=1836311903
 
 	hide_cursor();
 
-	err += tsk_spawn(spinner, .delay=DELAY);
+	err += tsk_spawn(spinner, .delay=us2ns(usDELAY));
 
 	Future future;
 	err += ftr_spawn(&future, fibonacci, .n=N);
