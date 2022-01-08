@@ -26,9 +26,8 @@ static inline int  tsk_sleep(unsigned long long nanoseconds);
 static inline int  tsk_join(Task task, int* result);
 static inline void tsk_yield(void);
 
-// handy macros
-#define tsk_spawn(T,...) tsk_run(T,&(struct T){__VA_ARGS__})
-#define tsk_filter(I,O,T,...) tsk_run(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
+// handy macro
+#define SPAWN_TASK(T,...) tsk_run(T,&(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
