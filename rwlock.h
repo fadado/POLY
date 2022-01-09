@@ -107,10 +107,10 @@ static inline int rwl_release(RWLock* self)
 	ENTER_RWLOCK_MONITOR
 
 	self->counter = 0; // the writer unholds the lock
-	if (_evt_length(&self->writers) > 0) {
+	if (!_evt_empty(&self->writers)) {
 		int err = evt_signal(&self->writers);
 		CHECK_RWLOCK_MONITOR (err)
-	} else if (_evt_length(&self->readers) > 0) {
+	} else if (!_evt_empty(&self->readers)) {
 		int err = evt_broadcast(&self->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
@@ -140,7 +140,7 @@ static inline int rwl_leave(RWLock* self)
 	ENTER_RWLOCK_MONITOR
 
 	if (--self->counter == 0) { // no readers reading
-		if (_evt_length(&self->writers) > 0) {
+		if (!_evt_empty(&self->writers)) {
 			int err = evt_signal(&self->writers);
 			CHECK_RWLOCK_MONITOR (err)
 		}

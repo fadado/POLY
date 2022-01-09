@@ -39,6 +39,9 @@ static inline int  evt_watch(Event* self, unsigned long long nanoseconds);
 static ALWAYS inline int _evt_length(Event* self)
 { return self->waiting; }
 
+static ALWAYS inline bool _evt_empty(Event* self)
+{ return self->waiting == 0; }
+
 static inline int evt_init(Event* self, union lck_ptr lock)
 {
 	self->waiting = self->permits = 0;
