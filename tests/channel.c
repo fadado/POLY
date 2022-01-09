@@ -1,4 +1,5 @@
 // Channel test
+// gcc -Wall -O2 -I. -lpthread tests/filename.c
 
 #include <stdio.h>
 #include <stdlib.h>

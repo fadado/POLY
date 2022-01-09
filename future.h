@@ -34,7 +34,7 @@ static inline int    ftr_join(Future* self);
 #define ftr_set(FUTURE,EXPRESSION) ftr_set_((FUTURE), coerce(EXPRESSION))
 
 // handy macro
-#define SPAWN_FUTURE(F,R,...)\
+#define SPAWN_Future(F,R,...)\
 	ftr_run(F,R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////

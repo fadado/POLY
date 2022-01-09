@@ -1,4 +1,5 @@
 // Spinner test
+// gcc -Wall -O2 -I. -lpthread tests/filename.c
 
 #include <stdio.h>
 
@@ -67,10 +68,10 @@ int main(int argc, char** argv)
 
 	hide_cursor();
 
-	err += SPAWN_TASK(spinner, .delay=us2ns(usDELAY));
+	err += SPAWN_Task(spinner, .delay=us2ns(usDELAY));
 
 	Future future;
-	err += SPAWN_FUTURE(&future, fibonacci, .n=N);
+	err += SPAWN_Future(&future, fibonacci, .n=N);
 	err += ftr_join(&future);
 
 	assert(err==0);

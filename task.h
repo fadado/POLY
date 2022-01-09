@@ -27,7 +27,7 @@ static inline int  tsk_join(Task task, int* result);
 static inline void tsk_yield(void);
 
 // handy macro
-#define SPAWN_TASK(T,...) tsk_run(T,&(struct T){__VA_ARGS__})
+#define SPAWN_Task(T,...) tsk_run(T,&(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation

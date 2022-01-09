@@ -53,7 +53,7 @@ static inline int  chn_send_(Channel* self, Scalar x);
 #define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce(EXPRESSION))
 
 // handy macro
-#define SPAWN_FILTER(I,O,T,...)\
+#define SPAWN_Filter(I,O,T,...)\
 	tsk_run(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
 
 ////////////////////////////////////////////////////////////////////////

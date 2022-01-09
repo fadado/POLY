@@ -1,4 +1,5 @@
 // Semaphore test
+// gcc -Wall -O2 -I. -lpthread tests/filename.c
 
 #include <stdlib.h>
 //#include <time.h>
