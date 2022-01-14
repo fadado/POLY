@@ -68,10 +68,10 @@ int main(int argc, char** argv)
 
 	hide_cursor();
 
-	err += SPAWN_Task(spinner, .delay=us2ns(usDELAY));
+	err += spawn_task(spinner, .delay=us2ns(usDELAY));
 
 	Future future;
-	err += SPAWN_Future(&future, fibonacci, .n=N);
+	err += spawn_future(&future, fibonacci, .n=N);
 	err += ftr_join(&future);
 
 	assert(err==0);

@@ -55,7 +55,7 @@ int main(int argc, char** argv)
 
 	Channel* ch = chn_alloc(1);
 	warn(__func__);
-	SPAWN_Filter(0, ch, generate_candidates);
+	spawn_filter(0, ch, generate_candidates);
 
 	for (int i = 0; i < BOUND; ++i) {
 		chn_receive(ch, &s);
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 		printf("%d\n", p);
 		Channel* ch1 = chn_alloc(1);
 	warn(__func__);
-		SPAWN_Filter(ch, ch1, filter_multiples, .prime=p);
+		spawn_filter(ch, ch1, filter_multiples, .prime=p);
 		ch = ch1;
 	}
 

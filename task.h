@@ -21,19 +21,19 @@ static inline int  tsk_detach(Task task);
 static inline bool tsk_equal(Task task1, Task task2);
 static inline void tsk_exit(int result);
 static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);
-static inline int  tsk_run(int(*root)(void*), void* argument);
+static inline int  tsk_spawn(int(*root)(void*), void* argument);
 static inline int  tsk_sleep(unsigned long long nanoseconds);
 static inline int  tsk_join(Task task, int* result);
 static inline void tsk_yield(void);
 
 // handy macro
-#define SPAWN_Task(T,...) tsk_run(T,&(struct T){__VA_ARGS__})
+#define spawn_task(T,...) tsk_spawn(T,&(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int tsk_run(int(*root)(void*), void* argument)
+static inline int tsk_spawn(int(*root)(void*), void* argument)
 {
 	Task task;
 	int err = tsk_fork(root, argument, &task);
