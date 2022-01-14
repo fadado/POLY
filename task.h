@@ -14,16 +14,16 @@
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-typedef thrd_t Task; // pure synonym
+typedef thrd_t Task;
 
 static inline Task tsk_current(void);
 static inline int  tsk_detach(Task task);
 static inline bool tsk_equal(Task task1, Task task2);
 static inline void tsk_exit(int result);
 static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);
-static inline int  tsk_spawn(int(*root)(void*), void* argument);
-static inline int  tsk_sleep(unsigned long long nanoseconds);
 static inline int  tsk_join(Task task, int* result);
+static inline int  tsk_sleep(unsigned long long nanoseconds);
+static inline int  tsk_spawn(int(*root)(void*), void* argument);
 static inline void tsk_yield(void);
 
 // handy macro
@@ -83,7 +83,7 @@ static ALWAYS inline void tsk_exit(int result)
 #define TASK_BEGIN(TASK_NAME)\
 	};\
 	int TASK_NAME(void* arg_) {\
-		struct TASK_NAME* self = arg_;
+		struct TASK_NAME* this = arg_;
 
 #define TASK_END(ignore)\
 	return 0; }

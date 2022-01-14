@@ -19,15 +19,15 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	int   counter; // <0: -# of blocked threads; 0: idle; >0: available resources
+	int   counter; // <0: abs(#) of blocked threads; 0: idle; >0: available resources
 	Lock  entry;
 	Event queue;
 } Semaphore;
 
-static inline void sem_destroy(Semaphore* self);
-static inline int  sem_init(Semaphore* self, int count);
-static inline int  sem_P(Semaphore* self);
-static inline int  sem_V(Semaphore* self);
+static inline void sem_destroy(Semaphore* this);
+static inline int  sem_init(Semaphore* this, int count);
+static inline int  sem_P(Semaphore* this);
+static inline int  sem_V(Semaphore* this);
 
 #define            sem_down(s) sem_P(s)
 #define            sem_wait(s) sem_P(s)
@@ -43,47 +43,47 @@ static inline int  sem_V(Semaphore* self);
 
 /*
 // Number of available resources
-static ALWAYS inline int _sem_value(Semaphore* self)
+static ALWAYS inline int _sem_value(Semaphore* this)
 {
-	return (self->counter > 0) ? self->counter : 0;
+	return (this->counter > 0) ? this->counter : 0;
 }
 
 // Number of blocked threads in the queue
-static ALWAYS inline int _sem_length(Semaphore* self)
+static ALWAYS inline int _sem_length(Semaphore* this)
 {
-	return (self->counter < 0) ? -self->counter : 0;
+	return (this->counter < 0) ? -this->counter : 0;
 }
 
 // Idle state ("red" semaphore)? value==0 and length==0
-static ALWAYS inline bool _sem_idle(Semaphore* self)
+static ALWAYS inline bool _sem_idle(Semaphore* this)
 {
-	return self->counter == 0;
+	return this->counter == 0;
 }
 */
 
-static inline int sem_init(Semaphore* self, int count)
+static inline int sem_init(Semaphore* this, int count)
 {
 	assert(count >= 0);
 
-	self->counter = count;
+	this->counter = count;
 
 	int err;
-	if ((err=lck_init(&self->entry)) == STATUS_SUCCESS) {
-		if ((err=evt_init(&self->queue, &self->entry)) == STATUS_SUCCESS) {
+	if ((err=lck_init(&this->entry)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&this->queue, &this->entry)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			lck_destroy(&self->entry);
+			lck_destroy(&this->entry);
 		}
 	}
 	return err;
 }
 
-static inline void sem_destroy(Semaphore* self)
+static inline void sem_destroy(Semaphore* this)
 {
-	assert(self->counter == 0 ); // idle state
+	assert(this->counter == 0 );
 
-	evt_destroy(&self->queue);
-	lck_destroy(&self->entry);
+	evt_destroy(&this->queue);
+	lck_destroy(&this->entry);
 }
 
 //
@@ -91,34 +91,34 @@ static inline void sem_destroy(Semaphore* self)
 //
 #define ENTER_SEMAPHORE_MONITOR\
 	int err_;\
-	if ((err_=lck_acquire(&self->entry))!=STATUS_SUCCESS)\
+	if ((err_=lck_acquire(&this->entry))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_SEMAPHORE_MONITOR\
-	if ((err_=lck_release(&self->entry))!=STATUS_SUCCESS)\
+	if ((err_=lck_release(&this->entry))!=STATUS_SUCCESS)\
 	return err_;\
 	else return STATUS_SUCCESS;
 
 #define CHECK_SEMAPHORE_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
-		lck_release(&self->entry);\
+		lck_release(&this->entry);\
 		return (E);\
 	}
 
 /*
 Decrements the value of semaphore variable by 1. If the new value of 
-self->counter is negative, the process executing wait is blocked (i.e.,
+this->counter is negative, the process executing wait is blocked (i.e.,
 added to the semaphore's queue). Otherwise, the process continues execution,
 having used a unit of the resource.
 */
-static inline int sem_P(Semaphore* self) // P, down, wait, acquire
+static inline int sem_P(Semaphore* this)
 {
 	ENTER_SEMAPHORE_MONITOR
 
-	--self->counter;
-	int length = self->counter < 0 ? -self->counter : 0;
-	if (length > 0) { // Do I have to block?
-		int err = evt_stay(&self->queue);
+	--this->counter;
+	int length = this->counter < 0 ? -this->counter : 0;
+	if (length > 0) {
+		int err = evt_stay(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -131,14 +131,14 @@ value is negative or zero (meaning there are processes waiting for a
 resource), it transfers a blocked process from the semaphore's waiting queue
 to the ready queue.
 */
-static inline int sem_V(Semaphore* self) // V, up, signal, release
+static inline int sem_V(Semaphore* this)
 {
 	ENTER_SEMAPHORE_MONITOR
 
-	int length = self->counter < 0 ? -self->counter : 0;
-	++self->counter;
-	if (length > 0) { // There are threads blocked?
-		int err = evt_signal(&self->queue);
+	int length = this->counter < 0 ? -this->counter : 0;
+	++this->counter;
+	if (length > 0) {
+		int err = evt_signal(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

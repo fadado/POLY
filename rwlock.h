@@ -19,50 +19,52 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct RWLock {
-	int   counter; // -1: a reader holds the lock; 0: ; >0: # of active writers
-	Lock  entry;
-	Event readers;
-	Event writers;
+	int   counter; // -1: writing; 0: idle; >0: # of active readers
+	Lock  entry;   // monitor lock
+	Event readers; // monitor condition
+	Event writers; // monitor condition
 } RWLock;
 
-static inline int  rwl_acquire(RWLock* self);
-static inline void rwl_destroy(RWLock* self);
-static inline int  rwl_enter(RWLock* self);
-static inline int  rwl_init(RWLock* self);
-static inline int  rwl_leave(RWLock* self);
-static inline int  rwl_release(RWLock* self);
+static inline int  rwl_acquire(RWLock* this);
+static inline void rwl_destroy(RWLock* this);
+static inline int  rwl_enter(RWLock* this);
+static inline int  rwl_init(RWLock* this);
+static inline int  rwl_leave(RWLock* this);
+static inline int  rwl_release(RWLock* this);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int rwl_init(RWLock* self)
+enum { RWL_IDLE=0, RWL_WRITING=-1 };
+
+static inline int rwl_init(RWLock* this)
 {
-	self->counter = 0;
+	this->counter = RWL_IDLE;
 
 	int err;
-	if ((err=lck_init(&self->entry)) == STATUS_SUCCESS) {
-		if ((err=evt_init(&self->readers, &self->entry)) == STATUS_SUCCESS) {
-			if ((err=evt_init(&self->writers, &self->entry)) == STATUS_SUCCESS) {
+	if ((err=lck_init(&this->entry)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&this->readers, &this->entry)) == STATUS_SUCCESS) {
+			if ((err=evt_init(&this->writers, &this->entry)) == STATUS_SUCCESS) {
 				return STATUS_SUCCESS;
 			} else {
-				evt_destroy(&self->readers);
-				lck_destroy(&self->entry);
+				evt_destroy(&this->readers);
+				lck_destroy(&this->entry);
 			}
 		} else {
-			lck_destroy(&self->entry);
+			lck_destroy(&this->entry);
 		}
 	}
 	return err;
 }
 
-static inline void rwl_destroy(RWLock* self)
+static inline void rwl_destroy(RWLock* this)
 {
-	assert(self->counter == 0 ); // idle state
+	assert(this->counter == RWL_IDLE);
 
-	evt_destroy(&self->readers);
-	evt_destroy(&self->writers);
-	lck_destroy(&self->entry);
+	evt_destroy(&this->readers);
+	evt_destroy(&this->writers);
+	lck_destroy(&this->entry);
 }
 
 //
@@ -70,48 +72,47 @@ static inline void rwl_destroy(RWLock* self)
 //
 #define ENTER_RWLOCK_MONITOR\
 	int err_;\
-	if ((err_=lck_acquire(&self->entry))!=STATUS_SUCCESS)\
+	if ((err_=lck_acquire(&this->entry))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_RWLOCK_MONITOR\
-	if ((err_=lck_release(&self->entry))!=STATUS_SUCCESS)\
+	if ((err_=lck_release(&this->entry))!=STATUS_SUCCESS)\
 	return err_;\
 	else return STATUS_SUCCESS;
 
 #define CHECK_RWLOCK_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
-		lck_release(&self->entry);\
+		lck_release(&this->entry);\
 		return (E);\
 	}
 
 //
 // Writer 
 //
-static inline int rwl_acquire(RWLock* self)
+static inline int rwl_acquire(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	if (self->counter != 0) {
-		int err = evt_wait(&self->writers);
+	if (this->counter != RWL_IDLE) {
+		int err = evt_wait(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
-		// after signaling writers the counter must be zero
-		assert(self->counter == 0);
+		assert(this->counter == RWL_IDLE);
 	}
-	self->counter = -1; // the writer holds the lock
+	this->counter = RWL_WRITING;
 
 	LEAVE_RWLOCK_MONITOR
 }
 
-static inline int rwl_release(RWLock* self)
+static inline int rwl_release(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	self->counter = 0; // the writer unholds the lock
-	if (!_evt_empty(&self->writers)) {
-		int err = evt_signal(&self->writers);
+	this->counter = RWL_IDLE;
+	if (!_evt_empty(&this->writers)) {
+		int err = evt_signal(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
-	} else if (!_evt_empty(&self->readers)) {
-		int err = evt_broadcast(&self->readers);
+	} else if (!_evt_empty(&this->readers)) {
+		int err = evt_broadcast(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
 
@@ -121,27 +122,26 @@ static inline int rwl_release(RWLock* self)
 //
 // Readers
 //
-static inline int rwl_enter(RWLock* self)
+static inline int rwl_enter(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	// while a writer holds the lock
-	while (self->counter == -1) {
-		int err = evt_wait(&self->readers);
+	while (this->counter == RWL_WRITING) {
+		int err = evt_wait(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
-	++self->counter;
+	++this->counter;
 
 	LEAVE_RWLOCK_MONITOR
 }
 
-static inline int rwl_leave(RWLock* self)
+static inline int rwl_leave(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	if (--self->counter == 0) { // no readers reading
-		if (!_evt_empty(&self->writers)) {
-			int err = evt_signal(&self->writers);
+	if (--this->counter == RWL_IDLE) {
+		if (!_evt_empty(&this->writers)) {
+			int err = evt_signal(&this->writers);
 			CHECK_RWLOCK_MONITOR (err)
 		}
 	}

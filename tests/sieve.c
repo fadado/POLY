@@ -14,34 +14,34 @@
 ////////////////////////////////////////////////////////////////////////
 
 // generate 2,3,5,7,9...
-TASK_BODY(generate_candidates)
+TASK_BODY (generate_candidates)
 	Channel* input; // not used
 	Channel* output;
-TASK_BEGIN(generate_candidates)
-	assert(self->input == (Channel*)0);
+TASK_BEGIN (generate_candidates)
+	assert(this->input == (Channel*)0);
 	int n = 2;
-	chn_send(self->output, n);
+	chn_send(this->output, n);
 	for (n=3; true; n+=2)  { // forever odd numbers
-		chn_send(self->output, n);
+		chn_send(this->output, n);
 	}
-TASK_END(generate_candidates)
+TASK_END (generate_candidates)
 
 // filter multiples of prime
-TASK_BODY(filter_multiples)
+TASK_BODY (filter_multiples)
 	Channel* input;
 	Channel* output;
 	int prime;
-TASK_BEGIN(filter_multiples)
+TASK_BEGIN (filter_multiples)
 	Scalar s;
 	int n;
 	for (;;) {
-		chn_receive(self->input, &s);
+		chn_receive(this->input, &s);
 		n = cast(s, n);
-		if (n%self->prime != 0) {
-			chn_send_(self->output, s);
+		if (n%this->prime != 0) {
+			chn_send_(this->output, s);
 		}
 	}
-TASK_END(filter_multiples)
+TASK_END (filter_multiples)
 
 ////////////////////////////////////////////////////////////////////////
 //

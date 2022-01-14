@@ -9,21 +9,21 @@
 #include "task.h"
 #include "future.h"
 
-TASK_SPEC(spinner, static)
-TASK_SPEC(fibonacci, static)
+TASK_SPEC (spinner, static)
+TASK_SPEC (fibonacci, static)
 
 ////////////////////////////////////////////////////////////////////////
 // Tasks
 ////////////////////////////////////////////////////////////////////////
 
 // run forever painting the spinner
-TASK_BODY(spinner)
+TASK_BODY (spinner)
 	int delay; // nanoseconds
-TASK_BEGIN(spinner)
+TASK_BEGIN (spinner)
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		tsk_sleep(self->delay);
+		tsk_sleep(this->delay);
 	}
 
 	spin(0);
@@ -32,22 +32,22 @@ TASK_BEGIN(spinner)
 			spin(i);
 		}
 	}
-TASK_END(spinner)
+TASK_END (spinner)
 
 // compute fib(n) in the background
-TASK_BODY(fibonacci)
+TASK_BODY (fibonacci)
 	Future* future;  // this is a promise: a task with future!
 	long    n;
-TASK_BEGIN(fibonacci)
+TASK_BEGIN (fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	long result = slow_fib(self->n);
+	long result = slow_fib(this->n);
 	// ...long time...
-	ftr_set(self->future, result); // what if return > 0 ???
-TASK_END(fibonacci)
+	ftr_set(this->future, result); // what if return > 0 ???
+TASK_END (fibonacci)
 
 ////////////////////////////////////////////////////////////////////////
 //

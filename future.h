@@ -20,15 +20,15 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Future {
-	bool    pending;
+	bool    pending; // still not resolved?
 	Scalar  result;  // memoized result
-	Channel port;
+	Channel port;    // shared message box
 } Future;
 
-static inline Scalar ftr_get(Future* self);
-static inline int    ftr_spawn(Future* self, int(*root)(void*), void* argument);
-static inline int    ftr_set_(Future* self, Scalar x);
-static inline int    ftr_join(Future* self);
+static inline Scalar ftr_get(Future* this);
+static inline int    ftr_join(Future* this);
+static inline int    ftr_set_(Future* this, Scalar x);
+static inline int    ftr_spawn(Future* this, int(*root)(void*), void* argument);
 
 // Accept any scalar type
 #define ftr_set(FUTURE,EXPRESSION) ftr_set_((FUTURE), coerce(EXPRESSION))
@@ -41,47 +41,47 @@ static inline int    ftr_join(Future* self);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int ftr_spawn(Future* self, int(*root)(void*), void* argument)
+static inline int ftr_spawn(Future* this, int(*root)(void*), void* argument)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;
 
-	self->pending = true;
-	self->result.word = 0x1aFabada;
-	if ((err=chn_init(&self->port, asyncronous)) == STATUS_SUCCESS) {
+	this->pending = true;
+	this->result.word = 0x1aFabada;
+	if ((err=chn_init(&this->port, asyncronous)) == STATUS_SUCCESS) {
 		if ((err=tsk_spawn(root, argument)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			chn_destroy(&self->port);
+			chn_destroy(&this->port);
 		}
 	}
 	return err;
 }
 
 // to be called once from the promise
-static ALWAYS inline int ftr_set_(Future* self, Scalar x)
+static ALWAYS inline int ftr_set_(Future* this, Scalar x)
 {
-	assert(self->pending);
-	int status = chn_send_(&self->port, x);               /*ASYNC*/
+	assert(this->pending);
+	int status = chn_send_(&this->port, x);
 	return status;
 }
 
 // to be called once from the client
-static inline int ftr_join(Future* self)
+static inline int ftr_join(Future* this)
 {
-	assert(self->pending);
-	int status = chn_receive(&self->port, &self->result); /*ASYNC*/
-	self->pending = false;
-	chn_destroy(&self->port);
+	assert(this->pending);
+	int status = chn_receive(&this->port, &this->result);
+	this->pending = false;
+	chn_destroy(&this->port);
 	return status;
 }
 
 // to be called any number of times from the client
-static ALWAYS inline Scalar ftr_get(Future* self)
+static ALWAYS inline Scalar ftr_get(Future* this)
 {
-	if (self->pending) { ftr_join(self); }
-	assert(!self->pending);
-	return self->result;
+	if (this->pending) { ftr_join(this); }
+	assert(!this->pending);
+	return this->result;
 }
 
 #endif // FUTURE_H

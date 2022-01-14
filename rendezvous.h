@@ -22,44 +22,44 @@ typedef struct RendezVous {
 	Event pair[2];
 } RendezVous;
 
-static inline void rv_destroy(RendezVous* self);
-static inline int  rv_init(RendezVous* self, union lck_ptr lock);
-static inline int  rv_signal(RendezVous* self, int i);
-static inline int  rv_wait(RendezVous* self, int i);
+static inline void rv_destroy(RendezVous* this);
+static inline int  rv_init(RendezVous* this, union lck_ptr lock);
+static inline int  rv_signal(RendezVous* this, int i);
+static inline int  rv_wait(RendezVous* this, int i);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int rv_init(RendezVous* self, union lck_ptr lock)
+static inline int rv_init(RendezVous* this, union lck_ptr lock)
 {
 	int err;
-	if ((err=evt_init(&self->pair[0], lock.mutex)) == STATUS_SUCCESS) {
-		if ((err=evt_init(&self->pair[1], lock.mutex)) == STATUS_SUCCESS) {
+	if ((err=evt_init(&this->pair[0], lock.mutex)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&this->pair[1], lock.mutex)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			evt_destroy(&self->pair[0]);
+			evt_destroy(&this->pair[0]);
 		}
 	}
 	return err;
 }
 
-static inline void rv_destroy(RendezVous* self)
+static inline void rv_destroy(RendezVous* this)
 {
-	evt_destroy(&self->pair[1]);
-	evt_destroy(&self->pair[0]);
+	evt_destroy(&this->pair[1]);
+	evt_destroy(&this->pair[0]);
 }
 
-static ALWAYS inline int rv_wait(RendezVous* self, int i)
+static ALWAYS inline int rv_wait(RendezVous* this, int i)
 {
 	assert(i==0 || i==1);
-	return evt_wait(&self->pair[i]);
+	return evt_wait(&this->pair[i]);
 }
 
-static ALWAYS inline int rv_signal(RendezVous* self, int i)
+static ALWAYS inline int rv_signal(RendezVous* this, int i)
 {
 	assert(i==0 || i==1);
-	return evt_signal(&self->pair[i]);
+	return evt_signal(&this->pair[i]);
 }
 
 #endif // RENDEZVOUS_H
