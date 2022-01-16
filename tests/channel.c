@@ -29,13 +29,13 @@ static int task_producer(void* arg)
 	Channel* channel = arg;
 	for (int i=0; i < M; ++i) {
 		char c = '0'+i;
-		catch (chn_send(channel, c));
+		catch (channel_send(channel, c));
 #ifdef DEBUG
 		//warn("Snd> %c", c);
 #endif
 	}
-	chn_close(channel);
-	// FAILURE: chn_send(channel, '0');
+	channel_close(channel);
+	// FAILURE: channel_send(channel, '0');
 #ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif
@@ -56,8 +56,8 @@ static int task_consumer(void* arg)
 #endif
 	Channel* channel = arg;
 	Scalar s;
-	while (!chn_drained(channel)) {
-		catch (chn_receive(channel, &s));
+	while (!channel_drained(channel)) {
+		catch (channel_receive(channel, &s));
 		char c = cast(s, '@');
 #ifdef DEBUG
 		//warn("Rcv< %c", s);
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 #	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
 
 	Channel channel;
-	catch (chn_init(&channel, N));
+	catch (channel_init(&channel, N));
 
 	thrd_t producer, consumer;
 
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 	catch (thrd_join(producer, &status)); catch (status);
 	catch (thrd_join(consumer, &status)); catch (status);
 
-	chn_destroy(&channel);
+	channel_destroy(&channel);
 
 	return EXIT_SUCCESS;
 onerror:

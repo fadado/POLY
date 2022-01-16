@@ -25,9 +25,9 @@ typedef struct Barrier {
 	Event move_on;  // monitor condition
 } Barrier;
 
-static inline int  brr_init(Barrier* this);
-static inline void brr_destroy(Barrier* this);
-static inline int  brr_wait(Barrier* this);
+static inline int  barrier_init(Barrier* this);
+static inline void barrier_destroy(Barrier* this);
+static inline int  barrier_wait(Barrier* this);
 
 enum { BARRIER_FULL = -1 };
 
@@ -37,35 +37,35 @@ enum { BARRIER_FULL = -1 };
 
 /*
 //
-static ALWAYS inline int _brr_empty(Barrier* this)
+static ALWAYS inline int _barrier_empty(Barrier* this)
 {
 	return this->places == this->capacity;
 }
 */
 
-static inline int brr_init(Barrier* this, int capacity)
+static inline int barrier_init(Barrier* this, int capacity)
 {
 	assert(capacity > 1);
 
 	this->places = this->capacity = capacity;
 
 	int err;
-	if ((err=lck_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=evt_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
+	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
+		if ((err=event_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			lck_destroy(&this->entry);
+			lock_destroy(&this->entry);
 		}
 	}
 	return err;
 }
 
-static inline void brr_destroy(Barrier* this)
+static inline void barrier_destroy(Barrier* this)
 {
 	assert(this->places == 0);
 
-	evt_destroy(&this->move_on);
-	lck_destroy(&this->entry);
+	event_destroy(&this->move_on);
+	lock_destroy(&this->entry);
 }
 
 //
@@ -73,20 +73,20 @@ static inline void brr_destroy(Barrier* this)
 //
 #define ENTER_BARRIER_MONITOR\
 	int err_;\
-	if ((err_=lck_acquire(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_acquire(&this->entry))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_BARRIER_MONITOR\
-	if ((err_=lck_release(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_release(&this->entry))!=STATUS_SUCCESS)\
 	return err_;\
 
 #define CHECK_BARRIER_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
-		lck_release(&this->entry);\
+		lock_release(&this->entry);\
 		return (E);\
 	}
 
-static inline int brr_wait(Event* this)
+static inline int barrier_wait(Event* this)
 {
 	int status = STATUS_SUCCESS;
 	ENTER_BARRIER_MONITOR
@@ -94,10 +94,10 @@ static inline int brr_wait(Event* this)
 	if (--this->places == 0) {
 		this->places = this->capacity;
 		status  = BARRIER_FULL;
-		int err = evt_broadcast(&this->move_on);
+		int err = event_broadcast(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	} else {
-		int err = evt_wait(&this->move_on);
+		int err = event_wait(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	}
 

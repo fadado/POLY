@@ -23,7 +23,7 @@ TASK_BEGIN (spinner)
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		tsk_sleep(this->delay);
+		task_sleep(this->delay);
 	}
 
 	spin(0);
@@ -46,7 +46,7 @@ TASK_BEGIN (fibonacci)
 
 	long result = slow_fib(this->n);
 	// ...long time...
-	ftr_set(this->future, result); // what if return > 0 ???
+	future_set(this->future, result); // what if return > 0 ???
 TASK_END
 
 ////////////////////////////////////////////////////////////////////////
@@ -72,14 +72,14 @@ int main(int argc, char** argv)
 
 	Future future;
 	err += spawn_future(&future, fibonacci, .n=N);
-	err += ftr_join(&future);
+	err += future_join(&future);
 
 	assert(err==0);
 
-	long n = cast(ftr_get(&future), 0L);
+	long n = cast(future_get(&future), 0L);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(ftr_get(&future), 0L);
+	n = cast(future_get(&future), 0L);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;

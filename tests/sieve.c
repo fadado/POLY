@@ -20,9 +20,9 @@ TASK_BODY (generate_candidates)
 TASK_BEGIN (generate_candidates)
 	assert(this->input == (Channel*)0);
 	int n = 2;
-	chn_send(this->output, n);
+	channel_send(this->output, n);
 	for (n=3; true; n+=2)  { // forever odd numbers
-		chn_send(this->output, n);
+		channel_send(this->output, n);
 	}
 TASK_END
 
@@ -35,10 +35,10 @@ TASK_BEGIN (filter_multiples)
 	Scalar s;
 	int n;
 	for (;;) {
-		chn_receive(this->input, &s);
+		channel_receive(this->input, &s);
 		n = cast(s, n);
 		if (n%this->prime != 0) {
-			chn_send_(this->output, s);
+			channel_send_(this->output, s);
 		}
 	}
 TASK_END
@@ -53,15 +53,15 @@ int main(int argc, char** argv)
 	Scalar s;
 	int p;
 
-	Channel* ch = chn_alloc(1);
+	Channel* ch = channel_alloc(1);
 	warn(__func__);
 	spawn_filter(0, ch, generate_candidates);
 
 	for (int i = 0; i < BOUND; ++i) {
-		chn_receive(ch, &s);
+		channel_receive(ch, &s);
 		p = cast(s, p);
 		printf("%d\n", p);
-		Channel* ch1 = chn_alloc(1);
+		Channel* ch1 = channel_alloc(1);
 	warn(__func__);
 		spawn_filter(ch, ch1, filter_multiples, .prime=p);
 		ch = ch1;

@@ -16,74 +16,74 @@
 
 typedef thrd_t Task;
 
-static inline Task tsk_current(void);
-static inline int  tsk_detach(Task task);
-static inline bool tsk_equal(Task task1, Task task2);
-static inline void tsk_exit(int result);
-static inline int  tsk_fork(int(*root)(void*), void* argument, Task* new_task);
-static inline int  tsk_join(Task task, int* result);
-static inline int  tsk_sleep(unsigned long long nanoseconds);
-static inline int  tsk_spawn(int(*root)(void*), void* argument);
-static inline void tsk_yield(void);
+static inline Task task_current(void);
+static inline int  task_detach(Task task);
+static inline bool task_equal(Task task1, Task task2);
+static inline void task_exit(int result);
+static inline int  task_fork(int(*root)(void*), void* argument, Task* new_task);
+static inline int  task_join(Task task, int* result);
+static inline int  task_sleep(unsigned long long nanoseconds);
+static inline int  task_spawn(int(*root)(void*), void* argument);
+static inline void task_yield(void);
 
 // handy macro
-#define spawn_task(T,...) tsk_spawn(T,&(struct T){__VA_ARGS__})
+#define spawn_task(T,...) task_spawn(T,&(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int tsk_spawn(int(*root)(void*), void* argument)
+static inline int task_spawn(int(*root)(void*), void* argument)
 {
 	Task task;
-	int err = tsk_fork(root, argument, &task);
+	int err = task_fork(root, argument, &task);
 	if (err != STATUS_SUCCESS) return err;
-	return tsk_detach(task);
+	return task_detach(task);
 }
 
-static ALWAYS inline int tsk_fork(int(*root)(void*), void* argument, Task* new_task)
+static ALWAYS inline int task_fork(int(*root)(void*), void* argument, Task* new_task)
 { return thrd_create(new_task, root, argument); }
 
-static ALWAYS inline int tsk_join(Task task, int* result)
+static ALWAYS inline int task_join(Task task, int* result)
 { return thrd_join(task, result); }
 
-static ALWAYS inline int tsk_detach(Task task)
+static ALWAYS inline int task_detach(Task task)
 { return thrd_detach(task); }
 
-static ALWAYS inline bool tsk_equal(Task task1, Task task2)
+static ALWAYS inline bool task_equal(Task task1, Task task2)
 { return thrd_equal(task1, task2); }
 
-static ALWAYS inline Task tsk_current(void)
+static ALWAYS inline Task task_current(void)
 { return thrd_current(); }
 
-static ALWAYS inline void tsk_yield(void)
+static ALWAYS inline void task_yield(void)
 { thrd_yield(); }
 
-static ALWAYS inline int tsk_sleep(unsigned long long nanoseconds)
+static ALWAYS inline int task_sleep(unsigned long long nanoseconds)
 {
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);
 	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, (void*)0);
 }
 
-static ALWAYS inline void tsk_exit(int result)
+static ALWAYS inline void task_exit(int result)
 { thrd_exit(result); }
 
 ////////////////////////////////////////////////////////////////////////
 // Experimental structures
 ////////////////////////////////////////////////////////////////////////
 
-#define TASK_SPEC(TASK_NAME,...)\
-	struct TASK_NAME;\
-	__VA_ARGS__ int TASK_NAME(void*);
+#define TASK_SPEC(TASK,...)\
+	struct TASK;\
+	__VA_ARGS__ int TASK(void*);
 
-#define TASK_BODY(TASK_NAME)\
-	struct TASK_NAME {
+#define TASK_BODY(TASK)\
+	struct TASK {
 
-#define TASK_BEGIN(TASK_NAME)\
+#define TASK_BEGIN(TASK)\
 	};\
-	int TASK_NAME(void* arg_) {\
-		struct TASK_NAME* this = arg_;
+	int TASK(void* arg_) {\
+		struct TASK* this = arg_;
 
 #define TASK_END\
 	return 0; }

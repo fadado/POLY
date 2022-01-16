@@ -21,14 +21,14 @@ int task_test(void* arg)
 	//warn("Enter %s", __func__);
 #endif
 	for (int i=0; i < M; ++i) {
-		sem_acquire(&test_lock_mutex);
+		semaphore_acquire(&test_lock_mutex);
 		Integer* pi = &test_lock_counter;
 		Integer** ppi = &pi;
 		Integer tmp = (**ppi-1) + 2;
 		**ppi = tmp;
-		sem_release(&test_lock_mutex);
+		semaphore_release(&test_lock_mutex);
 	}
-	tsk_yield();
+	task_yield();
 
 	return 0;
 }
@@ -40,15 +40,15 @@ static void test_lock(void)
 #endif
 	test_lock_counter = 0;
 
-	sem_init(&test_lock_mutex, 1);
+	semaphore_init(&test_lock_mutex, 1);
 
 	Task t[N];
 	for (int i=0; i < N; ++i) {
-		int e = tsk_fork(task_test, (void*)0, &t[i]);
+		int e = task_fork(task_test, (void*)0, &t[i]);
 		assert(e == STATUS_SUCCESS);
 	}
 	for (int i=0; i < N; ++i) {
-		int e = tsk_join(t[i], (int*)0);
+		int e = task_join(t[i], (int*)0);
 		assert(e == STATUS_SUCCESS);
 	}
 	assert(test_lock_counter == N*M);

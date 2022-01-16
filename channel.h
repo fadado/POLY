@@ -14,8 +14,8 @@
 #endif
 #include "scalar.h"
 #include "lock.h"
+#include "condition.h"
 #include "event.h"
-#include "sign.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -23,7 +23,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
-	int flags;
+	int _Atomic flags;
 	int capacity;
 	int occupation;
 	int front;
@@ -35,27 +35,27 @@ typedef struct Channel {
 	union {
 		// buffered channel
 		struct {
-			Sign non_empty;
-			Sign non_full;
+			Condition non_empty;
+			Condition non_full;
 		};
 		// blocking channel
 		Event rendezvous[2];
 	};
 } Channel;
 
-static inline void chn_close(Channel* this);
-static inline void chn_destroy(Channel* this);
-static inline bool chn_drained(Channel* this);
-static inline int  chn_init(Channel* this, unsigned capacity);
-static inline int  chn_receive(Channel* this, Scalar* x);
-static inline int  chn_send_(Channel* this, Scalar x);
+static inline void channel_close(Channel* this);
+static inline void channel_destroy(Channel* this);
+static inline bool channel_drained(Channel* this);
+static inline int  channel_init(Channel* this, unsigned capacity);
+static inline int  channel_receive(Channel* this, Scalar* x);
+static inline int  channel_send_(Channel* this, Scalar x);
 
 // Accept any scalar type
-#define chn_send(CHANNEL,EXPRESSION) chn_send_((CHANNEL), coerce(EXPRESSION))
+#define channel_send(CHANNEL,EXPRESSION) channel_send_((CHANNEL), coerce(EXPRESSION))
 
 // handy macro
 #define spawn_filter(I,O,T,...)\
-	tsk_spawn(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
+	task_spawn(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -76,7 +76,7 @@ enum channel_flag {
 			assert(0 <= this->front && this->front <  this->capacity);\
 			assert(this->buffer != (Scalar*)0);\
 		}\
-		assert(!(_chn_empty(this) && _chn_full(this)));
+		assert(!(_channel_empty(this) && _channel_full(this)));
 #else
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
@@ -87,12 +87,12 @@ enum channel_flag {
 //
 // Predicates
 //
-static ALWAYS inline bool _chn_empty(Channel* this)
+static ALWAYS inline bool _channel_empty(Channel* this)
 {
 	return this->occupation == 0;
 }
 
-static ALWAYS inline bool _chn_full(Channel* this)
+static ALWAYS inline bool _channel_full(Channel* this)
 {
 	return this->occupation == this->capacity;
 }
@@ -101,10 +101,10 @@ static ALWAYS inline bool _chn_full(Channel* this)
 // Channel life
 //
 
-static inline int chn_init(Channel* this, unsigned capacity)
+static inline int channel_init(Channel* this, unsigned capacity)
 {
-	void d_lock(void)   { lck_destroy(&this->entry); }
-	void d_empty(void)  { sign_destroy(&this->non_empty); }
+	void d_lock(void)   { lock_destroy(&this->entry); }
+	void d_empty(void)  { condition_destroy(&this->non_empty); }
 	void d_buffer(void) { free(this->buffer); }
 
 	// cleanup thunks to call before return
@@ -116,12 +116,12 @@ static inline int chn_init(Channel* this, unsigned capacity)
 
 	this->occupation = this->flags = 0;
 	this->capacity = capacity;
-	catch (lck_init(&this->entry));
+	catch (lock_init(&this->entry));
 	push(d_lock);
 
 	switch (this->capacity) {
 		case 0:
-			catch (evt_init2(this->rendezvous, &this->entry));
+			catch (event_init2(this->rendezvous, &this->entry));
 			this->capacity = 1;
 			this->flags |= CHANNEL_BLOCKING;
 			break;
@@ -135,9 +135,9 @@ static inline int chn_init(Channel* this, unsigned capacity)
 			push(d_buffer);
 			fallthrough;
 		case 1:
-			catch (sign_init(&this->non_empty));
+			catch (condition_init(&this->non_empty));
 			push(d_empty);
-			catch (sign_init(&this->non_full));
+			catch (condition_init(&this->non_full));
 			this->flags |= CHANNEL_BUFFERED;
 			break;
 	}
@@ -155,86 +155,83 @@ onerror:
 	return err;
 }
 
-static inline void chn_destroy(Channel* this)
+static inline void channel_destroy(Channel* this)
 {
-	assert(_chn_empty(this));
+	assert(_channel_empty(this));
 
 	if (this->flags & CHANNEL_BUFFERED) {
-		sign_destroy(&this->non_full);
-		sign_destroy(&this->non_empty);
+		condition_destroy(&this->non_full);
+		condition_destroy(&this->non_empty);
 	} else if (this->flags & CHANNEL_BLOCKING) {
-		evt_destroy(&this->rendezvous[1]);
-		evt_destroy(&this->rendezvous[0]);
+		event_destroy(&this->rendezvous[1]);
+		event_destroy(&this->rendezvous[0]);
 	}
-	lck_destroy(&this->entry);
+	lock_destroy(&this->entry);
 	if (this->capacity > 1) {
 		free(this->buffer);
 		this->buffer = (Scalar*)0;
 	}
 }
 
-static inline void chn_close(Channel* this)
+static inline void channel_close(Channel* this)
 {
-	lck_acquire(&this->entry);
 	this->flags |= CHANNEL_CLOSED;
+	//?lock_acquire(&this->entry);
 	if (this->occupation == 0) {
 		this->flags |= CHANNEL_DRAINED;
 	}
-	lck_release(&this->entry);
+	//?lock_release(&this->entry);
 }
 
-static ALWAYS inline bool chn_drained(Channel* this)
+static ALWAYS inline bool channel_drained(Channel* this)
 {
-	lck_acquire(&this->entry);
-	bool b = this->flags & CHANNEL_DRAINED;
-	lck_release(&this->entry);
-	return b;
+	return (this->flags & CHANNEL_DRAINED);
 }
 
 //
 // Monitor helpers
 //
 #define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
-	if ((err=lck_acquire(&this->entry))!=STATUS_SUCCESS) {\
+	if ((err=lock_acquire(&this->entry))!=STATUS_SUCCESS) {\
 		return err;\
 	}\
 	if (this->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else while (PREDICATE(this)) {\
-		if ((err=sign_wait(&CONDITION, &this->entry.mutex))!=STATUS_SUCCESS) {\
-			lck_destroy(&this->entry);\
+		if ((err=condition_wait(&CONDITION, &this->entry.mutex))!=STATUS_SUCCESS) {\
+			lock_destroy(&this->entry);\
 			return err;\
 		}\
 	}
 
 #define LEAVE_CHANNEL_MONITOR(CONDITION)\
 	if (this->flags & CHANNEL_BLOCKING) /*NOP*/;\
-	else if ((err=sign_give(&CONDITION))!=STATUS_SUCCESS) {\
-		lck_release(&this->entry);\
+	else if ((err=condition_notify(&CONDITION))!=STATUS_SUCCESS) {\
+		lock_release(&this->entry);\
 		return err;\
 	}\
-	if ((err=lck_release(&this->entry))!=STATUS_SUCCESS) {\
+	if ((err=lock_release(&this->entry))!=STATUS_SUCCESS) {\
 		return err;\
 	}
 
-static inline int chn_send_(Channel* this, Scalar x)
+static inline int channel_send_(Channel* this, Scalar x)
 {
-	int err;
-	ENTER_CHANNEL_MONITOR (_chn_full, this->non_full)
-
 	if (this->flags & CHANNEL_CLOSED) {
-		panic("chn_send want to send an scalar to a closed channel");
+		panic("channel_send want to send an scalar to a closed channel");
 	}
+
+	int err;
+	ENTER_CHANNEL_MONITOR (_channel_full, this->non_full)
 
 	if (this->flags & CHANNEL_BLOCKING) {
 		assert(this->capacity == 1);
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (evt_wait(&this->rendezvous[0]));
+		catch (event_wait(&this->rendezvous[0]));
 		this->value = x;
-		catch (evt_notify(&this->rendezvous[1]));
+		catch (event_notify(&this->rendezvous[1]));
 	} else if (this->capacity == 1) {
-		assert(_chn_empty(this));
+		assert(_channel_empty(this));
 		this->value = x;
 	} else {
 		assert(this->capacity > 1);
@@ -248,11 +245,11 @@ static inline int chn_send_(Channel* this, Scalar x)
 
 	return STATUS_SUCCESS;
 onerror:
-	lck_release(&this->entry);
+	lock_release(&this->entry);
 	return err;
 }
 
-static inline int chn_receive(Channel* this, Scalar* x)
+static inline int channel_receive(Channel* this, Scalar* x)
 {
 	if (this->flags & CHANNEL_DRAINED) {
 		if (x) x->word = 0x0;
@@ -260,19 +257,19 @@ static inline int chn_receive(Channel* this, Scalar* x)
 	}
 
 	int err;
-	ENTER_CHANNEL_MONITOR (_chn_empty, this->non_empty)
+	ENTER_CHANNEL_MONITOR (_channel_empty, this->non_empty)
 
 	if (this->flags & CHANNEL_BLOCKING) {
 		assert(this->capacity == 1);
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (evt_notify(&this->rendezvous[0]));
-		catch (evt_wait(&this->rendezvous[1]));
+		catch (event_notify(&this->rendezvous[0]));
+		catch (event_wait(&this->rendezvous[1]));
 		if (x) *x = this->value;
 		//
 	} else if (this->capacity == 1) {
-		assert(_chn_full(this));
+		assert(_channel_full(this));
 		if (x) *x = this->value;
 	} else if (x) {
 		assert(this->capacity > 1);
@@ -290,7 +287,7 @@ static inline int chn_receive(Channel* this, Scalar* x)
 
 	return STATUS_SUCCESS;
 onerror:
-	lck_release(&this->entry);
+	lock_release(&this->entry);
 	return err;
 }
 
@@ -298,24 +295,24 @@ onerror:
 // Dynamic allocation
 ////////////////////////////////////////////////////////////////////////
 
-static inline Channel* chn_alloc(int capacity)
+static inline Channel* channel_alloc(int capacity)
 {
 	Channel* channel = calloc(capacity ? capacity : 1, sizeof(Channel));
 	if (channel == (Channel*)0) {
-		panic("chn_alloc out of memory");
+		panic("channel_alloc out of memory");
 	}
-	int err = chn_init(channel, capacity);
+	int err = channel_init(channel, capacity);
 	if (err != STATUS_SUCCESS) {
 		free(channel);
-		panic("chn_alloc cannot initialize channel");
+		panic("channel_alloc cannot initialize channel");
 	}
 	return channel;
 }
 
-static inline void chn_free(Channel* channel)
+static inline void channel_free(Channel* channel)
 {
 	if (channel) {
-		chn_destroy(channel);
+		channel_destroy(channel);
 		free(channel);
 	}
 }

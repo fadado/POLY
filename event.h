@@ -24,46 +24,46 @@ typedef struct Event {
 	cnd_t  queue;   // monitor condition
 } Event;
 
-static inline int  evt_broadcast(Event* this);
-static inline void evt_destroy(Event* this);
-static inline int  evt_init(Event* this, union lck_ptr lock);
-static inline int  evt_init2(Event pair[2], union lck_ptr lock);
-static inline int  evt_notify(Event* this);
-static inline int  evt_stay(Event* this);
-static inline int  evt_wait(Event* this);
-static inline int  evt_wait_for(Event* this, unsigned long long nanoseconds);
+static inline int  event_broadcast(Event* this);
+static inline void event_destroy(Event* this);
+static inline int  event_init(Event* this, union lock_ptr lock);
+static inline int  event_init2(Event pair[2], union lock_ptr lock);
+static inline int  event_notify(Event* this);
+static inline int  event_stay(Event* this);
+static inline int  event_wait(Event* this);
+static inline int  event_wait_for(Event* this, unsigned long long nanoseconds);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int _evt_length(Event* this)
+static ALWAYS inline int _event_length(Event* this)
 { return this->waiting; }
 
-static ALWAYS inline bool _evt_empty(Event* this)
+static ALWAYS inline bool _event_empty(Event* this)
 { return this->waiting == 0; }
 
-static inline int evt_init(Event* this, union lck_ptr lock)
+static inline int event_init(Event* this, union lock_ptr lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
 	return cnd_init(&this->queue);
 }
 
-static inline int evt_init2(Event pair[2], union lck_ptr lock)
+static inline int event_init2(Event pair[2], union lock_ptr lock)
 {
 	int err;
-	if ((err=evt_init(&pair[0], lock.mutex)) == STATUS_SUCCESS) {
-		if ((err=evt_init(&pair[1], lock.mutex)) == STATUS_SUCCESS) {
+	if ((err=event_init(&pair[0], lock.mutex)) == STATUS_SUCCESS) {
+		if ((err=event_init(&pair[1], lock.mutex)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			evt_destroy(&pair[0]);
+			event_destroy(&pair[0]);
 		}
 	}
 	return err;
 }
 
-static inline void evt_destroy(Event* this)
+static inline void event_destroy(Event* this)
 {
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
@@ -72,7 +72,7 @@ static inline void evt_destroy(Event* this)
 	cnd_destroy(&this->queue);
 }
 
-static inline int evt_wait(Event* this)
+static inline int event_wait(Event* this)
 {
 	while (this->permits == 0) {
 		++this->waiting;
@@ -84,7 +84,7 @@ static inline int evt_wait(Event* this)
 	return STATUS_SUCCESS;
 }
 
-static inline int evt_stay(Event* this)
+static inline int event_stay(Event* this)
 {
 	do {
 		++this->waiting;
@@ -96,13 +96,13 @@ static inline int evt_stay(Event* this)
 	return STATUS_SUCCESS;
 }
 
-static ALWAYS inline int evt_notify(Event* this)
+static ALWAYS inline int event_notify(Event* this)
 {
 	++this->permits;
 	return cnd_signal(&this->queue);
 }
 
-static ALWAYS inline int evt_broadcast(Event* this)
+static ALWAYS inline int event_broadcast(Event* this)
 {
 	if (this->waiting > 0) {
 		this->permits += this->waiting;
@@ -110,7 +110,7 @@ static ALWAYS inline int evt_broadcast(Event* this)
 	}
 }
 
-static ALWAYS inline int evt_wait_for(Event* this, unsigned long long nanoseconds)
+static ALWAYS inline int event_wait_for(Event* this, unsigned long long nanoseconds)
 {
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);
