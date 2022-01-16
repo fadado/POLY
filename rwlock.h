@@ -109,7 +109,7 @@ static inline int rwl_release(RWLock* this)
 
 	this->counter = RWL_IDLE;
 	if (!_evt_empty(&this->writers)) {
-		int err = evt_signal(&this->writers);
+		int err = evt_notify(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
 	} else if (!_evt_empty(&this->readers)) {
 		int err = evt_broadcast(&this->readers);
@@ -141,7 +141,7 @@ static inline int rwl_leave(RWLock* this)
 
 	if (--this->counter == RWL_IDLE) {
 		if (!_evt_empty(&this->writers)) {
-			int err = evt_signal(&this->writers);
+			int err = evt_notify(&this->writers);
 			CHECK_RWLOCK_MONITOR (err)
 		}
 	}

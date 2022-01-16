@@ -27,7 +27,8 @@ typedef struct Event {
 static inline int  evt_broadcast(Event* this);
 static inline void evt_destroy(Event* this);
 static inline int  evt_init(Event* this, union lck_ptr lock);
-static inline int  evt_signal(Event* this);
+static inline int  evt_init2(Event pair[2], union lck_ptr lock);
+static inline int  evt_notify(Event* this);
 static inline int  evt_stay(Event* this);
 static inline int  evt_wait(Event* this);
 static inline int  evt_wait_for(Event* this, unsigned long long nanoseconds);
@@ -47,6 +48,19 @@ static inline int evt_init(Event* this, union lck_ptr lock)
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
 	return cnd_init(&this->queue);
+}
+
+static inline int evt_init2(Event pair[2], union lck_ptr lock)
+{
+	int err;
+	if ((err=evt_init(&pair[0], lock.mutex)) == STATUS_SUCCESS) {
+		if ((err=evt_init(&pair[1], lock.mutex)) == STATUS_SUCCESS) {
+			return STATUS_SUCCESS;
+		} else {
+			evt_destroy(&pair[0]);
+		}
+	}
+	return err;
 }
 
 static inline void evt_destroy(Event* this)
@@ -82,7 +96,7 @@ static inline int evt_stay(Event* this)
 	return STATUS_SUCCESS;
 }
 
-static ALWAYS inline int evt_signal(Event* this)
+static ALWAYS inline int evt_notify(Event* this)
 {
 	++this->permits;
 	return cnd_signal(&this->queue);

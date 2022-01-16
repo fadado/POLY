@@ -24,7 +24,7 @@ TASK_BEGIN (generate_candidates)
 	for (n=3; true; n+=2)  { // forever odd numbers
 		chn_send(this->output, n);
 	}
-TASK_END (generate_candidates)
+TASK_END
 
 // filter multiples of prime
 TASK_BODY (filter_multiples)
@@ -41,7 +41,7 @@ TASK_BEGIN (filter_multiples)
 			chn_send_(this->output, s);
 		}
 	}
-TASK_END (filter_multiples)
+TASK_END
 
 ////////////////////////////////////////////////////////////////////////
 //

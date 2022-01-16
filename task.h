@@ -85,7 +85,7 @@ static ALWAYS inline void tsk_exit(int result)
 	int TASK_NAME(void* arg_) {\
 		struct TASK_NAME* this = arg_;
 
-#define TASK_END(ignore)\
+#define TASK_END\
 	return 0; }
 
 #endif // TASK_H

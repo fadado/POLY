@@ -34,6 +34,7 @@ static inline int  sem_V(Semaphore* this);
 #define            sem_acquire(s) sem_P(s)
 
 #define            sem_up(s) sem_V(s)
+#define            sem_post(s) sem_V(s)
 #define            sem_signal(s) sem_V(s)
 #define            sem_release(s) sem_V(s)
 
@@ -138,7 +139,7 @@ static inline int sem_V(Semaphore* this)
 	int length = this->counter < 0 ? -this->counter : 0;
 	++this->counter;
 	if (length > 0) {
-		int err = evt_signal(&this->queue);
+		int err = evt_notify(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

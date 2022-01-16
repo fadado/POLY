@@ -17,7 +17,7 @@ TASK_SPEC (fibonacci, static)
 ////////////////////////////////////////////////////////////////////////
 
 // run forever painting the spinner
-TASK_BODY (spinner)
+TASK_BODY  (spinner)
 	int delay; // nanoseconds
 TASK_BEGIN (spinner)
 	const char s[] = "-\\|/-";
@@ -32,10 +32,10 @@ TASK_BEGIN (spinner)
 			spin(i);
 		}
 	}
-TASK_END (spinner)
+TASK_END
 
 // compute fib(n) in the background
-TASK_BODY (fibonacci)
+TASK_BODY  (fibonacci)
 	Future* future;  // this is a promise: a task with future!
 	long    n;
 TASK_BEGIN (fibonacci)
@@ -47,7 +47,7 @@ TASK_BEGIN (fibonacci)
 	long result = slow_fib(this->n);
 	// ...long time...
 	ftr_set(this->future, result); // what if return > 0 ???
-TASK_END (fibonacci)
+TASK_END
 
 ////////////////////////////////////////////////////////////////////////
 //
