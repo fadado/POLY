@@ -25,7 +25,7 @@ typedef struct { mtx_t mutex; } TimedRecursiveLock;
 typedef PlainLock               Lock;
 typedef TimedRecursiveLock      RecursiveTimedLock;
 
-union TRANSPARENT lock_ptr {
+union TRANSPARENT Lock {
 	mtx_t* mutex;
 	PlainLock* _1;
 	TimedLock* _2;
@@ -33,12 +33,12 @@ union TRANSPARENT lock_ptr {
 	TimedRecursiveLock* _4;
 };
 
-static inline int  lock_acquire(union lock_ptr this);
-static inline void lock_destroy(union lock_ptr this);
-static inline int  lock_init_(union lock_ptr this, int mask);
-static inline int  lock_release(union lock_ptr this);
-static inline int  lock_try(union lock_ptr this);
-static inline int  lock_try_for(union lock_ptr this, unsigned long long nanoseconds);
+static inline int  lock_acquire(union Lock this);
+static inline void lock_destroy(union Lock this);
+static inline int  lock_init_(union Lock this, int mask);
+static inline int  lock_release(union Lock this);
+static inline int  lock_try(union Lock this);
+static inline int  lock_try_for(union Lock this, unsigned long long nanoseconds);
 
 // Deduce mask from lock type
 #define lock_init(LOCK) lock_init_((LOCK), \
@@ -52,22 +52,22 @@ static inline int  lock_try_for(union lock_ptr this, unsigned long long nanoseco
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int lock_init_(union lock_ptr this, int mask)
+static ALWAYS inline int lock_init_(union Lock this, int mask)
 { return mtx_init(this.mutex, mask); }
 
-static ALWAYS inline void lock_destroy(union lock_ptr this)
+static ALWAYS inline void lock_destroy(union Lock this)
 { mtx_destroy(this.mutex); }
 
-static ALWAYS inline int lock_acquire(union lock_ptr this)
+static ALWAYS inline int lock_acquire(union Lock this)
 { return mtx_lock(this.mutex); }
 
-static ALWAYS inline int lock_release(union lock_ptr this)
+static ALWAYS inline int lock_release(union Lock this)
 { return mtx_unlock(this.mutex); }
 
-static ALWAYS inline int lock_try(union lock_ptr this)
+static ALWAYS inline int lock_try(union Lock this)
 { return mtx_trylock(this.mutex); }
 
-static ALWAYS inline int lock_try_for(union lock_ptr this, unsigned long long nanoseconds)
+static ALWAYS inline int lock_try_for(union Lock this, unsigned long long nanoseconds)
 {
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);

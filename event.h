@@ -26,8 +26,8 @@ typedef struct Event {
 
 static inline int  event_broadcast(Event* this);
 static inline void event_destroy(Event* this);
-static inline int  event_init(Event* this, union lock_ptr lock);
-static inline int  event_init2(Event pair[2], union lock_ptr lock);
+static inline int  event_init(Event* this, union Lock lock);
+static inline int  event_init2(Event pair[2], union Lock lock);
 static inline int  event_notify(Event* this);
 static inline int  event_stay(Event* this);
 static inline int  event_wait(Event* this);
@@ -43,14 +43,14 @@ static ALWAYS inline int _event_length(Event* this)
 static ALWAYS inline bool _event_empty(Event* this)
 { return this->waiting == 0; }
 
-static inline int event_init(Event* this, union lock_ptr lock)
+static inline int event_init(Event* this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
 	return cnd_init(&this->queue);
 }
 
-static inline int event_init2(Event pair[2], union lock_ptr lock)
+static inline int event_init2(Event pair[2], union Lock lock)
 {
 	int err;
 	if ((err=event_init(&pair[0], lock)) == STATUS_SUCCESS) {
