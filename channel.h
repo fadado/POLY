@@ -110,14 +110,14 @@ static inline int channel_init(Channel* this, unsigned capacity)
 	// cleanup thunks to call before return
 	void(*thunks[4])(void) = { 0 };
 	int thunk_index = 0;
-#	define push(F) thunks[thunk_index++]=F
+#	define at_cleanup(F) thunks[thunk_index++]=F
 
 	int err;
 
 	this->occupation = this->flags = 0;
 	this->capacity = capacity;
 	catch (lock_init(&this->entry));
-	push(d_lock);
+	at_cleanup(d_lock);
 
 	switch (this->capacity) {
 		case 0:
@@ -132,11 +132,11 @@ static inline int channel_init(Channel* this, unsigned capacity)
 				err = STATUS_NOMEM;
 				goto onerror;
 			}
-			push(d_buffer);
+			at_cleanup(d_buffer);
 			fallthrough;
 		case 1:
 			catch (condition_init(&this->non_empty));
-			push(d_empty);
+			at_cleanup(d_empty);
 			catch (condition_init(&this->non_full));
 			this->flags |= CHANNEL_BUFFERED;
 			break;
@@ -145,7 +145,7 @@ static inline int channel_init(Channel* this, unsigned capacity)
 
 	return STATUS_SUCCESS;
 onerror:
-#	undef push
+#	undef at_cleanup
 	if (thunk_index > 0) {
 		assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
 		int i;
@@ -216,7 +216,7 @@ static ALWAYS inline bool channel_drained(Channel* this)
 static inline int channel_send_(Channel* this, Scalar x)
 {
 	if (this->flags & CHANNEL_CLOSED) {
-		panic("channel_send want to send an scalar to a closed channel");
+		panic("channel_send cannot use a closed channel");
 	}
 
 	int err;
@@ -267,18 +267,18 @@ static inline int channel_receive(Channel* this, Scalar* x)
 		catch (event_notify(&this->rendezvous[0]));
 		catch (event_wait(&this->rendezvous[1]));
 		if (x) *x = this->value;
-		//
 	} else if (this->capacity == 1) {
 		assert(_channel_full(this));
 		if (x) *x = this->value;
 	} else if (x) {
 		assert(this->capacity > 1);
-		int back = this->front - this->occupation;
+		register int back = this->front - this->occupation;
 		back = (back >= 0) ? back : back+this->capacity;
 		*x = this->buffer[back];
 	}
 	--this->occupation;
 	ASSERT_CHANNEL_INVARIANT
+
 	if ((this->flags & CHANNEL_CLOSED) && this->occupation == 0) {
 		this->flags |= CHANNEL_DRAINED;
 	}
