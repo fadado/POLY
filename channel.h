@@ -197,7 +197,7 @@ static ALWAYS inline bool channel_drained(Channel* this)
 	}\
 	if (this->flags & CHANNEL_BLOCKING) /*NOP*/;\
 	else while (PREDICATE(this)) {\
-		if ((err=condition_wait(&CONDITION, &this->entry.mutex))!=STATUS_SUCCESS) {\
+		if ((err=condition_wait(&CONDITION, &this->entry))!=STATUS_SUCCESS) {\
 			lock_destroy(&this->entry);\
 			return err;\
 		}\

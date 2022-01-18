@@ -53,8 +53,8 @@ static inline int event_init(Event* this, union lock_ptr lock)
 static inline int event_init2(Event pair[2], union lock_ptr lock)
 {
 	int err;
-	if ((err=event_init(&pair[0], lock.mutex)) == STATUS_SUCCESS) {
-		if ((err=event_init(&pair[1], lock.mutex)) == STATUS_SUCCESS) {
+	if ((err=event_init(&pair[0], lock)) == STATUS_SUCCESS) {
+		if ((err=event_init(&pair[1], lock)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
 			event_destroy(&pair[0]);

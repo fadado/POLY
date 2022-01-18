@@ -8,6 +8,7 @@
 #ifndef POLY_H
 #include "POLY.h"
 #endif
+#include "lock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Event
@@ -20,8 +21,8 @@ static ALWAYS inline int  condition_broadcast(Condition* this);
 static ALWAYS inline void condition_destroy(Condition* this);
 static ALWAYS inline int  condition_init(Condition* this);
 static ALWAYS inline int  condition_notify(Condition* this);
-static ALWAYS inline int  condition_wait(Condition* this, mtx_t* mutex );
-static ALWAYS inline int  condition_wait_for(Condition* this, mtx_t* mutex, unsigned long long nanoseconds);
+static ALWAYS inline int  condition_wait(Condition* this, union lock_ptr lock);
+static ALWAYS inline int  condition_wait_for(Condition* this, union lock_ptr lock, unsigned long long nanoseconds);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -36,17 +37,17 @@ static ALWAYS inline void condition_destroy(Condition* this)
 static ALWAYS inline int condition_notify(Condition* this)
 { return cnd_signal(this); }
 
-static ALWAYS inline int condition_wait(Condition* this, mtx_t* mutex )
-{ return cnd_wait(this, mutex); }
+static ALWAYS inline int  condition_wait(Condition* this, union lock_ptr lock)
+{ return cnd_wait(this, lock.mutex); }
 
 static ALWAYS inline int condition_broadcast(Condition* this)
 { return cnd_broadcast(this); }
 
-static ALWAYS inline int condition_wait_for(Condition* this, mtx_t* mutex, unsigned long long nanoseconds)
+static ALWAYS inline int condition_wait_for(Condition* this, union lock_ptr lock, unsigned long long nanoseconds)
 {
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);
-	return cnd_timedwait(this, mutex,
+	return cnd_timedwait(this, lock.mutex,
 						 &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
