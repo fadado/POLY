@@ -112,6 +112,7 @@ static ALWAYS inline int event_broadcast(Event* this)
 
 static ALWAYS inline int event_wait_for(Event* this, unsigned long long nanoseconds)
 {
+	nanoseconds += now(); // TIME_UTC based absolute calendar time point
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);
 	return cnd_timedwait(&this->queue, this->mutex,

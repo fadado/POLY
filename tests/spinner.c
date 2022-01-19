@@ -12,6 +12,8 @@
 TASK_SPEC (spinner, static)
 TASK_SPEC (fibonacci, static)
 
+DEFINE_TASK_ID (10) // max 10 tasks
+
 ////////////////////////////////////////////////////////////////////////
 // Tasks
 ////////////////////////////////////////////////////////////////////////
@@ -20,6 +22,7 @@ TASK_SPEC (fibonacci, static)
 TASK_BODY  (spinner)
 	int delay; // nanoseconds
 TASK_BEGIN (spinner)
+	warn("TaskID: %d", task_id());
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
@@ -39,6 +42,7 @@ TASK_BODY  (fibonacci)
 	Future* future;  // this is a promise: a task with future!
 	long    n;
 TASK_BEGIN (fibonacci)
+	warn("TaskID: %d", task_id());
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -67,6 +71,8 @@ int main(int argc, char** argv)
 	enum { N=46, usDELAY=500}; // fib(46)=1836311903
 
 	hide_cursor();
+
+	warn("TaskID: %d", task_id());
 
 	err += spawn_task(spinner, .delay=us2ns(usDELAY));
 

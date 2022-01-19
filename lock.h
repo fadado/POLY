@@ -69,6 +69,7 @@ static ALWAYS inline int lock_try(union Lock this)
 
 static ALWAYS inline int lock_try_for(union Lock this, unsigned long long nanoseconds)
 {
+	nanoseconds += now();
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});

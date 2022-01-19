@@ -56,6 +56,22 @@ static ALWAYS inline bool task_equal(Task task1, Task task2)
 static ALWAYS inline Task task_current(void)
 { return thrd_current(); }
 
+#define DEFINE_TASK_ID(N)\
+	static _Atomic int _task_id_count;\
+	static Task _task_id_vector[N];\
+	static int task_id(void) {\
+		Task t = task_current();\
+		int i, c = _task_id_count;\
+		for (i=0; i < c; ++i)\
+			if (task_equal(_task_id_vector[i], t))\
+				return i;\
+		i = _task_id_count++;\
+		if (i >= sizeof(_task_id_vector)/sizeof(Task))\
+			panic("looser");\
+		_task_id_vector[i] = t;\
+		return i;\
+	}
+
 static ALWAYS inline void task_yield(void)
 { thrd_yield(); }
 

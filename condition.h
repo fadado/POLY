@@ -45,6 +45,7 @@ static ALWAYS inline int condition_broadcast(Condition* this)
 
 static ALWAYS inline int condition_wait_for(Condition* this, union Lock lock, unsigned long long nanoseconds)
 {
+	nanoseconds += now(); // TIME_UTC based absolute calendar time point
 	time_t s  = ns2s(nanoseconds);
 	long   ns = nanoseconds - s2ns(s);
 	return cnd_timedwait(this, lock.mutex,
