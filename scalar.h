@@ -39,12 +39,10 @@ static_assert(sizeof(Scalar) == 8);
 /* Pseudo declarations:
  *     union_scalar  coerce(native_scalar);
  *     native_scalar cast(union_scalar, native_scalar_exemple_for_type);
- *
  */
 
 // Cast from any native scalar EXPRESSION to an Scalar
-#define coerce(EXPRESSION) _Generic((EXPRESSION),\
-	Scalar: (EXPRESSION),\
+#define coerce(EXPRESSION) (Scalar)_Generic((EXPRESSION),\
 	_Bool: (Word)(EXPRESSION),\
 	char: (Word)(EXPRESSION),\
 	signed char: (Integer)(EXPRESSION),\

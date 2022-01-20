@@ -50,7 +50,7 @@ TASK_BEGIN (fibonacci)
 
 	long result = slow_fib(this->n);
 	// ...long time...
-	future_set(this->future, result); // what if return > 0 ???
+	future_set(this->future, result); // what if error: return > 0 ???
 TASK_END
 
 ////////////////////////////////////////////////////////////////////////

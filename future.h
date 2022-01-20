@@ -27,11 +27,11 @@ typedef struct Future {
 
 static inline Scalar future_get(Future* this);
 static inline int    future_join(Future* this);
-static inline int    future_set_(Future* this, Scalar x);
+static inline int    future_set_scalar(Future* this, Scalar x);
 static inline int    future_spawn(Future* this, int(*root)(void*), void* argument);
 
 // Accept any scalar type
-#define future_set(FUTURE,EXPRESSION) future_set_((FUTURE), coerce(EXPRESSION))
+#define future_set(FUTURE,EXPRESSION) future_set_scalar((FUTURE), coerce(EXPRESSION))
 
 // handy macro
 #define spawn_future(F,R,...)\
@@ -59,10 +59,10 @@ static inline int future_spawn(Future* this, int(*root)(void*), void* argument)
 }
 
 // to be called once from the promise
-static ALWAYS inline int future_set_(Future* this, Scalar x)
+static ALWAYS inline int future_set_scalar(Future* this, Scalar x)
 {
 	assert(this->pending);
-	int status = channel_send_(&this->port, x);
+	int status = channel_send_scalar(&this->port, x);
 	return status;
 }
 
