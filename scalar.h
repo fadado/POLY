@@ -57,8 +57,12 @@ static_assert(sizeof(Scalar) == 8);
 	unsigned long long int: (Word)(EXPRESSION),\
 	float: (Real)(EXPRESSION),\
 	double: (Real)(EXPRESSION),\
-	long double: (Real)(EXPRESSION),\
-	default: (Pointer)(Word)(EXPRESSION))
+	long double: (Real)(EXPRESSION))
+
+//	default: (Pointer)(Word)(EXPRESSION)) ???
+
+// necessary to coerce pointers due to a bug in _Generic ???
+#define COERCE(x) (Scalar)(void*)(x)
 
 // Cast an union SCALAR to the same type as the EXAMPLE expression type
 #define cast(SCALAR,EXAMPLE) _Generic((EXAMPLE),\

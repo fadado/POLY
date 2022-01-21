@@ -275,7 +275,7 @@ static inline int channel_receive(Channel* this, Scalar* x)
 		register int back = this->front - this->occupation;
 		back = (back >= 0) ? back : back+this->capacity;
 		*x = this->buffer[back];
-	}
+	} // else ignore
 	--this->occupation;
 	ASSERT_CHANNEL_INVARIANT
 
