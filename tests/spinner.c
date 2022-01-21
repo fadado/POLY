@@ -82,10 +82,10 @@ int main(int argc, char** argv)
 
 	assert(err==0);
 
-	long n = cast(future_get(&future), 0L);
+	long n = cast(future_get(&future), long);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(future_get(&future), 0L);
+	n = cast(future_get(&future), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;

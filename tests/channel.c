@@ -58,7 +58,7 @@ static int task_consumer(void* arg)
 	Scalar s;
 	while (!channel_drained(channel)) {
 		catch (channel_receive(channel, &s));
-		char c = cast(s, '@');
+		char c = cast(s, char);
 #ifdef DEBUG
 		//warn("Rcv< %c", s);
 #endif
