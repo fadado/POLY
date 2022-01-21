@@ -81,6 +81,16 @@ int main(int argc, char** argv)
 	s1 = (Scalar)(Real)0e0;
 	s1 = (Scalar)(Pointer)NULL;
 
+#define Integer(x) (Scalar)(Integer)(x)
+#define Word(x) (Scalar)(Word)(x)
+#define Real(x) (Scalar)(Real)(x)
+#define Pointer(x) (Scalar)(Pointer)(x)
+
+	s1 = Integer(0);
+	s1 = Word(0x0);
+	s1 = Real(0e0);
+	s1 = Pointer(00);
+
 	return 0;
 }
 
