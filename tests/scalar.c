@@ -9,11 +9,13 @@
 
 int main(int argc, char** argv)
 {
-	inline ALWAYS void set_(Scalar* p, Scalar s) {
-		*p = s;
-	}
-#	define set(P,S) set_((P), coerce(S))
+////////////////////////////////////////////////////////////////////////
+//	inline ALWAYS void set_(Scalar* p, Scalar s) {
+//		*p = s;
+//	}
+//#define set(P,S) set_((P), coerce(S))
 
+////////////////////////////////////////////////////////////////////////
 	Scalar s1, s2;
 
 	int i1, i2;
@@ -75,6 +77,13 @@ int main(int argc, char** argv)
 	s1 = COERCE(0);				// assign pointer to scalar
 	p2 = cast(s1, p2);
 	assert(p2 == s1.pointer);
+
+////////////////////////////////////////////////////////////////////////
+
+	s1 = (Scalar)(Integer)0;
+	s1 = (Scalar)(Word)0x0;
+	s1 = (Scalar)(Real)0e0;
+	s1 = (Scalar)(Pointer)NULL;
 
 	return 0;
 }

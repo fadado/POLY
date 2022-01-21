@@ -48,10 +48,7 @@ static inline void channel_destroy(Channel* this);
 static inline bool channel_drained(Channel* this);
 static inline int  channel_init(Channel* this, unsigned capacity);
 static inline int  channel_receive(Channel* this, Scalar* x);
-static inline int  channel_send_scalar(Channel* this, Scalar x);
-
-// Accept any scalar type
-#define channel_send(CHANNEL,EXPRESSION) channel_send_scalar((CHANNEL), coerce(EXPRESSION))
+static inline int  channel_send(Channel* this, Scalar x);
 
 // handy macro
 #define spawn_filter(I,O,T,...)\
@@ -213,7 +210,7 @@ static ALWAYS inline bool channel_drained(Channel* this)
 		return err;\
 	}
 
-static inline int channel_send_scalar(Channel* this, Scalar x)
+static inline int channel_send(Channel* this, Scalar x)
 {
 	if (this->flags & CHANNEL_CLOSED) {
 		panic("channel_send cannot use a closed channel");
