@@ -14,18 +14,18 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef signed long long   Integer; // like int64_t; assume LP64 or LLP64
-typedef unsigned long long Word;    // like uint64_t; assume LP64 or LLP64
+typedef unsigned long long Natural; // like uint64_t; assume LP64 or LLP64
 typedef double             Real;    // the standard sets it
 typedef void*              Pointer; // assume LP64 or LLP64
 
 static_assert(sizeof(Real) == sizeof(Integer));
-static_assert(sizeof(Real) == sizeof(Word));
+static_assert(sizeof(Real) == sizeof(Natural));
 static_assert(sizeof(Real) == sizeof(Pointer));
 static_assert(sizeof(Real) == 8);
 
 typedef union TRANSPARENT Scalar {
 	Integer integer;
-	Word    word;
+	Natural word;
 	Real    real;
 	Pointer pointer;
 } Scalar;
@@ -40,30 +40,30 @@ static_assert(sizeof(Scalar) == 8);
 
 // Cast from any native scalar EXPRESSION to an Scalar
 #define coerce(EXPRESSION) (Scalar)_Generic((EXPRESSION),\
-	_Bool: (Word)(EXPRESSION),\
-	char: (Word)(EXPRESSION),\
+	_Bool: (Natural)(EXPRESSION),\
+	char: (Natural)(EXPRESSION),\
 	signed char: (Integer)(EXPRESSION),\
-	unsigned char: (Word)(EXPRESSION),\
+	unsigned char: (Natural)(EXPRESSION),\
 	signed short int: (Integer)(EXPRESSION),\
-	unsigned short int: (Word)(EXPRESSION),\
+	unsigned short int: (Natural)(EXPRESSION),\
 	signed int: (Integer)(EXPRESSION),\
-	unsigned int: (Word)(EXPRESSION),\
+	unsigned int: (Natural)(EXPRESSION),\
 	signed long int: (Integer)(EXPRESSION),\
-	unsigned long int: (Word)(EXPRESSION),\
+	unsigned long int: (Natural)(EXPRESSION),\
 	signed long long int: (Integer)(EXPRESSION),\
-	unsigned long long int: (Word)(EXPRESSION),\
+	unsigned long long int: (Natural)(EXPRESSION),\
 	float: (Real)(EXPRESSION),\
 	double: (Real)(EXPRESSION),\
 	long double: (Real)(EXPRESSION))
 
 //	this causes an error!!!
-//	default: (Pointer)(Word)(EXPRESSION)) ???
+//	default: (Pointer)(Natural)(EXPRESSION)) ???
 
 #endif
 
 // alternative to coerce
 #define Integer(x)    (Scalar)(Integer)(x)
-#define Word(x)       (Scalar)(Word)(x)
+#define Natural(x)    (Scalar)(Natural)(x)
 #define Real(x)       (Scalar)(Real)(x)
 #define Pointer(x)    (Scalar)(Pointer)(x)
 
@@ -84,7 +84,7 @@ static_assert(sizeof(Scalar) == 8);
 	float: (float)(SCALAR).real,\
 	double: (double)(SCALAR).real,\
 	long double: (long double)(SCALAR).real,\
-	default: (void*)(SCALAR).pointer)
+	default: (SCALAR).pointer)
 
 #endif // SCALAR_H
 

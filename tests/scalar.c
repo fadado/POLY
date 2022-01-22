@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 	assert(i1 == i2);
 
 	unsigned w1;
-	s1 = Word(0x1000000U);
+	s1 = Natural(0x1000000U);
 	s2 = s1;
 	w1 = cast(s1, unsigned);
 	assert(w1 == s1.word);
@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 ////////////////////////////////////////////////////////////////////////
 
 	s1 = Integer(0);
-	s1 = Word(0x0);
+	s1 = Natural(0x0);
 	s1 = Real(0e0);
 	s1 = Pointer(00);
 
