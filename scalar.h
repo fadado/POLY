@@ -36,10 +36,7 @@ static_assert(sizeof(Scalar) == 8);
 // Cast to and from Scalar
 ////////////////////////////////////////////////////////////////////////
 
-/* Pseudo declarations:
- *     union_scalar  coerce(native_scalar);
- *     native_scalar cast(union_scalar, native_scalar_exemple_for_type);
- */
+#ifdef TheCoerceMacroOrTheCompilerHaveBugs
 
 // Cast from any native scalar EXPRESSION to an Scalar
 #define coerce(EXPRESSION) (Scalar)_Generic((EXPRESSION),\
@@ -62,8 +59,13 @@ static_assert(sizeof(Scalar) == 8);
 //	this causes an error!!!
 //	default: (Pointer)(Word)(EXPRESSION)) ???
 
-// necessary to coerce pointers due to a bug in _Generic ???
-#define COERCE(POINTER) (Scalar)(void*)(POINTER)
+#endif
+
+// alternative to coerce
+#define Integer(x)    (Scalar)(Integer)(x)
+#define Word(x)       (Scalar)(Word)(x)
+#define Real(x)       (Scalar)(Real)(x)
+#define Pointer(x)    (Scalar)(Pointer)(x)
 
 // Cast an union SCALAR to the TYPE specified
 #define cast(SCALAR,TYPE) _Generic(((TYPE){0}),\
