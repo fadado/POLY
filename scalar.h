@@ -13,21 +13,21 @@
 // Scalar type and 64 bit scalar types
 ////////////////////////////////////////////////////////////////////////
 
-typedef signed long long   Integer; // like int64_t; assume LP64 or LLP64
-typedef unsigned long long Natural; // like uint64_t; assume LP64 or LLP64
-typedef double             Real;    // the standard sets it
-typedef void*              Pointer; // assume LP64 or LLP64
+typedef signed long long   Integer;
+typedef unsigned long long Unsigned;
+typedef double             Double;
+typedef void*              Pointer;
 
-static_assert(sizeof(Real) == sizeof(Integer));
-static_assert(sizeof(Real) == sizeof(Natural));
-static_assert(sizeof(Real) == sizeof(Pointer));
-static_assert(sizeof(Real) == 8);
+static_assert(sizeof(Double) == sizeof(Integer));
+static_assert(sizeof(Double) == sizeof(Unsigned));
+static_assert(sizeof(Double) == sizeof(Pointer));
+static_assert(sizeof(Double) == 8);
 
 typedef union TRANSPARENT Scalar {
-	Integer integer;
-	Natural word;
-	Real    real;
-	Pointer pointer;
+	Integer  integer;	// _i?
+	Unsigned word;		// _u?
+	Double   real;		// _d?
+	Pointer  pointer;	// _p?
 } Scalar;
 
 static_assert(sizeof(Scalar) == 8);
@@ -40,31 +40,31 @@ static_assert(sizeof(Scalar) == 8);
 
 // Cast from any native scalar EXPRESSION to an Scalar
 #define coerce(EXPRESSION) (Scalar)_Generic((EXPRESSION),\
-	_Bool: (Natural)(EXPRESSION),\
-	char: (Natural)(EXPRESSION),\
+	_Bool: (Unsigned)(EXPRESSION),\
+	char: (Unsigned)(EXPRESSION),\
 	signed char: (Integer)(EXPRESSION),\
-	unsigned char: (Natural)(EXPRESSION),\
+	unsigned char: (Unsigned)(EXPRESSION),\
 	signed short int: (Integer)(EXPRESSION),\
-	unsigned short int: (Natural)(EXPRESSION),\
+	unsigned short int: (Unsigned)(EXPRESSION),\
 	signed int: (Integer)(EXPRESSION),\
-	unsigned int: (Natural)(EXPRESSION),\
+	unsigned int: (Unsigned)(EXPRESSION),\
 	signed long int: (Integer)(EXPRESSION),\
-	unsigned long int: (Natural)(EXPRESSION),\
+	unsigned long int: (Unsigned)(EXPRESSION),\
 	signed long long int: (Integer)(EXPRESSION),\
-	unsigned long long int: (Natural)(EXPRESSION),\
-	float: (Real)(EXPRESSION),\
-	double: (Real)(EXPRESSION),\
-	long double: (Real)(EXPRESSION))
+	unsigned long long int: (Unsigned)(EXPRESSION),\
+	float: (Double)(EXPRESSION),\
+	double: (Double)(EXPRESSION),\
+	long double: (Double)(EXPRESSION))
 
 //	this causes an error!!!
-//	default: (Pointer)(Natural)(EXPRESSION)) ???
+//	default: (Pointer)(Unsigned)(EXPRESSION)) ???
 
 #endif
 
 // alternative to coerce
 #define Integer(x)    (Scalar)(Integer)(x)
-#define Natural(x)    (Scalar)(Natural)(x)
-#define Real(x)       (Scalar)(Real)(x)
+#define Unsigned(x)   (Scalar)(Unsigned)(x)
+#define Double(x)     (Scalar)(Double)(x)
 #define Pointer(x)    (Scalar)(Pointer)(x)
 
 // Cast an union SCALAR to the TYPE specified

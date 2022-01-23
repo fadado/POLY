@@ -249,7 +249,7 @@ onerror:
 static inline int channel_receive(Channel* this, Scalar* x)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (x) x->word = 0x0;
+		if (x) *x = Unsigned(0x0);
 		return STATUS_SUCCESS;
 	}
 

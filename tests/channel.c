@@ -29,13 +29,13 @@ static int task_producer(void* arg)
 	Channel* channel = arg;
 	for (int i=0; i < M; ++i) {
 		char c = '0'+i;
-		catch (channel_send(channel, Natural(c)));
+		catch (channel_send(channel, (Unsigned)c));
 #ifdef DEBUG
 		//warn("Snd> %c", c);
 #endif
 	}
 	channel_close(channel);
-	// FAILURE: channel_send(channel, Natural('0'));
+	// FAILURE: channel_send(channel, (Unsigned)'0');
 #ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif

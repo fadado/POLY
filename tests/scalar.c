@@ -6,6 +6,8 @@
 #define DEBUG
 #include "scalar.h"
 
+union Scalar scalar(union Scalar s) { return s; }
+
 int main(int argc, char** argv)
 {
 ////////////////////////////////////////////////////////////////////////
@@ -22,14 +24,14 @@ int main(int argc, char** argv)
 	assert(i1 == i2);
 
 	unsigned w1;
-	s1 = Natural(0x1000000U);
+	s1 = Unsigned(0x1000000U);
 	s2 = s1;
 	w1 = cast(s1, unsigned);
 	assert(w1 == s1.word);
 	assert(w1 == s2.word);
 
 	double d1, d2;
-	s1 = Real(123.456);
+	s1 = Double(123.456);
 	s2 = s1;
 	d1 = cast(s1, double);
 	d2 = cast(s2, double);
@@ -59,9 +61,11 @@ int main(int argc, char** argv)
 ////////////////////////////////////////////////////////////////////////
 
 	s1 = Integer(0);
-	s1 = Natural(0x0);
-	s1 = Real(0e0);
+	s1 = Unsigned(0x0);
+	s1 = Double(0e0);
 	s1 = Pointer(00);
+
+	Scalar s9 = (Integer)0;
 
 	return 0;
 }

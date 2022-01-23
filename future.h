@@ -44,7 +44,7 @@ static inline int future_spawn(Future* this, int(*root)(void*), void* argument)
 	int err;
 
 	this->pending = true;
-	this->result.word = 0x1aFabada;
+	this->result = Unsigned(0x1aFabada);
 	if ((err=channel_init(&this->port, asyncronous)) == STATUS_SUCCESS) {
 		if ((err=task_spawn(root, argument)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
