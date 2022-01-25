@@ -46,4 +46,29 @@ tests/bug1.c:43:9: error: pointer value used where a floating-point was expected
 	return 0;
 }
 
+#ifdef TheCoerceMacroOrTheCompilerHaveBugs
+
+// Cast from any native scalar EXPRESSION to an Scalar
+#define coerce(EXPRESSION) (union Scalar)_Generic((EXPRESSION),\
+	_Bool: (Unsigned)(EXPRESSION),\
+	char: (Unsigned)(EXPRESSION),\
+	signed char: (Integer)(EXPRESSION),\
+	unsigned char: (Unsigned)(EXPRESSION),\
+	signed short int: (Integer)(EXPRESSION),\
+	unsigned short int: (Unsigned)(EXPRESSION),\
+	signed int: (Integer)(EXPRESSION),\
+	unsigned int: (Unsigned)(EXPRESSION),\
+	signed long int: (Integer)(EXPRESSION),\
+	unsigned long int: (Unsigned)(EXPRESSION),\
+	signed long long int: (Integer)(EXPRESSION),\
+	unsigned long long int: (Unsigned)(EXPRESSION),\
+	float: (Double)(EXPRESSION),\
+	double: (Double)(EXPRESSION),\
+	long double: (Double)(EXPRESSION))
+
+//	this causes an error!!!
+//	default: (Pointer)(Unsigned)(EXPRESSION)) ???
+
+#endif
+
 // vim:ai:sw=4:ts=4:syntax=cpp

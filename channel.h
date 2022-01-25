@@ -23,7 +23,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
-	int _Atomic flags;
+	atomic int flags;
 	int capacity;
 	int occupation;
 	int front;
