@@ -15,7 +15,7 @@
 #include "scalar.h"
 #include "lock.h"
 #include "condition.h"
-#include "event.h"
+#include "queue.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -39,7 +39,7 @@ typedef struct Channel {
 			Condition non_full;
 		};
 		// blocking channel
-		Event rendezvous[2];
+		Queue rendezvous[2];
 	};
 } Channel;
 
@@ -118,7 +118,7 @@ static inline int channel_init(Channel* this, unsigned capacity)
 
 	switch (this->capacity) {
 		case 0:
-			catch (event_init2(this->rendezvous, &this->entry));
+			catch (queue_init2(this->rendezvous, &this->entry));
 			this->capacity = 1;
 			this->flags |= CHANNEL_BLOCKING;
 			break;
@@ -160,8 +160,8 @@ static inline void channel_destroy(Channel* this)
 		condition_destroy(&this->non_full);
 		condition_destroy(&this->non_empty);
 	} else if (this->flags & CHANNEL_BLOCKING) {
-		event_destroy(&this->rendezvous[1]);
-		event_destroy(&this->rendezvous[0]);
+		queue_destroy(&this->rendezvous[1]);
+		queue_destroy(&this->rendezvous[0]);
 	}
 	lock_destroy(&this->entry);
 	if (this->capacity > 1) {
@@ -224,9 +224,9 @@ static inline int channel_send(Channel* this, Scalar x)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (event_wait(&this->rendezvous[0]));
+		catch (queue_wait(&this->rendezvous[0]));
 		this->value = x;
-		catch (event_notify(&this->rendezvous[1]));
+		catch (queue_notify(&this->rendezvous[1]));
 	} else if (this->capacity == 1) {
 		assert(_channel_empty(this));
 		this->value = x;
@@ -261,8 +261,8 @@ static inline int channel_receive(Channel* this, Scalar* x)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (event_notify(&this->rendezvous[0]));
-		catch (event_wait(&this->rendezvous[1]));
+		catch (queue_notify(&this->rendezvous[0]));
+		catch (queue_wait(&this->rendezvous[1]));
 		if (x) *x = this->value;
 	} else if (this->capacity == 1) {
 		assert(_channel_full(this));

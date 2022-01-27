@@ -1,11 +1,11 @@
 /*
- * Event
+ * Queue
  *
  * Compile: gcc -O2 -lpthread ...
  *
  */
-#ifndef EVENT_H
-#define EVENT_H
+#ifndef QUEUE_H
+#define QUEUE_H
 
 #ifndef POLY_H
 #include "POLY.h"
@@ -13,57 +13,57 @@
 #include "lock.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Event
+// Type Queue
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-typedef struct Event {
+typedef struct Queue {
 	int    permits; // # of threads allowed to leave the queue
 	int    waiting; // # of threads waiting in the queue
 	mtx_t* mutex;   // monitor lock
 	cnd_t  queue;   // monitor condition
-} Event;
+} Queue;
 
-static inline int  event_broadcast(Event* this);
-static inline void event_destroy(Event* this);
-static inline int  event_init(Event* this, union Lock lock);
-static inline int  event_init2(Event pair[2], union Lock lock);
-static inline int  event_notify(Event* this);
-static inline int  event_stay(Event* this);
-static inline int  event_wait(Event* this);
-static inline int  event_wait_for(Event* this, unsigned long long nanoseconds);
+static inline int  queue_broadcast(Queue* this);
+static inline void queue_destroy(Queue* this);
+static inline int  queue_init(Queue* this, union Lock lock);
+static inline int  queue_init2(Queue pair[2], union Lock lock);
+static inline int  queue_notify(Queue* this);
+static inline int  queue_stay(Queue* this);
+static inline int  queue_wait(Queue* this);
+static inline int  queue_wait_for(Queue* this, unsigned long long nanoseconds);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int _event_length(Event* this)
+static ALWAYS inline int _queue_length(Queue* this)
 { return this->waiting; }
 
-static ALWAYS inline bool _event_empty(Event* this)
+static ALWAYS inline bool _queue_empty(Queue* this)
 { return this->waiting == 0; }
 
-static inline int event_init(Event* this, union Lock lock)
+static inline int queue_init(Queue* this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
 	return cnd_init(&this->queue);
 }
 
-static inline int event_init2(Event pair[2], union Lock lock)
+static inline int queue_init2(Queue pair[2], union Lock lock)
 {
 	int err;
-	if ((err=event_init(&pair[0], lock)) == STATUS_SUCCESS) {
-		if ((err=event_init(&pair[1], lock)) == STATUS_SUCCESS) {
+	if ((err=queue_init(&pair[0], lock)) == STATUS_SUCCESS) {
+		if ((err=queue_init(&pair[1], lock)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			event_destroy(&pair[0]);
+			queue_destroy(&pair[0]);
 		}
 	}
 	return err;
 }
 
-static inline void event_destroy(Event* this)
+static inline void queue_destroy(Queue* this)
 {
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
@@ -72,7 +72,7 @@ static inline void event_destroy(Event* this)
 	cnd_destroy(&this->queue);
 }
 
-static inline int event_wait(Event* this)
+static inline int queue_wait(Queue* this)
 {
 	while (this->permits == 0) {
 		++this->waiting;
@@ -84,7 +84,7 @@ static inline int event_wait(Event* this)
 	return STATUS_SUCCESS;
 }
 
-static inline int event_stay(Event* this)
+static inline int queue_stay(Queue* this)
 {
 	do {
 		++this->waiting;
@@ -96,13 +96,13 @@ static inline int event_stay(Event* this)
 	return STATUS_SUCCESS;
 }
 
-static ALWAYS inline int event_notify(Event* this)
+static ALWAYS inline int queue_notify(Queue* this)
 {
 	++this->permits;
 	return cnd_signal(&this->queue);
 }
 
-static ALWAYS inline int event_broadcast(Event* this)
+static ALWAYS inline int queue_broadcast(Queue* this)
 {
 	if (this->waiting > 0) {
 		this->permits += this->waiting;
@@ -110,7 +110,7 @@ static ALWAYS inline int event_broadcast(Event* this)
 	}
 }
 
-static ALWAYS inline int event_wait_for(Event* this, unsigned long long nanoseconds)
+static ALWAYS inline int queue_wait_for(Queue* this, unsigned long long nanoseconds)
 {
 	nanoseconds += now(); // TIME_UTC based absolute calendar time point
 	time_t s  = ns2s(nanoseconds);
@@ -119,6 +119,6 @@ static ALWAYS inline int event_wait_for(Event* this, unsigned long long nanoseco
 						 &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
-#endif // EVENT_H
+#endif // QUEUE_H
 
 // vim:ai:sw=4:ts=4:syntax=cpp

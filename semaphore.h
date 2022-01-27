@@ -11,7 +11,7 @@
 #include "POLY.h"
 #endif
 #include "lock.h"
-#include "event.h"
+#include "queue.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type
@@ -21,7 +21,7 @@
 typedef struct Semaphore {
 	int   counter; // <0: abs(#) of blocked threads; 0: idle; >0: available resources
 	Lock  entry;
-	Event queue;
+	Queue queue;
 } Semaphore;
 
 static inline void semaphore_destroy(Semaphore* this);
@@ -70,7 +70,7 @@ static inline int semaphore_init(Semaphore* this, int count)
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=event_init(&this->queue, &this->entry)) == STATUS_SUCCESS) {
+		if ((err=queue_init(&this->queue, &this->entry)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
 			lock_destroy(&this->entry);
@@ -83,7 +83,7 @@ static inline void semaphore_destroy(Semaphore* this)
 {
 	assert(this->counter == 0 );
 
-	event_destroy(&this->queue);
+	queue_destroy(&this->queue);
 	lock_destroy(&this->entry);
 }
 
@@ -119,7 +119,7 @@ static inline int semaphore_P(Semaphore* this)
 	--this->counter;
 	register int length = this->counter < 0 ? -this->counter : 0;
 	if (length > 0) {
-		int err = event_stay(&this->queue);
+		int err = queue_stay(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -139,7 +139,7 @@ static inline int semaphore_V(Semaphore* this)
 	int length = this->counter < 0 ? -this->counter : 0;
 	++this->counter;
 	if (length > 0) {
-		int err = event_notify(&this->queue);
+		int err = queue_notify(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

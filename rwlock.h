@@ -11,7 +11,7 @@
 #include "POLY.h"
 #endif
 #include "lock.h"
-#include "event.h"
+#include "queue.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type
@@ -20,9 +20,9 @@
 
 typedef struct RWLock {
 	int   counter; // -1: writing; 0: idle; >0: # of active readers
-	Lock  entry;   // monitor lock
-	Event readers; // monitor condition
-	Event writers; // monitor condition
+	Lock  entry;
+	Queue readers;
+	Queue writers;
 } RWLock;
 
 static inline int  rwlock_acquire(RWLock* this);
@@ -44,11 +44,11 @@ static inline int rwlock_init(RWLock* this)
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=event_init(&this->readers, &this->entry)) == STATUS_SUCCESS) {
-			if ((err=event_init(&this->writers, &this->entry)) == STATUS_SUCCESS) {
+		if ((err=queue_init(&this->readers, &this->entry)) == STATUS_SUCCESS) {
+			if ((err=queue_init(&this->writers, &this->entry)) == STATUS_SUCCESS) {
 				return STATUS_SUCCESS;
 			} else {
-				event_destroy(&this->readers);
+				queue_destroy(&this->readers);
 				lock_destroy(&this->entry);
 			}
 		} else {
@@ -62,8 +62,8 @@ static inline void rwlock_destroy(RWLock* this)
 {
 	assert(this->counter == RWL_IDLE);
 
-	event_destroy(&this->readers);
-	event_destroy(&this->writers);
+	queue_destroy(&this->readers);
+	queue_destroy(&this->writers);
 	lock_destroy(&this->entry);
 }
 
@@ -94,7 +94,7 @@ static inline int rwlock_acquire(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	if (this->counter != RWL_IDLE) {
-		int err = event_wait(&this->writers);
+		int err = queue_wait(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
 		assert(this->counter == RWL_IDLE);
 	}
@@ -108,11 +108,11 @@ static inline int rwlock_release(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	this->counter = RWL_IDLE;
-	if (!_event_empty(&this->writers)) {
-		int err = event_notify(&this->writers);
+	if (!_queue_empty(&this->writers)) {
+		int err = queue_notify(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
-	} else if (!_event_empty(&this->readers)) {
-		int err = event_broadcast(&this->readers);
+	} else if (!_queue_empty(&this->readers)) {
+		int err = queue_broadcast(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
 
@@ -127,7 +127,7 @@ static inline int rwlock_enter(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	while (this->counter == RWL_WRITING) {
-		int err = event_wait(&this->readers);
+		int err = queue_wait(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
 	++this->counter;
@@ -140,8 +140,8 @@ static inline int rwlock_leave(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	if (--this->counter == RWL_IDLE) {
-		if (!_event_empty(&this->writers)) {
-			int err = event_notify(&this->writers);
+		if (!_queue_empty(&this->writers)) {
+			int err = queue_notify(&this->writers);
 			CHECK_RWLOCK_MONITOR (err)
 		}
 	}

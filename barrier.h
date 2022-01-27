@@ -11,7 +11,7 @@
 #include "POLY.h"
 #endif
 #include "lock.h"
-#include "event.h"
+#include "queue.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Types
@@ -21,8 +21,8 @@
 typedef struct Barrier {
 	int   capacity; // # of threads to wait before opening the barrier
 	int   places;   // # of threads still expected before opening
-	Lock  entry;    // monitor lock
-	Event move_on;  // monitor condition
+	Lock  entry;
+	Queue move_on;
 } Barrier;
 
 static inline int  barrier_init(Barrier* this);
@@ -51,7 +51,7 @@ static inline int barrier_init(Barrier* this, int capacity)
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=event_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
+		if ((err=queue_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
 			lock_destroy(&this->entry);
@@ -64,7 +64,7 @@ static inline void barrier_destroy(Barrier* this)
 {
 	assert(this->places == 0);
 
-	event_destroy(&this->move_on);
+	queue_destroy(&this->move_on);
 	lock_destroy(&this->entry);
 }
 
@@ -86,7 +86,7 @@ static inline void barrier_destroy(Barrier* this)
 		return (E);\
 	}
 
-static inline int barrier_wait(Event* this)
+static inline int barrier_wait(Barrier* this)
 {
 	int status = STATUS_SUCCESS;
 	ENTER_BARRIER_MONITOR
@@ -94,10 +94,10 @@ static inline int barrier_wait(Event* this)
 	if (--this->places == 0) {
 		this->places = this->capacity;
 		status  = BARRIER_FULL;
-		int err = event_broadcast(&this->move_on);
+		int err = queue_broadcast(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	} else {
-		int err = event_wait(&this->move_on);
+		int err = queue_wait(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	}
 
