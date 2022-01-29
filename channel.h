@@ -224,7 +224,7 @@ static inline int channel_send(Channel* this, Scalar x)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (queue_wait(&this->rendezvous[0]));
+		catch (queue_check(&this->rendezvous[0]));
 		this->value = x;
 		catch (queue_notify(&this->rendezvous[1]));
 	} else if (this->capacity == 1) {
@@ -262,7 +262,7 @@ static inline int channel_receive(Channel* this, Scalar* x)
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
 		catch (queue_notify(&this->rendezvous[0]));
-		catch (queue_wait(&this->rendezvous[1]));
+		catch (queue_check(&this->rendezvous[1]));
 		if (x) *x = this->value;
 	} else if (this->capacity == 1) {
 		assert(_channel_full(this));

@@ -119,7 +119,7 @@ static inline int semaphore_P(Semaphore* this)
 	--this->counter;
 	register int length = this->counter < 0 ? -this->counter : 0;
 	if (length > 0) {
-		int err = queue_stay(&this->queue);
+		int err = queue_wait(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

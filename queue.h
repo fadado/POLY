@@ -25,11 +25,11 @@ typedef struct Queue {
 } Queue;
 
 static inline int  queue_broadcast(Queue* this);
+static inline int  queue_check(Queue* this);
 static inline void queue_destroy(Queue* this);
 static inline int  queue_init(Queue* this, union Lock lock);
 static inline int  queue_init2(Queue pair[2], union Lock lock);
 static inline int  queue_notify(Queue* this);
-static inline int  queue_stay(Queue* this);
 static inline int  queue_wait(Queue* this);
 static inline int  queue_wait_for(Queue* this, unsigned long long nanoseconds);
 
@@ -72,7 +72,7 @@ static inline void queue_destroy(Queue* this)
 	cnd_destroy(&this->queue);
 }
 
-static inline int queue_wait(Queue* this)
+static inline int queue_check(Queue* this)
 {
 	while (this->permits == 0) {
 		++this->waiting;
@@ -84,7 +84,7 @@ static inline int queue_wait(Queue* this)
 	return STATUS_SUCCESS;
 }
 
-static inline int queue_stay(Queue* this)
+static inline int queue_wait(Queue* this)
 {
 	do {
 		++this->waiting;

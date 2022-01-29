@@ -94,7 +94,7 @@ static inline int rwlock_acquire(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	if (this->counter != RWL_IDLE) {
-		int err = queue_wait(&this->writers);
+		int err = queue_check(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
 		assert(this->counter == RWL_IDLE);
 	}
