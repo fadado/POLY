@@ -98,7 +98,7 @@ static ALWAYS inline void task_exit(int result)
 #define TASK_BEGIN(TASK)\
 	};\
 	int TASK(void* arg_) {\
-		struct TASK* this = arg_;
+		struct TASK this = *((struct TASK*)arg_);
 
 #define TASK_END\
 	return 0; }

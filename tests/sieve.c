@@ -18,11 +18,11 @@ TASK_BODY (generate_candidates)
 	Channel* input; // not used
 	Channel* output;
 TASK_BEGIN (generate_candidates)
-	assert(this->input == (Channel*)0);
+	assert(this.input == (Channel*)0);
 	int n = 2;
-	channel_send(this->output, n);
+	channel_send(this.output, n);
 	for (n=3; true; n+=2)  { // forever odd numbers
-		channel_send(this->output, n);
+		channel_send(this.output, n);
 	}
 TASK_END
 
@@ -35,10 +35,10 @@ TASK_BEGIN (filter_multiples)
 	Scalar s;
 	int n;
 	for (;;) {
-		channel_receive(this->input, &s);
+		channel_receive(this.input, &s);
 		n = cast(s, n);
-		if (n%this->prime != 0) {
-			channel_send_(this->output, s);
+		if (n%this.prime != 0) {
+			channel_send_(this.output, s);
 		}
 	}
 TASK_END

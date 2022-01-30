@@ -26,7 +26,7 @@ TASK_BEGIN (spinner)
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		task_sleep(this->delay);
+		task_sleep(this.delay);
 	}
 
 	spin(0);
@@ -48,9 +48,9 @@ TASK_BEGIN (fibonacci)
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	long result = slow_fib(this->n);
+	long result = slow_fib(this.n);
 	// ...long time...
-	future_set(this->future, (Integer)result); // what if error: return > 0 ???
+	future_set(this.future, (Integer)result); // what if error: return > 0 ???
 TASK_END
 
 ////////////////////////////////////////////////////////////////////////
