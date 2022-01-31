@@ -6,27 +6,27 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "scalar.h"
-#include "task.h"
+#include "spinner.h"
 #include "future.h"
 
-TASK_SPEC (spinner, static)
-TASK_SPEC (fibonacci, static)
+THREAD_SPEC (spinner, static)
+THREAD_SPEC (fibonacci, static)
 
-DEFINE_TASK_ID (10) // max 10 tasks
+DEFINE_THREAD_ID (10) // max 10 threads
 
 ////////////////////////////////////////////////////////////////////////
 // Tasks
 ////////////////////////////////////////////////////////////////////////
 
 // run forever painting the spinner
-TASK_BODY  (spinner)
+THREAD_BODY  (spinner)
 	int delay; // nanoseconds
-TASK_BEGIN (spinner)
-	warn("TaskID: %d", task_id());
+THREAD_BEGIN (spinner)
+	warn("ThreadID: %d", thread_id());
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
-		task_sleep(this.delay);
+		thread_sleep(this.delay);
 	}
 
 	spin(0);
@@ -35,14 +35,14 @@ TASK_BEGIN (spinner)
 			spin(i);
 		}
 	}
-TASK_END
+THREAD_END
 
 // compute fib(n) in the background
-TASK_BODY  (fibonacci)
-	Future* future;  // this is a promise: a task with future!
+THREAD_BODY  (fibonacci)
+	Future* future;  // this is a promise: a thread with future!
 	long    n;
-TASK_BEGIN (fibonacci)
-	warn("TaskID: %d", task_id());
+THREAD_BEGIN (fibonacci)
+	warn("ThreadID: %d", thread_id());
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -51,7 +51,7 @@ TASK_BEGIN (fibonacci)
 	long result = slow_fib(this.n);
 	// ...long time...
 	future_set(this.future, (Integer)result); // what if error: return > 0 ???
-TASK_END
+THREAD_END
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
 
 	hide_cursor();
 
-	warn("TaskID: %d", task_id());
+	warn("ThreadID: %d", thread_id());
 
 	err += spawn_task(spinner, .delay=us2ns(usDELAY));
 

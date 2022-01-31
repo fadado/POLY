@@ -6,32 +6,32 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "scalar.h"
-#include "task.h"
+#include "spinner.h"
 #include "channel.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Tasks
+// Tasks & Filters
 ////////////////////////////////////////////////////////////////////////
 
 // generate 2,3,5,7,9...
-TASK_BODY (generate_candidates)
+THREAD_BODY (generate_candidates)
 	Channel* input; // not used
 	Channel* output;
-TASK_BEGIN (generate_candidates)
+THREAD_BEGIN (generate_candidates)
 	assert(this.input == (Channel*)0);
 	int n = 2;
 	channel_send(this.output, n);
 	for (n=3; true; n+=2)  { // forever odd numbers
 		channel_send(this.output, n);
 	}
-TASK_END
+THREAD_END
 
 // filter multiples of prime
-TASK_BODY (filter_multiples)
+THREAD_BODY (filter_multiples)
 	Channel* input;
 	Channel* output;
 	int prime;
-TASK_BEGIN (filter_multiples)
+THREAD_BEGIN (filter_multiples)
 	Scalar s;
 	int n;
 	for (;;) {
@@ -41,7 +41,7 @@ TASK_BEGIN (filter_multiples)
 			channel_send_(this.output, s);
 		}
 	}
-TASK_END
+THREAD_END
 
 ////////////////////////////////////////////////////////////////////////
 //

@@ -10,7 +10,7 @@
 #ifndef POLY_H
 #include "POLY.h"
 #endif
-#include "task.h"
+#include "spinner.h"
 #include "channel.h"
 #include "scalar.h"
 

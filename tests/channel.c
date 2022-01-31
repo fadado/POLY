@@ -6,7 +6,9 @@
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "channel.h" // include scalar.h
+#include "spinner.h"
+#include "scalar.h"
+#include "channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test
@@ -21,7 +23,7 @@
 static int task_producer(void* arg)
 {
 	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success) return err
+#	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) return err
 
 #ifdef DEBUG
 	warn("Enter %s", __func__);
@@ -39,7 +41,7 @@ static int task_producer(void* arg)
 #ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif
-	return thrd_success;
+	return STATUS_SUCCESS;
 #	undef catch
 }
 
@@ -49,7 +51,7 @@ static int task_producer(void* arg)
 static int task_consumer(void* arg)
 {
 	int err;
-#	define catch(X)	if ((err=(X))!=thrd_success) return err
+#	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) return err
 
 #ifdef DEBUG
 	warn("Enter %s", __func__);
@@ -68,7 +70,7 @@ static int task_consumer(void* arg)
 #ifdef DEBUG
 	warn("Exit %s", __func__);
 #endif
-	return thrd_success;
+	return STATUS_SUCCESS;
 #	undef catch
 }
 
@@ -78,18 +80,18 @@ static int task_consumer(void* arg)
 int main(int argc, char* argv[])
 {
 	int err, status;
-#	define catch(X)	if ((err=(X))!=thrd_success) goto onerror
+#	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) goto onerror
 
 	Channel channel;
 	catch (channel_init(&channel, N));
 
-	thrd_t producer, consumer;
+	Thread producer, consumer;
 
-	catch (thrd_create(&producer, task_producer, &channel));
-	catch (thrd_create(&consumer, task_consumer, &channel));
+	catch (thread_fork(task_producer, &channel, &producer));
+	catch (thread_fork(task_consumer, &channel, &consumer));
 
-	catch (thrd_join(producer, &status)); catch (status);
-	catch (thrd_join(consumer, &status)); catch (status);
+	catch (thread_join(producer, &status)); catch (status);
+	catch (thread_join(consumer, &status)); catch (status);
 
 	channel_destroy(&channel);
 
@@ -97,22 +99,22 @@ int main(int argc, char* argv[])
 onerror:
 #	undef catch
 	static const char* ename[] = {
-		[thrd_success] = "thrd_success",
-		[thrd_nomem] = "thrd_nomem",
-		[thrd_busy] = "thrd_busy",
-		[thrd_error] = "thrd_error",
-		[thrd_timedout] = "thrd_timedout",
+		[STATUS_SUCCESS] = "thrd_success",
+		[STATUS_NOMEM] = "thrd_nomem",
+		[STATUS_BUSY] = "thrd_busy",
+		[STATUS_ERROR] = "thrd_error",
+		[STATUS_TIMEDOUT] = "thrd_timedout",
 	};
 
-	assert(err != thrd_success);
+	assert(err != STATUS_SUCCESS);
 	switch (err) {
-		case thrd_nomem:
+		case STATUS_NOMEM:
 			error(EXIT_FAILURE, ENOMEM, "%s", ename[err]);
-		case thrd_busy:
+		case STATUS_BUSY:
 			error(EXIT_FAILURE, EBUSY, "%s", ename[err]);
-		case thrd_error:
+		case STATUS_ERROR:
 			error(EXIT_FAILURE, ECANCELED, "%s", ename[err]);
-		case thrd_timedout:
+		case STATUS_TIMEDOUT:
 			error(EXIT_FAILURE, ETIMEDOUT, "%s", ename[err]);
 		default: assert(internal_error);
 	}

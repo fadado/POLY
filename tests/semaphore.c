@@ -7,14 +7,14 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "scalar.h"
-#include "task.h"
+#include "spinner.h"
 #include "semaphore.h"
 
 static Semaphore test_lock_mutex;
 static Integer test_lock_counter;
 enum { N=10, M=10000 };
 
-int task_test(void* arg)
+int thread_test(void* arg)
 {
 	assert(arg == (void*)0);
 #ifdef DEBUG
@@ -28,7 +28,7 @@ int task_test(void* arg)
 		**ppi = tmp;
 		semaphore_release(&test_lock_mutex);
 	}
-	task_yield();
+	thread_yield();
 
 	return 0;
 }
@@ -42,13 +42,13 @@ static void test_lock(void)
 
 	semaphore_init(&test_lock_mutex, 1);
 
-	Task t[N];
+	Thread t[N];
 	for (int i=0; i < N; ++i) {
-		int e = task_fork(task_test, (void*)0, &t[i]);
+		int e = thread_fork(thread_test, (void*)0, &t[i]);
 		assert(e == STATUS_SUCCESS);
 	}
 	for (int i=0; i < N; ++i) {
-		int e = task_join(t[i], (int*)0);
+		int e = thread_join(t[i], (int*)0);
 		assert(e == STATUS_SUCCESS);
 	}
 	assert(test_lock_counter == N*M);
