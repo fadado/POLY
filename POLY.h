@@ -59,7 +59,7 @@ enum {
 #	define fallthrough  /*NOP*/
 #endif
 
-#define atomic  _Atomic
+#define atomic(T)  _Atomic T
 
 ////////////////////////////////////////////////////////////////////////
 // Time measured in nanoseconds

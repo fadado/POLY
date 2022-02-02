@@ -75,7 +75,7 @@ static inline int task_spawn(int(*root)(void*), void* argument)
 }
 
 #define DEFINE_THREAD_ID(N)\
-	static atomic int _thread_id_count;\
+	static atomic(int) _thread_id_count;\
 	static Thread _thread_id_vector[N];\
 	static int thread_id(void) {\
 		Thread t = thread_current();\
