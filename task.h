@@ -1,11 +1,11 @@
 /*
- * Future
+ * Task & Future
  *
  * Compile: gcc -O2 -lpthread ...
  *
  */
-#ifndef FUTURE_H
-#define FUTURE_H
+#ifndef TASK_H
+#define TASK_H
 
 #ifndef POLY_H
 #include "POLY.h"
@@ -25,20 +25,20 @@ typedef struct Future {
 	Channel port;    // shared message box
 } Future;
 
+static inline int    task_join(Future* this);
+static inline int    task_set(Future* this, Scalar x);
+static inline int    task_spawn(Future* this, int(*root)(void*), void* argument);
 static inline Scalar future_get(Future* this);
-static inline int    future_join(Future* this);
-static inline int    future_set(Future* this, Scalar x);
-static inline int    future_spawn(Future* this, int(*root)(void*), void* argument);
 
 // handy macro
-#define spawn_future(F,R,...)\
-	future_spawn(F,R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
+#define spawn_task(F,R,...)\
+	task_spawn(F,R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int future_spawn(Future* this, int(*root)(void*), void* argument)
+static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;
@@ -46,7 +46,7 @@ static inline int future_spawn(Future* this, int(*root)(void*), void* argument)
 	this->pending = true;
 	this->result = Unsigned(0x1aFabada);
 	if ((err=channel_init(&this->port, asyncronous)) == STATUS_SUCCESS) {
-		if ((err=task_spawn(root, argument)) == STATUS_SUCCESS) {
+		if ((err=thread_spawn(root, argument)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
 			channel_destroy(&this->port);
@@ -56,15 +56,14 @@ static inline int future_spawn(Future* this, int(*root)(void*), void* argument)
 }
 
 // to be called once from the promise
-static ALWAYS inline int future_set(Future* this, Scalar x)
+static ALWAYS inline int task_set(Future* this, Scalar x)
 {
 	assert(this->pending);
-	int status = channel_send(&this->port, x);
-	return status;
+	return channel_send(&this->port, x);
 }
 
 // to be called once from the client
-static inline int future_join(Future* this)
+static inline int task_join(Future* this)
 {
 	assert(this->pending);
 	int status = channel_receive(&this->port, &this->result);
@@ -76,11 +75,10 @@ static inline int future_join(Future* this)
 // to be called any number of times from the client
 static ALWAYS inline Scalar future_get(Future* this)
 {
-	if (this->pending) { future_join(this); }
-	assert(!this->pending);
+	if (this->pending) { task_join(this); }
 	return this->result;
 }
 
-#endif // FUTURE_H
+#endif // TASK_H
 
 // vim:ai:sw=4:ts=4:syntax=cpp

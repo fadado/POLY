@@ -65,14 +65,16 @@ enum {
 // Time measured in nanoseconds
 ////////////////////////////////////////////////////////////////////////
 
-#define s2ns(T)     (unsigned long long)((T)*1000000000ull)
-#define ms2ns(T)    (unsigned long long)((T)*1000000ull)
-#define us2ns(T)    (unsigned long long)((T)*1000ull)
-#define ns2s(T)     (unsigned long long)((T)/1000000000ull)
-#define ns2ms(T)    (unsigned long long)((T)/1000000ull)
-#define ns2us(T)    (unsigned long long)((T)/1000ull)
+typedef unsigned long long Time;
 
-static ALWAYS inline unsigned long long now(void)
+#define s2ns(T)     (Time)((T)*1000000000ull)
+#define ms2ns(T)    (Time)((T)*1000000ull)
+#define us2ns(T)    (Time)((T)*1000ull)
+#define ns2s(T)     (Time)((T)/1000000000ull)
+#define ns2ms(T)    (Time)((T)/1000000ull)
+#define ns2us(T)    (Time)((T)/1000ull)
+
+static ALWAYS inline Time now(void)
 {
 	struct timespec ts;
 	timespec_get(&ts, TIME_UTC);

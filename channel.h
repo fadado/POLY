@@ -31,7 +31,7 @@ typedef struct Channel {
 		Scalar* buffer; // for capacity > 1
 		Scalar  value;  // for capacity == 1
 	};
-	Lock entry;
+	Lock entry; // RecursiveLock?
 	union {
 		// buffered channel
 		struct {
@@ -47,12 +47,12 @@ static inline void channel_close(Channel* this);
 static inline void channel_destroy(Channel* this);
 static inline bool channel_drained(Channel* this);
 static inline int  channel_init(Channel* this, unsigned capacity);
-static inline int  channel_receive(Channel* this, Scalar* x);
-static inline int  channel_send(Channel* this, Scalar x);
+static inline int  channel_receive(Channel* this, Scalar* message);
+static inline int  channel_send(Channel* this, Scalar message);
 
 // handy macro
 #define spawn_filter(I,O,T,...)\
-	task_spawn(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
+	thread_spawn(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -100,9 +100,9 @@ static ALWAYS inline bool _channel_full(Channel* this)
 
 static inline int channel_init(Channel* this, unsigned capacity)
 {
-	void d_lock(void)   { lock_destroy(&this->entry); }
-	void d_empty(void)  { condition_destroy(&this->non_empty); }
-	void d_buffer(void) { free(this->buffer); }
+	void destroy_lock(void)   { lock_destroy(&this->entry); }
+	void destroy_empty(void)  { condition_destroy(&this->non_empty); }
+	void destroy_buffer(void) { free(this->buffer); }
 
 	// cleanup thunks to call before return
 	void(*thunks[4])(void) = { 0 };
@@ -114,11 +114,11 @@ static inline int channel_init(Channel* this, unsigned capacity)
 	this->occupation = this->flags = 0;
 	this->capacity = capacity;
 	catch (lock_init(&this->entry));
-	at_cleanup(d_lock);
+	at_cleanup(destroy_lock);
 
 	switch (this->capacity) {
 		case 0:
-			catch (queue_init2(this->rendezvous, &this->entry));
+			catch (queue_init2(this->rendezvous+0, this->rendezvous+1, &this->entry));
 			this->capacity = 1;
 			this->flags |= CHANNEL_BLOCKING;
 			break;
@@ -129,11 +129,11 @@ static inline int channel_init(Channel* this, unsigned capacity)
 				err = STATUS_NOMEM;
 				goto onerror;
 			}
-			at_cleanup(d_buffer);
+			at_cleanup(destroy_buffer);
 			fallthrough;
 		case 1:
 			catch (condition_init(&this->non_empty));
-			at_cleanup(d_empty);
+			at_cleanup(destroy_empty);
 			catch (condition_init(&this->non_full));
 			this->flags |= CHANNEL_BUFFERED;
 			break;
@@ -146,7 +146,7 @@ onerror:
 	if (thunk_index > 0) {
 		assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
 		int i;
-		for (i=0; thunks[i] != (void(*)(void))0; ++i) ;
+		for (i=0; thunks[i] != (void(*)(void))0; ++i)/*go end*/;
 		for (--i; i >= 0; --i) (*thunks[i])();
 	}
 	return err;
@@ -160,8 +160,8 @@ static inline void channel_destroy(Channel* this)
 		condition_destroy(&this->non_full);
 		condition_destroy(&this->non_empty);
 	} else if (this->flags & CHANNEL_BLOCKING) {
-		queue_destroy(&this->rendezvous[1]);
-		queue_destroy(&this->rendezvous[0]);
+		queue_destroy(this->rendezvous+1);
+		queue_destroy(this->rendezvous+0);
 	}
 	lock_destroy(&this->entry);
 	if (this->capacity > 1) {
@@ -210,7 +210,7 @@ static ALWAYS inline bool channel_drained(Channel* this)
 		return err;\
 	}
 
-static inline int channel_send(Channel* this, Scalar x)
+static inline int channel_send(Channel* this, Scalar message)
 {
 	if (this->flags & CHANNEL_CLOSED) {
 		panic("channel_send cannot use a closed channel");
@@ -224,15 +224,15 @@ static inline int channel_send(Channel* this, Scalar x)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (queue_check(&this->rendezvous[0]));
-		this->value = x;
-		catch (queue_notify(&this->rendezvous[1]));
+		catch (queue_check(this->rendezvous+0));
+		this->value = message;
+		catch (queue_notify(this->rendezvous+1));
 	} else if (this->capacity == 1) {
 		assert(_channel_empty(this));
-		this->value = x;
+		this->value = message;
 	} else {
 		assert(this->capacity > 1);
-		this->buffer[this->front] = x;
+		this->buffer[this->front] = message;
 		this->front = (this->front+1) % this->capacity;
 	}
 	++this->occupation;
@@ -246,10 +246,10 @@ onerror:
 	return err;
 }
 
-static inline int channel_receive(Channel* this, Scalar* x)
+static inline int channel_receive(Channel* this, Scalar* message)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (x) *x = Unsigned(0x0);
+		if (message) *message = Unsigned(0x0);
 		return STATUS_SUCCESS;
 	}
 
@@ -261,17 +261,17 @@ static inline int channel_receive(Channel* this, Scalar* x)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (queue_notify(&this->rendezvous[0]));
-		catch (queue_check(&this->rendezvous[1]));
-		if (x) *x = this->value;
+		catch (queue_notify(this->rendezvous+0));
+		catch (queue_check(this->rendezvous+1));
+		if (message) *message = this->value;
 	} else if (this->capacity == 1) {
 		assert(_channel_full(this));
-		if (x) *x = this->value;
-	} else if (x) {
+		if (message) *message = this->value;
+	} else if (message) {
 		assert(this->capacity > 1);
 		register int back = this->front - this->occupation;
 		back = (back >= 0) ? back : back+this->capacity;
-		*x = this->buffer[back];
+		*message = this->buffer[back];
 	} // else ignore
 	--this->occupation;
 	ASSERT_CHANNEL_INVARIANT

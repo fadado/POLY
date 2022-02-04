@@ -38,7 +38,7 @@ static inline void lock_destroy(union Lock this);
 static inline int  lock_init_(union Lock this, int mask);
 static inline int  lock_release(union Lock this);
 static inline int  lock_try(union Lock this);
-static inline int  lock_try_for(union Lock this, unsigned long long nanoseconds);
+static inline int  lock_try_for(union Lock this, Time duration);
 
 // Deduce mask from lock type
 #define lock_init(LOCK) lock_init_((LOCK), \
@@ -67,11 +67,12 @@ static ALWAYS inline int lock_release(union Lock this)
 static ALWAYS inline int lock_try(union Lock this)
 { return mtx_trylock(this.mutex); }
 
-static ALWAYS inline int lock_try_for(union Lock this, unsigned long long nanoseconds)
+static ALWAYS inline int lock_try_for(union Lock this, Time duration)
 {
-	nanoseconds += now();
-	time_t s  = ns2s(nanoseconds);
-	long   ns = nanoseconds - s2ns(s);
+	Time t = now();
+	t += duration; // TIME_UTC based absolute calendar time point
+	time_t s  = ns2s(t);
+	long   ns = t - s2ns(s);
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 

@@ -22,13 +22,13 @@ static inline bool   thread_equal(Thread thread1, Thread thread2);
 static inline void   thread_exit(int result);
 static inline int    thread_fork(int(*root)(void*), void* argument, Thread* new_thread);
 static inline int    thread_join(Thread thread, int* result);
-static inline int    thread_sleep(unsigned long long nanoseconds);
+static inline int    thread_sleep(Time duration);
 static inline void   thread_yield(void);
 
 // handy macro
-static inline int task_spawn(int(*root)(void*), void* argument);
+static inline int thread_spawn(int(*root)(void*), void* argument);
 
-#define spawn_task(T,...) task_spawn(T,&(struct T){__VA_ARGS__})
+#define spawn_thread(T,...) thread_spawn(T,&(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Thread implementation
@@ -52,10 +52,10 @@ static ALWAYS inline Thread thread_current(void)
 static ALWAYS inline void thread_yield(void)
 { thrd_yield(); }
 
-static ALWAYS inline int thread_sleep(unsigned long long nanoseconds)
+static ALWAYS inline int thread_sleep(Time duration)
 {
-	time_t s  = ns2s(nanoseconds);
-	long   ns = nanoseconds - s2ns(s);
+	time_t s  = ns2s(duration);
+	long   ns = duration - s2ns(s);
 	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, (void*)0);
 }
 
@@ -66,7 +66,7 @@ static ALWAYS inline void thread_exit(int result)
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static inline int task_spawn(int(*root)(void*), void* argument)
+static inline int thread_spawn(int(*root)(void*), void* argument)
 {
 	Thread thread;
 	int err = thread_fork(root, argument, &thread);

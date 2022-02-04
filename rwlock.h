@@ -108,10 +108,10 @@ static inline int rwlock_release(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	this->counter = RWL_IDLE;
-	if (!_queue_empty(&this->writers)) {
+	if (!queue_empty(&this->writers)) {
 		int err = queue_notify(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
-	} else if (!_queue_empty(&this->readers)) {
+	} else if (!queue_empty(&this->readers)) {
 		int err = queue_broadcast(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
@@ -140,7 +140,7 @@ static inline int rwlock_leave(RWLock* this)
 	ENTER_RWLOCK_MONITOR
 
 	if (--this->counter == RWL_IDLE) {
-		if (!_queue_empty(&this->writers)) {
+		if (!queue_empty(&this->writers)) {
 			int err = queue_notify(&this->writers);
 			CHECK_RWLOCK_MONITOR (err)
 		}

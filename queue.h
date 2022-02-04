@@ -27,20 +27,23 @@ typedef struct Queue {
 static inline int  queue_broadcast(Queue* this);
 static inline int  queue_check(Queue* this);
 static inline void queue_destroy(Queue* this);
+static inline bool queue_empty(Queue* this);
 static inline int  queue_init(Queue* this, union Lock lock);
-static inline int  queue_init2(Queue pair[2], union Lock lock);
+static inline int  queue_init2(Queue* q1, Queue* q2, union Lock lock);
 static inline int  queue_notify(Queue* this);
 static inline int  queue_wait(Queue* this);
-static inline int  queue_wait_for(Queue* this, unsigned long long nanoseconds);
+static inline int  queue_wait_for(Queue* this, Time duration);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
+/*
 static ALWAYS inline int _queue_length(Queue* this)
 { return this->waiting; }
+*/
 
-static ALWAYS inline bool _queue_empty(Queue* this)
+static ALWAYS inline bool queue_empty(Queue* this)
 { return this->waiting == 0; }
 
 static inline int queue_init(Queue* this, union Lock lock)
@@ -50,14 +53,14 @@ static inline int queue_init(Queue* this, union Lock lock)
 	return cnd_init(&this->queue);
 }
 
-static inline int queue_init2(Queue pair[2], union Lock lock)
+static inline int queue_init2(Queue* q1, Queue* q2, union Lock lock)
 {
 	int err;
-	if ((err=queue_init(&pair[0], lock)) == STATUS_SUCCESS) {
-		if ((err=queue_init(&pair[1], lock)) == STATUS_SUCCESS) {
+	if ((err=queue_init(q1, lock)) == STATUS_SUCCESS) {
+		if ((err=queue_init(q2, lock)) == STATUS_SUCCESS) {
 			return STATUS_SUCCESS;
 		} else {
-			queue_destroy(&pair[0]);
+			queue_destroy(q1);
 		}
 	}
 	return err;
@@ -110,13 +113,13 @@ static ALWAYS inline int queue_broadcast(Queue* this)
 	}
 }
 
-static ALWAYS inline int queue_wait_for(Queue* this, unsigned long long nanoseconds)
+static ALWAYS inline int queue_wait_for(Queue* this, Time duration)
 {
-	nanoseconds += now(); // TIME_UTC based absolute calendar time point
-	time_t s  = ns2s(nanoseconds);
-	long   ns = nanoseconds - s2ns(s);
-	return cnd_timedwait(&this->queue, this->mutex,
-						 &(struct timespec){.tv_sec=s, .tv_nsec=ns});
+	Time t = now();
+	t += duration; // TIME_UTC based absolute calendar time point
+	time_t s  = ns2s(t);
+	long   ns = t - s2ns(s);
+	return cnd_timedwait(&this->queue, this->mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
 #endif // QUEUE_H

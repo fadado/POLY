@@ -66,7 +66,7 @@ tests/bug1.c:43:9: error: pointer value used where a floating-point was expected
 	double: (Double)(EXPRESSION),\
 	long double: (Double)(EXPRESSION))
 
-//	this causes an error!!!
+//	causes an error!!!
 //	default: (Pointer)(Unsigned)(EXPRESSION)) ???
 
 #endif

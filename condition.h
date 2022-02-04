@@ -22,7 +22,7 @@ static ALWAYS inline void condition_destroy(Condition* this);
 static ALWAYS inline int  condition_init(Condition* this);
 static ALWAYS inline int  condition_notify(Condition* this);
 static ALWAYS inline int  condition_wait(Condition* this, union Lock lock);
-static ALWAYS inline int  condition_wait_for(Condition* this, union Lock lock, unsigned long long nanoseconds);
+static ALWAYS inline int  condition_wait_for(Condition* this, union Lock lock, Time duration);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -43,13 +43,13 @@ static ALWAYS inline int  condition_wait(Condition* this, union Lock lock)
 static ALWAYS inline int condition_broadcast(Condition* this)
 { return cnd_broadcast(this); }
 
-static ALWAYS inline int condition_wait_for(Condition* this, union Lock lock, unsigned long long nanoseconds)
+static ALWAYS inline int condition_wait_for(Condition* this, union Lock lock, Time duration)
 {
-	nanoseconds += now(); // TIME_UTC based absolute calendar time point
-	time_t s  = ns2s(nanoseconds);
-	long   ns = nanoseconds - s2ns(s);
-	return cnd_timedwait(this, lock.mutex,
-						 &(struct timespec){.tv_sec=s, .tv_nsec=ns});
+	Time t = now();
+	t += duration; // TIME_UTC based absolute calendar time point
+	time_t s  = ns2s(t);
+	long   ns = t - s2ns(s);
+	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
 #endif // LOCK_H
