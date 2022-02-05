@@ -100,15 +100,25 @@ static ALWAYS inline bool _channel_full(Channel* this)
 
 static inline int channel_init(Channel* this, unsigned capacity)
 {
-	void destroy_lock(void)   { lock_destroy(&this->entry); }
-	void destroy_empty(void)  { condition_destroy(&this->non_empty); }
-	void destroy_buffer(void) { free(this->buffer); }
-
 	// cleanup thunks to call before return
-	void(*thunks[4])(void) = { 0 };
-	int thunk_index = 0;
-#	define at_cleanup(F) thunks[thunk_index++]=F
+	void(*_thunks[4])(void) = { 0 };
+	int _thunk_index = 0;
+	inline void at_cleanup(void(*f)(void)) { _thunks[_thunk_index++]=f; }
+	void cleanup(void) {
+		if (_thunk_index > 0) {
+			assert(_thunk_index < sizeof(_thunks)/sizeof(_thunks[0]));
+			int i;
+			for (i=0; _thunks[i] != (void(*)(void))0; ++i)/*go end*/;
+			for (--i; i >= 0; --i) {
+				(*_thunks[i])();
+			}
+		}
+	}
+	inline void destroy_lock(void)   { lock_destroy(&this->entry); }
+	inline void destroy_empty(void)  { condition_destroy(&this->non_empty); }
+	inline void destroy_buffer(void) { free(this->buffer); }
 
+	//
 	int err;
 
 	this->occupation = this->flags = 0;
@@ -142,13 +152,7 @@ static inline int channel_init(Channel* this, unsigned capacity)
 
 	return STATUS_SUCCESS;
 onerror:
-#	undef at_cleanup
-	if (thunk_index > 0) {
-		assert(thunk_index < sizeof(thunks)/sizeof(thunks[0]));
-		int i;
-		for (i=0; thunks[i] != (void(*)(void))0; ++i)/*go end*/;
-		for (--i; i >= 0; --i) (*thunks[i])();
-	}
+	cleanup();
 	return err;
 }
 

@@ -77,6 +77,7 @@ static inline void queue_destroy(Queue* this)
 
 static inline int queue_check(Queue* this)
 {
+	// until permits > 0
 	while (this->permits == 0) {
 		++this->waiting;
 		int err = cnd_wait(&this->queue, this->mutex);
@@ -94,6 +95,7 @@ static inline int queue_wait(Queue* this)
 		int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
 		if (err != STATUS_SUCCESS) return err;
+	// until permits > 0
 	} while (this->permits == 0);
 	--this->permits;
 	return STATUS_SUCCESS;

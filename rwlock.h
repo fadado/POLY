@@ -44,13 +44,8 @@ static inline int rwlock_init(RWLock* this)
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=queue_init(&this->readers, &this->entry)) == STATUS_SUCCESS) {
-			if ((err=queue_init(&this->writers, &this->entry)) == STATUS_SUCCESS) {
-				return STATUS_SUCCESS;
-			} else {
-				queue_destroy(&this->readers);
-				lock_destroy(&this->entry);
-			}
+		if ((err=queue_init2(&this->readers, &this->writers, &this->entry)) == STATUS_SUCCESS) {
+			/*skip*/;
 		} else {
 			lock_destroy(&this->entry);
 		}
