@@ -1,9 +1,3 @@
-/*
- * Semaphore
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
@@ -150,6 +144,5 @@ static inline int semaphore_V(Semaphore* this)
 #undef LEAVE_SEMAPHORE_MONITOR
 #undef CHECK_SEMAPHORE_MONITOR
 
-#endif // SEMAPHORE_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // SEMAPHORE_H

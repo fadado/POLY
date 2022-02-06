@@ -1,9 +1,3 @@
-/*
- * Channel
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
@@ -323,6 +317,5 @@ static inline void channel_free(Channel* channel)
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
 
-#endif // CHANNEL_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // CHANNEL_H

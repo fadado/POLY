@@ -1,9 +1,3 @@
-/*
- * Queue
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef QUEUE_H
 #define QUEUE_H
 
@@ -124,6 +118,5 @@ static ALWAYS inline int queue_wait_for(Queue* this, Time duration)
 	return cnd_timedwait(&this->queue, this->mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
-#endif // QUEUE_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // QUEUE_H

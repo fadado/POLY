@@ -1,9 +1,3 @@
-/*
- * Barrier
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef BARRIER_H
 #define BARRIER_H
 
@@ -109,6 +103,5 @@ static inline int barrier_wait(Barrier* this)
 #undef LEAVE_BARRIER_MONITOR
 #undef CHECK_BARRIER_MONITOR
 
-#endif // BARRIER_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // BARRIER_H

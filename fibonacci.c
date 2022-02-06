@@ -1,13 +1,13 @@
 // Spinner test
-// gcc -Wall -O2 -I. -lpthread tests/filename.c
+// gcc -Wall -O2 -lpthread filename.c
 
 #include <stdio.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "scalar.h"
-#include "spinner.h"
-#include "task.h"
+#include "poly/scalar.h"
+#include "poly/thread.h"
+#include "poly/task.h"
 
 THREAD_SPEC (spinner, static)
 THREAD_SPEC (fibonacci, static)
@@ -15,10 +15,9 @@ THREAD_SPEC (fibonacci, static)
 DEFINE_THREAD_ID (10) // max 10 threads
 
 ////////////////////////////////////////////////////////////////////////
-// Tasks
+// Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-// run forever painting the spinner
 THREAD_BODY  (spinner)
 	int delay; // nanoseconds
 THREAD_BEGIN (spinner)
@@ -29,15 +28,19 @@ THREAD_BEGIN (spinner)
 		thread_sleep(this.delay);
 	}
 
+	thread_sleep(ms2ns(1));
 	spin(0);
-	for (;;)  { // forever
+	for (;;)  {
 		for (int i = 0; s[i] != '\0'; ++i) {
 			spin(i);
 		}
 	}
 THREAD_END
 
-// compute fib(n) in the background
+////////////////////////////////////////////////////////////////////////
+// Compute fib(n) in the background
+////////////////////////////////////////////////////////////////////////
+
 THREAD_BODY  (fibonacci)
 	Future* future;  // this is a task: a thread with future!
 	long    n;
@@ -50,7 +53,7 @@ THREAD_BEGIN (fibonacci)
 
 	long result = slow_fib(this.n);
 	// ...long time...
-	task_set(this.future, (Integer)result); // what if error: return > 0 ???
+	future_set(this.future, (Integer)result); // what if error: return > 0 ???
 THREAD_END
 
 ////////////////////////////////////////////////////////////////////////

@@ -1,7 +1,3 @@
-/*
- * Condition
- *
- */
 #ifndef CONDITION_H
 #define CONDITION_H
 
@@ -52,6 +48,5 @@ static ALWAYS inline int condition_wait_for(Condition* this, union Lock lock, Ti
 	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
-#endif // LOCK_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // LOCK_H

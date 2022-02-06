@@ -1,13 +1,13 @@
 // Sieve test
-// gcc -Wall -O2 -I. -lpthread tests/filename.c
+// gcc -Wall -O2 -lpthread filename.c
 
 #include <stdio.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "scalar.h"
-#include "spinner.h"
-#include "channel.h"
+#include "poly/scalar.h"
+#include "poly/thread.h"
+#include "poly/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Tasks & Filters

@@ -1,7 +1,3 @@
-/*
- * 64 bit scalars
- *
- */
 #ifndef SCALAR_H
 #define SCALAR_H
 
@@ -61,6 +57,5 @@ static_assert(sizeof(union Scalar) == 8);
 	long double: (long double)(SCALAR).d,\
 	default: (SCALAR).p)
 
-#endif // SCALAR_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // SCALAR_H

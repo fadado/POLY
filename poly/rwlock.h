@@ -1,9 +1,3 @@
-/*
- * Multiple-Readers Single-Writer lock
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef RWLOCK_H
 #define RWLOCK_H
 
@@ -148,6 +142,5 @@ static inline int rwlock_leave(RWLock* this)
 #undef LEAVE_RWLOCK_MONITOR
 #undef CHECK_RWLOCK_MONITOR
 
-#endif // RWLOCK_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // RWLOCK_H

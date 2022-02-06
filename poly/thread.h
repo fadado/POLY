@@ -1,7 +1,3 @@
-/*
- * Thread
- *
- */
 #ifndef SPINNER_H
 #define SPINNER_H
 
@@ -108,6 +104,5 @@ static inline int thread_spawn(int(*root)(void*), void* argument)
 #define THREAD_END\
 	return 0; }
 
-#endif // SPINNER_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // SPINNER_H

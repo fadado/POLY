@@ -1,10 +1,10 @@
 // Scalars test
-// gcc -Wall -O2 -I. tests/scalar.c
+// gcc -Wall -O2 filename.c
 
 #include <stdio.h>
 
 #define DEBUG
-#include "scalar.h"
+#include "poly/scalar.h"
 
 union Scalar scalar(union Scalar s) { return s; }
 
@@ -64,8 +64,6 @@ int main(int argc, char** argv)
 	s1 = Unsigned(0x0);
 	s1 = Double(0e0);
 	s1 = Pointer(00);
-
-	Scalar s9 = (Integer)0;
 
 	return 0;
 }

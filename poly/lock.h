@@ -1,9 +1,3 @@
-/*
- * Locks
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef LOCK_H
 #define LOCK_H
 
@@ -76,6 +70,5 @@ static ALWAYS inline int lock_try_for(union Lock this, Time duration)
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
-#endif // LOCK_H
-
 // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // LOCK_H
