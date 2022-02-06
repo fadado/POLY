@@ -1,9 +1,3 @@
-/*
- * Multiple-Readers Single-Writer lock
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef RWLOCK_H
 #define RWLOCK_H
 

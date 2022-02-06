@@ -1,9 +1,3 @@
-/*
- * Semaphore
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 

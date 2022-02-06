@@ -1,9 +1,3 @@
-/*
- * POLY
- *
- * Ensemble
- *
- */
 #ifndef POLY_H
 #define POLY_H
 

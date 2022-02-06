@@ -1,10 +1,10 @@
 // Scalars test
-// gcc -Wall -O2 -I. tests/scalar.c
+// gcc -Wall -O2 filename.c
 
 #include <stdio.h>
 
 #define DEBUG
-#include "scalar.h"
+#include "poly/scalar.h"
 
 union Scalar scalar(union Scalar s) { return s; }
 

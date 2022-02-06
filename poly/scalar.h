@@ -1,7 +1,3 @@
-/*
- * 64 bit scalars
- *
- */
 #ifndef SCALAR_H
 #define SCALAR_H
 

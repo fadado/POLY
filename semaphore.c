@@ -1,14 +1,14 @@
 // Semaphore test
-// gcc -Wall -O2 -I. -lpthread tests/filename.c
+// gcc -Wall -O2 -lpthread filename.c
 
 #include <stdlib.h>
 //#include <time.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "scalar.h"
-#include "spinner.h"
-#include "semaphore.h"
+#include "poly/scalar.h"
+#include "poly/thread.h"
+#include "poly/semaphore.h"
 
 static Semaphore test_lock_mutex;
 static Integer test_lock_counter;

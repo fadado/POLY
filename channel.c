@@ -1,14 +1,14 @@
 // Channel test
-// gcc -Wall -O2 -I. -lpthread tests/filename.c
+// gcc -Wall -O2 -lpthread filename.c
 
 #include <stdio.h>
 #include <stdlib.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "spinner.h"
-#include "scalar.h"
-#include "channel.h"
+#include "poly/thread.h"
+#include "poly/scalar.h"
+#include "poly/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test

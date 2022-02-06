@@ -1,9 +1,3 @@
-/*
- * Queue
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef QUEUE_H
 #define QUEUE_H
 

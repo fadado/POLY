@@ -1,9 +1,3 @@
-/*
- * Locks
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef LOCK_H
 #define LOCK_H
 

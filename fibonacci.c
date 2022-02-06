@@ -1,13 +1,13 @@
 // Spinner test
-// gcc -Wall -O2 -I. -lpthread tests/filename.c
+// gcc -Wall -O2 -lpthread filename.c
 
 #include <stdio.h>
 
 // uncomment next line to enable assertions
 #define DEBUG
-#include "scalar.h"
-#include "spinner.h"
-#include "task.h"
+#include "poly/scalar.h"
+#include "poly/thread.h"
+#include "poly/task.h"
 
 THREAD_SPEC (spinner, static)
 THREAD_SPEC (fibonacci, static)
@@ -50,7 +50,7 @@ THREAD_BEGIN (fibonacci)
 
 	long result = slow_fib(this.n);
 	// ...long time...
-	task_set(this.future, (Integer)result); // what if error: return > 0 ???
+	future_set(this.future, (Integer)result); // what if error: return > 0 ???
 THREAD_END
 
 ////////////////////////////////////////////////////////////////////////

@@ -1,16 +1,10 @@
-/*
- * Task & Future
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef TASK_H
 #define TASK_H
 
 #ifndef POLY_H
 #include "POLY.h"
 #endif
-#include "spinner.h"
+#include "thread.h"
 #include "channel.h"
 #include "scalar.h"
 
@@ -26,8 +20,8 @@ typedef struct Future {
 } Future;
 
 static inline int    task_join(Future* this);
-static inline int    task_set(Future* this, Scalar x);
 static inline int    task_spawn(Future* this, int(*root)(void*), void* argument);
+static inline int    future_set(Future* this, Scalar x);
 static inline Scalar future_get(Future* this);
 
 // handy macro
@@ -56,7 +50,7 @@ static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 }
 
 // to be called once from the promise
-static ALWAYS inline int task_set(Future* this, Scalar x)
+static ALWAYS inline int future_set(Future* this, Scalar x)
 {
 	assert(this->pending);
 	return channel_send(&this->port, x);

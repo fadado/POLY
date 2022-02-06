@@ -1,9 +1,3 @@
-/*
- * Channel
- *
- * Compile: gcc -O2 -lpthread ...
- *
- */
 #ifndef CHANNEL_H
 #define CHANNEL_H
 

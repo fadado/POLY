@@ -1,7 +1,3 @@
-/*
- * Thread
- *
- */
 #ifndef SPINNER_H
 #define SPINNER_H
 
