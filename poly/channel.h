@@ -286,32 +286,6 @@ onerror:
 	return err;
 }
 
-////////////////////////////////////////////////////////////////////////
-// Dynamic allocation
-////////////////////////////////////////////////////////////////////////
-
-static inline Channel* channel_alloc(int capacity)
-{
-	Channel* channel = calloc(capacity ? capacity : 1, sizeof(Channel));
-	if (channel == (Channel*)0) {
-		panic("channel_alloc out of memory");
-	}
-	int err = channel_init(channel, capacity);
-	if (err != STATUS_SUCCESS) {
-		free(channel);
-		panic("channel_alloc cannot initialize channel");
-	}
-	return channel;
-}
-
-static inline void channel_free(Channel* channel)
-{
-	if (channel) {
-		channel_destroy(channel);
-		free(channel);
-	}
-}
-
 #undef catch
 #undef ASSERT_CHANNEL_INVARIANT
 #undef ENTER_CHANNEL_MONITOR

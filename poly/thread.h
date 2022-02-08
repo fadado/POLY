@@ -14,9 +14,9 @@ typedef thrd_t Thread;
 
 static inline Thread thread_current(void);
 static inline int    thread_detach(Thread thread);
-static inline bool   thread_equal(Thread thread1, Thread thread2);
+static inline bool   thread_equal(Thread lhs, Thread rhs);
 static inline void   thread_exit(int result);
-static inline int    thread_fork(int(*root)(void*), void* argument, Thread* new_thread);
+static inline int    thread_fork(int(*root)(void*), void* argument, Thread* thread);
 static inline int    thread_join(Thread thread, int* result);
 static inline int    thread_sleep(Time duration);
 static inline void   thread_yield(void);
@@ -30,8 +30,8 @@ static inline int thread_spawn(int(*root)(void*), void* argument);
 // Thread implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int thread_fork(int(*root)(void*), void* argument, Thread* new_thread)
-{ return thrd_create(new_thread, root, argument); }
+static ALWAYS inline int thread_fork(int(*root)(void*), void* argument, Thread* thread)
+{ return thrd_create(thread, root, argument); }
 
 static ALWAYS inline int thread_join(Thread thread, int* result)
 { return thrd_join(thread, result); }
@@ -39,8 +39,8 @@ static ALWAYS inline int thread_join(Thread thread, int* result)
 static ALWAYS inline int thread_detach(Thread thread)
 { return thrd_detach(thread); }
 
-static ALWAYS inline bool thread_equal(Thread thread1, Thread thread2)
-{ return thrd_equal(thread1, thread2); }
+static ALWAYS inline bool thread_equal(Thread lhs, Thread rhs)
+{ return thrd_equal(lhs, rhs); }
 
 static ALWAYS inline Thread thread_current(void)
 { return thrd_current(); }
@@ -67,6 +67,7 @@ static inline int thread_spawn(int(*root)(void*), void* argument)
 	Thread thread;
 	int err = thread_fork(root, argument, &thread);
 	if (err != STATUS_SUCCESS) return err;
+	// TODO: thread_yield(): ensure root has been called???
 	return thread_detach(thread);
 }
 

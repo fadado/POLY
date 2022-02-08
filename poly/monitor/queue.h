@@ -52,7 +52,7 @@ static inline int queue_init2(Queue* q1, Queue* q2, union Lock lock)
 	int err;
 	if ((err=queue_init(q1, lock)) == STATUS_SUCCESS) {
 		if ((err=queue_init(q2, lock)) == STATUS_SUCCESS) {
-			return STATUS_SUCCESS;
+			/*skip*/;
 		} else {
 			queue_destroy(q1);
 		}

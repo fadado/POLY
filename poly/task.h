@@ -14,7 +14,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Future {
-	bool    pending; // still not resolved?
+	bool    pending; // still not finished?
 	Scalar  result;  // memoized result
 	Channel port;    // shared message box
 } Future;
@@ -32,6 +32,10 @@ static inline Scalar future_get(Future* this);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
+/* atomic(bool) pending?
+ * static inline bool finished(Future* this) { return !this->pending; }
+ */
+
 static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 {
 	enum { syncronous=0, asyncronous=1 };
@@ -39,9 +43,9 @@ static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 
 	this->pending = true;
 	this->result = Unsigned(0x1aFabada);
-	if ((err=channel_init(&this->port, asyncronous)) == STATUS_SUCCESS) {
+	if ((err=channel_init(&this->port, syncronous)) == STATUS_SUCCESS) {
 		if ((err=thread_spawn(root, argument)) == STATUS_SUCCESS) {
-			return STATUS_SUCCESS;
+			/*skip*/;
 		} else {
 			channel_destroy(&this->port);
 		}

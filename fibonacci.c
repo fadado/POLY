@@ -14,6 +14,8 @@ THREAD_SPEC (fibonacci, static)
 
 DEFINE_THREAD_ID (10) // max 10 threads
 
+static atomic(bool) calculating;
+
 ////////////////////////////////////////////////////////////////////////
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
@@ -28,7 +30,7 @@ THREAD_BEGIN (spinner)
 		thread_sleep(this.delay);
 	}
 
-	thread_sleep(ms2ns(1));
+	while (!calculating) /*wait*/;
 	spin(0);
 	for (;;)  {
 		for (int i = 0; s[i] != '\0'; ++i) {
@@ -45,12 +47,14 @@ THREAD_BODY  (fibonacci)
 	Future* future;  // this is a task: a thread with future!
 	long    n;
 THREAD_BEGIN (fibonacci)
-	warn("ThreadID: %d", thread_id());
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
+	warn("ThreadID: %d", thread_id());
+
+	calculating = true; // allow spinner to show
 	long result = slow_fib(this.n);
 	// ...long time...
 	future_set(this.future, (Integer)result); // what if error: return > 0 ???
