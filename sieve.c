@@ -1,17 +1,14 @@
-// Sieve test
-// gcc -Wall -O2 -lpthread filename.c
+// Sieve with one thread for each prime
+// gcc -Wall -O2 -lpthread sieve.c
 
 #include <stdio.h>
+#include <stdlib.h>
 
 // uncomment next line to enable assertions
-#define DEBUG
+//#define DEBUG
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/channel.h"
-
-////////////////////////////////////////////////////////////////////////
-// Tasks & Filters
-////////////////////////////////////////////////////////////////////////
 
 // generate 2,3,5,7,9...
 THREAD_BODY (generate_candidates)
@@ -20,9 +17,9 @@ THREAD_BODY (generate_candidates)
 THREAD_BEGIN (generate_candidates)
 	assert(this.input == (Channel*)0);
 	int n = 2;
-	channel_send(this.output, n);
+	channel_send(this.output, (Integer)n);
 	for (n=3; true; n+=2)  { // forever odd numbers
-		channel_send(this.output, n);
+		channel_send(this.output, (Integer)n);
 	}
 THREAD_END
 
@@ -32,40 +29,36 @@ THREAD_BODY (filter_multiples)
 	Channel* output;
 	int prime;
 THREAD_BEGIN (filter_multiples)
+	inline bool divides(int n, int d) { return n%d == 0; }
 	Scalar s;
-	int n;
 	for (;;) {
 		channel_receive(this.input, &s);
-		n = cast(s, n);
-		if (n%this.prime != 0) {
-			channel_send_(this.output, s);
+		int n = cast(s, int);
+		if (!divides(n, this.prime)) {
+			channel_send(this.output, s);
 		}
 	}
 THREAD_END
 
-////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////
-
 int main(int argc, char** argv)
 {
-	enum { BOUND=100 };
-	Scalar s;
-	int p;
+	enum { NPRIMES=100 };
+	int n = (argc == 1) ? NPRIMES : atoi(argv[1]);
+	if (n <= 0) n = NPRIMES;
 
-	Channel* ch = channel_alloc(1);
-	warn(__func__);
-	spawn_filter(0, ch, generate_candidates);
+	Channel* input = channel_alloc(1);
+	spawn_filter((Channel*)0, input, generate_candidates);
 
-	for (int i = 0; i < BOUND; ++i) {
-		channel_receive(ch, &s);
-		p = cast(s, p);
-		printf("%d\n", p);
-		Channel* ch1 = channel_alloc(1);
-	warn(__func__);
-		spawn_filter(ch, ch1, filter_multiples, .prime=p);
-		ch = ch1;
+	for (int i = 0; i < n; ++i) {
+		Scalar s;
+		channel_receive(input, &s);
+		int prime = cast(s, int);
+		printf("%d ", prime);
+		Channel* output = channel_alloc(1);
+		spawn_filter(input, output, filter_multiples, .prime=prime);
+		input = output;
 	}
+	putchar('\n');
 
 	return 0;
 }

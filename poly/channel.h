@@ -7,9 +7,9 @@
 #include "POLY.h"
 #endif
 #include "scalar.h"
-#include "lock.h"
-#include "condition.h"
-#include "queue.h"
+#include "monitor/lock.h"
+#include "monitor/condition.h"
+#include "monitor/queue.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
