@@ -247,7 +247,7 @@ onerror:
 static inline int channel_receive(Channel* this, Scalar* message)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (message) *message = Unsigned(0x0);
+		if (message) *message = Scalar(0x0);
 		return STATUS_SUCCESS;
 	}
 
@@ -291,5 +291,4 @@ onerror:
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // CHANNEL_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

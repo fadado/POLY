@@ -9,7 +9,6 @@
 #include "channel.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Future
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -21,6 +20,7 @@ typedef struct Future {
 
 static inline int    task_join(Future* this);
 static inline int    task_spawn(Future* this, int(*root)(void*), void* argument);
+
 static inline int    future_set(Future* this, Scalar x);
 static inline Scalar future_get(Future* this);
 
@@ -42,7 +42,7 @@ static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 	int err;
 
 	this->pending = true;
-	this->result = Unsigned(0x1aFabada);
+	this->result = Scalar(0x01Fabada);
 	if ((err=channel_init(&this->port, syncronous)) == STATUS_SUCCESS) {
 		if ((err=thread_spawn(root, argument)) == STATUS_SUCCESS) {
 			/*skip*/;
@@ -51,13 +51,6 @@ static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 		}
 	}
 	return err;
-}
-
-// to be called once from the promise
-static ALWAYS inline int future_set(Future* this, Scalar x)
-{
-	assert(this->pending);
-	return channel_send(&this->port, x);
 }
 
 // to be called once from the client
@@ -70,6 +63,13 @@ static inline int task_join(Future* this)
 	return status;
 }
 
+// to be called once from the promise
+static ALWAYS inline int future_set(Future* this, Scalar x)
+{
+	assert(this->pending);
+	return channel_send(&this->port, x);
+}
+
 // to be called any number of times from the client
 static ALWAYS inline Scalar future_get(Future* this)
 {
@@ -77,5 +77,4 @@ static ALWAYS inline Scalar future_get(Future* this)
 	return this->result;
 }
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // TASK_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

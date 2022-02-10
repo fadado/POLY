@@ -8,7 +8,6 @@
 #include "monitor/queue.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -144,5 +143,4 @@ static inline int semaphore_V(Semaphore* this)
 #undef LEAVE_SEMAPHORE_MONITOR
 #undef CHECK_SEMAPHORE_MONITOR
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // SEMAPHORE_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

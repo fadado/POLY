@@ -6,7 +6,6 @@
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// Type Lock
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +60,7 @@ static ALWAYS inline int lock_release(union Lock this)
 static ALWAYS inline int lock_try(union Lock this)
 { return mtx_trylock(this.mutex); }
 
-static ALWAYS inline int lock_try_for(union Lock this, Time duration)
+static inline int lock_try_for(union Lock this, Time duration)
 {
 	Time t = now();
 	t += duration; // TIME_UTC based absolute calendar time point
@@ -70,5 +69,4 @@ static ALWAYS inline int lock_try_for(union Lock this, Time duration)
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // LOCK_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

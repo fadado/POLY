@@ -8,7 +8,6 @@
 #include "monitor/queue.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Types
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -103,5 +102,4 @@ static inline int barrier_wait(Barrier* this)
 #undef LEAVE_BARRIER_MONITOR
 #undef CHECK_BARRIER_MONITOR
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // BARRIER_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

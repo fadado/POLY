@@ -7,7 +7,6 @@
 #include "lock.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Condition
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -39,7 +38,7 @@ static ALWAYS inline int  condition_wait(Condition* this, union Lock lock)
 static ALWAYS inline int condition_broadcast(Condition* this)
 { return cnd_broadcast(this); }
 
-static ALWAYS inline int condition_wait_for(Condition* this, union Lock lock, Time duration)
+static inline int condition_wait_for(Condition* this, union Lock lock, Time duration)
 {
 	Time t = now();
 	t += duration; // TIME_UTC based absolute calendar time point
@@ -48,5 +47,4 @@ static ALWAYS inline int condition_wait_for(Condition* this, union Lock lock, Ti
 	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // LOCK_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

@@ -7,7 +7,6 @@
 #include "lock.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Queue
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -26,7 +25,6 @@ static inline int  queue_init(Queue* this, union Lock lock);
 static inline int  queue_init2(Queue* q1, Queue* q2, union Lock lock);
 static inline int  queue_notify(Queue* this);
 static inline int  queue_wait(Queue* this);
-static inline int  queue_wait_for(Queue* this, Time duration);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -109,14 +107,4 @@ static ALWAYS inline int queue_broadcast(Queue* this)
 	}
 }
 
-static ALWAYS inline int queue_wait_for(Queue* this, Time duration)
-{
-	Time t = now();
-	t += duration; // TIME_UTC based absolute calendar time point
-	time_t s  = ns2s(t);
-	long   ns = t - s2ns(s);
-	return cnd_timedwait(&this->queue, this->mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
-}
-
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // QUEUE_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

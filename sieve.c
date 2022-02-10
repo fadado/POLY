@@ -55,7 +55,7 @@ int main(int argc, char** argv)
 {
 	enum { NPRIMES=100 };
 	int n = (argc == 1) ? NPRIMES : atoi(argv[1]);
-	if (n <= 0) n = NPRIMES;
+	if (n <= 0) n = NPRIMES; // ignore bad parameter
 
 	Channel _chn_pool[n+1], *_chn_ptr=_chn_pool;
 	inline Channel* alloc(void) { return _chn_ptr++; }

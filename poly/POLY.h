@@ -75,5 +75,4 @@ static ALWAYS inline Time now(void)
 	return s2ns(ts.tv_sec) + ts.tv_nsec;
 }
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // POLY_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

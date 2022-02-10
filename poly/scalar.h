@@ -33,10 +33,26 @@ static_assert(sizeof(union Scalar) == 8);
 ////////////////////////////////////////////////////////////////////////
 
 // 4 Scalar constructors
-#define Integer(x)    (union Scalar)(Integer)(x)
-#define Unsigned(x)   (union Scalar)(Unsigned)(x)
-#define Double(x)     (union Scalar)(Double)(x)
 #define Pointer(x)    (union Scalar)(Pointer)(x)
+
+// Cast from any native scalar EXPRESSION to an Scalar
+#define Scalar(EXPRESSION) (union Scalar)_Generic((EXPRESSION),\
+	_Bool: (Unsigned)(EXPRESSION),\
+	char: (Unsigned)(EXPRESSION),\
+	signed char: (Integer)(EXPRESSION),\
+	unsigned char: (Unsigned)(EXPRESSION),\
+	signed short int: (Integer)(EXPRESSION),\
+	unsigned short int: (Unsigned)(EXPRESSION),\
+	signed int: (Integer)(EXPRESSION),\
+	unsigned int: (Unsigned)(EXPRESSION),\
+	signed long int: (Integer)(EXPRESSION),\
+	unsigned long int: (Unsigned)(EXPRESSION),\
+	signed long long int: (Integer)(EXPRESSION),\
+	unsigned long long int: (Unsigned)(EXPRESSION),\
+	float: (Double)(EXPRESSION),\
+	double: (Double)(EXPRESSION),\
+	long double: (Double)(EXPRESSION))
+	//BUG? default: (Pointer)(EXPRESSION))
 
 // Cast an union Scalar to the TYPE specified
 #define cast(SCALAR,TYPE) _Generic(((TYPE){0}),\
@@ -57,5 +73,4 @@ static_assert(sizeof(union Scalar) == 8);
 	long double: (long double)(SCALAR).d,\
 	default: (SCALAR).p)
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // SCALAR_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

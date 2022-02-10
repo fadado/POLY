@@ -6,7 +6,6 @@
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// Type Thread
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -19,15 +18,14 @@ static inline void   thread_exit(int result);
 static inline int    thread_fork(int(*root)(void*), void* argument, Thread* thread);
 static inline int    thread_join(Thread thread, int* result);
 static inline int    thread_sleep(Time duration);
+static inline int    thread_spawn(int(*root)(void*), void* argument);
 static inline void   thread_yield(void);
 
 // handy macro
-static inline int thread_spawn(int(*root)(void*), void* argument);
-
 #define spawn_thread(T,...) thread_spawn(T,&(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
-// Thread implementation
+// Implementation
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int thread_fork(int(*root)(void*), void* argument, Thread* thread)
@@ -59,7 +57,7 @@ static ALWAYS inline void thread_exit(int result)
 { thrd_exit(result); }
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Extensions to C11 API
 ////////////////////////////////////////////////////////////////////////
 
 static inline int thread_spawn(int(*root)(void*), void* argument)
@@ -87,7 +85,7 @@ static inline int thread_spawn(int(*root)(void*), void* argument)
 	}
 
 ////////////////////////////////////////////////////////////////////////
-// Experimental structures
+// Macros to define threads, tasks, filters...
 ////////////////////////////////////////////////////////////////////////
 
 #define THREAD_SPEC(T,...)\
@@ -105,5 +103,4 @@ static inline int thread_spawn(int(*root)(void*), void* argument)
 #define THREAD_END\
 	return 0; }
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // SPINNER_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp

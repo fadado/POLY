@@ -8,7 +8,6 @@
 #include "monitor/queue.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
@@ -30,11 +29,11 @@ static inline int  rwlock_release(RWLock* this);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-enum { RWL_IDLE=0, RWL_WRITING=-1 };
+enum { RWLOCK_IDLE=0, RWLOCK_WRITING=-1 };
 
 static inline int rwlock_init(RWLock* this)
 {
-	this->counter = RWL_IDLE;
+	this->counter = RWLOCK_IDLE;
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
@@ -49,7 +48,7 @@ static inline int rwlock_init(RWLock* this)
 
 static inline void rwlock_destroy(RWLock* this)
 {
-	assert(this->counter == RWL_IDLE);
+	assert(this->counter == RWLOCK_IDLE);
 
 	queue_destroy(&this->readers);
 	queue_destroy(&this->writers);
@@ -82,12 +81,12 @@ static inline int rwlock_acquire(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	if (this->counter != RWL_IDLE) {
+	if (this->counter != RWLOCK_IDLE) {
 		int err = queue_check(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
-		assert(this->counter == RWL_IDLE);
+		assert(this->counter == RWLOCK_IDLE);
 	}
-	this->counter = RWL_WRITING;
+	this->counter = RWLOCK_WRITING;
 
 	LEAVE_RWLOCK_MONITOR
 }
@@ -96,7 +95,7 @@ static inline int rwlock_release(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	this->counter = RWL_IDLE;
+	this->counter = RWLOCK_IDLE;
 	if (!queue_empty(&this->writers)) {
 		int err = queue_notify(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
@@ -115,7 +114,7 @@ static inline int rwlock_enter(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	while (this->counter == RWL_WRITING) {
+	while (this->counter == RWLOCK_WRITING) {
 		int err = queue_wait(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
@@ -128,7 +127,7 @@ static inline int rwlock_leave(RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
-	if (--this->counter == RWL_IDLE) {
+	if (--this->counter == RWLOCK_IDLE) {
 		if (!queue_empty(&this->writers)) {
 			int err = queue_notify(&this->writers);
 			CHECK_RWLOCK_MONITOR (err)
@@ -142,5 +141,4 @@ static inline int rwlock_leave(RWLock* this)
 #undef LEAVE_RWLOCK_MONITOR
 #undef CHECK_RWLOCK_MONITOR
 
-// vim:ai:sw=4:ts=4:syntax=cpp
-#endif // RWLOCK_H
+#endif // vim:ai:sw=4:ts=4:syntax=cpp
