@@ -32,10 +32,11 @@ static_assert(sizeof(union Scalar) == 8);
 // Cast to and from Scalar
 ////////////////////////////////////////////////////////////////////////
 
-// 4 Scalar constructors
-#define Pointer(x)    (union Scalar)(Pointer)(x)
+// Scalar constructors
+#define Pointer(x)    (Scalar){.p=(x)}
 
 // Cast from any native scalar EXPRESSION to an Scalar
+#if 0
 #define Scalar(EXPRESSION) (union Scalar)_Generic((EXPRESSION),\
 	_Bool: (Unsigned)(EXPRESSION),\
 	char: (Unsigned)(EXPRESSION),\
@@ -53,6 +54,25 @@ static_assert(sizeof(union Scalar) == 8);
 	double: (Double)(EXPRESSION),\
 	long double: (Double)(EXPRESSION))
 	//BUG? default: (Pointer)(EXPRESSION))
+#else
+#define Scalar(EXPRESSION) _Generic((EXPRESSION),\
+	_Bool: (Scalar){.u=(EXPRESSION)},\
+	char: (Scalar){.u=(EXPRESSION)},\
+	signed char: (Scalar){.i=(EXPRESSION)},\
+	unsigned char: (Scalar){.u=(EXPRESSION)},\
+	signed short int: (Scalar){.i=(EXPRESSION)},\
+	unsigned short int: (Scalar){.u=(EXPRESSION)},\
+	signed int: (Scalar){.i=(EXPRESSION)},\
+	unsigned int: (Scalar){.u=(EXPRESSION)},\
+	signed long int: (Scalar){.i=(EXPRESSION)},\
+	unsigned long int: (Scalar){.u=(EXPRESSION)},\
+	signed long long int: (Scalar){.i=(EXPRESSION)},\
+	unsigned long long int: (Scalar){.u=(EXPRESSION)},\
+	float: (Scalar){.d=(EXPRESSION)},\
+	double: (Scalar){.d=(EXPRESSION)},\
+	long double: (Scalar){.d=(EXPRESSION)},\
+	default: (Scalar){.p=(Pointer)(EXPRESSION)})
+#endif
 
 // Cast an union Scalar to the TYPE specified
 #define cast(SCALAR,TYPE) _Generic(((TYPE){0}),\

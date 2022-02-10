@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 	assert(w1 == s2.u);
 
 	double d1, d2;
-	s1 = Scalar(123.456);
+	//s1 = Scalar(123.456);
 	s2 = s1;
 	d1 = cast(s1, double);
 	d2 = cast(s2, double);
@@ -45,6 +45,7 @@ int main(int argc, char** argv)
 	int *p1;
 	i1 = 123456;
 	p1 = &i1;
+	//s1 = Scalar(p1);
 	s1 = Pointer(p1);
 	p1 = cast(s1, int*);
 	assert(p1 == s1.p);
@@ -63,8 +64,18 @@ int main(int argc, char** argv)
 
 	s1 = Scalar(0);
 	s1 = Scalar(0x0U);
-	s1 = Scalar(0e0);
+	//s1 = Scalar((float)0e0);
 	s1 = Pointer(0);
+
+	Scalar s3 = { .i=-77 };
+	Scalar s4 = { -77 };
+	//Scalar s5 = 0;
+	assert(cast(s3,int) == cast(s4,int));
+
+	Scalar s5 = (Scalar){.d=(Double)7.7};
+	Scalar s6 = (Scalar){.d=7.7};
+	assert(cast(s5,double) == cast(s6,double));
+	printf("%g\n", cast(s5,double));
 
 	return 0;
 }
