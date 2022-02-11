@@ -32,29 +32,8 @@ static_assert(sizeof(union Scalar) == 8);
 // Cast to and from Scalar
 ////////////////////////////////////////////////////////////////////////
 
-// Scalar constructors
-#define Pointer(x)    (Scalar){.p=(x)}
-
-// Cast from any native scalar EXPRESSION to an Scalar
 #if 0
-#define Scalar(EXPRESSION) (union Scalar)_Generic((EXPRESSION),\
-	_Bool: (Unsigned)(EXPRESSION),\
-	char: (Unsigned)(EXPRESSION),\
-	signed char: (Integer)(EXPRESSION),\
-	unsigned char: (Unsigned)(EXPRESSION),\
-	signed short int: (Integer)(EXPRESSION),\
-	unsigned short int: (Unsigned)(EXPRESSION),\
-	signed int: (Integer)(EXPRESSION),\
-	unsigned int: (Unsigned)(EXPRESSION),\
-	signed long int: (Integer)(EXPRESSION),\
-	unsigned long int: (Unsigned)(EXPRESSION),\
-	signed long long int: (Integer)(EXPRESSION),\
-	unsigned long long int: (Unsigned)(EXPRESSION),\
-	float: (Double)(EXPRESSION),\
-	double: (Double)(EXPRESSION),\
-	long double: (Double)(EXPRESSION))
-	//BUG? default: (Pointer)(EXPRESSION))
-#else
+// Cast from any native scalar EXPRESSION to an Scalar
 #define Scalar(EXPRESSION) _Generic((EXPRESSION),\
 	_Bool: (Scalar){.u=(EXPRESSION)},\
 	char: (Scalar){.u=(EXPRESSION)},\

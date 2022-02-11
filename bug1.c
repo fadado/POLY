@@ -1,5 +1,5 @@
 // Bug #1
-// gcc -Wall -O2 tests/bug1.c
+// gcc -Wall -O2 bug1.c
 
 #include <assert.h>
 

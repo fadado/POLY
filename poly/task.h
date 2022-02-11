@@ -42,7 +42,7 @@ static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
 	int err;
 
 	this->pending = true;
-	this->result = Scalar(0x01Fabada);
+	this->result = (Scalar)(Unsigned)0xFabadaUL;
 	if ((err=channel_init(&this->port, syncronous)) == STATUS_SUCCESS) {
 		if ((err=thread_spawn(root, argument)) == STATUS_SUCCESS) {
 			/*skip*/;
