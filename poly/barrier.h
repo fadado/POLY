@@ -30,13 +30,15 @@ enum { BARRIER_FULL = -1 };
 
 /*
 //
-static ALWAYS inline int _barrier_empty(Barrier* this)
+static ALWAYS inline int
+_barrier_empty (Barrier* this)
 {
 	return this->places == this->capacity;
 }
 */
 
-static inline int barrier_init(Barrier* this, int capacity)
+static inline int
+barrier_init (Barrier* this, int capacity)
 {
 	assert(capacity > 1);
 
@@ -53,7 +55,8 @@ static inline int barrier_init(Barrier* this, int capacity)
 	return err;
 }
 
-static inline void barrier_destroy(Barrier* this)
+static inline void
+barrier_destroy (Barrier* this)
 {
 	assert(this->places == 0);
 
@@ -79,7 +82,8 @@ static inline void barrier_destroy(Barrier* this)
 		return (E);\
 	}
 
-static inline int barrier_wait(Barrier* this)
+static inline int
+barrier_wait (Barrier* this)
 {
 	int status = STATUS_SUCCESS;
 	ENTER_BARRIER_MONITOR

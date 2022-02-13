@@ -35,17 +35,22 @@ static ALWAYS inline int _queue_length(Queue* this)
 { return this->waiting; }
 */
 
-static ALWAYS inline bool queue_empty(Queue* this)
-{ return this->waiting == 0; }
+static ALWAYS inline bool
+queue_empty (Queue* this)
+{
+	return this->waiting == 0;
+}
 
-static inline int queue_init(Queue* this, union Lock lock)
+static inline int
+queue_init (Queue* this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
 	return cnd_init(&this->queue);
 }
 
-static inline int queue_init2(Queue* q1, Queue* q2, union Lock lock)
+static inline int
+queue_init2 (Queue* q1, Queue* q2, union Lock lock)
 {
 	int err;
 	if ((err=queue_init(q1, lock)) == STATUS_SUCCESS) {
@@ -58,7 +63,8 @@ static inline int queue_init2(Queue* q1, Queue* q2, union Lock lock)
 	return err;
 }
 
-static inline void queue_destroy(Queue* this)
+static inline void
+queue_destroy (Queue* this)
 {
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
@@ -67,7 +73,8 @@ static inline void queue_destroy(Queue* this)
 	cnd_destroy(&this->queue);
 }
 
-static inline int queue_check(Queue* this)
+static inline int
+queue_check (Queue* this)
 {
 	// until permits > 0
 	while (this->permits == 0) {
@@ -80,7 +87,8 @@ static inline int queue_check(Queue* this)
 	return STATUS_SUCCESS;
 }
 
-static inline int queue_wait(Queue* this)
+static inline int
+queue_wait (Queue* this)
 {
 	do {
 		++this->waiting;
@@ -93,13 +101,15 @@ static inline int queue_wait(Queue* this)
 	return STATUS_SUCCESS;
 }
 
-static ALWAYS inline int queue_notify(Queue* this)
+static ALWAYS inline int
+queue_notify (Queue* this)
 {
 	++this->permits;
 	return cnd_signal(&this->queue);
 }
 
-static ALWAYS inline int queue_broadcast(Queue* this)
+static ALWAYS inline int
+queue_broadcast (Queue* this)
 {
 	if (this->waiting > 0) {
 		this->permits += this->waiting;

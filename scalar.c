@@ -8,6 +8,24 @@
 
 //static inline ALWAYS union Scalar scalar(union Scalar s) { return s;}
 
+#define coerce(EXPRESSION) _Generic((EXPRESSION),\
+	_Bool: (Scalar){.u=(EXPRESSION)},\
+	char: (Scalar){.u=(EXPRESSION)},\
+	signed char: (Scalar){.i=(EXPRESSION)},\
+	unsigned char: (Scalar){.u=(EXPRESSION)},\
+	signed short int: (Scalar){.i=(EXPRESSION)},\
+	unsigned short int: (Scalar){.u=(EXPRESSION)},\
+	signed int: (Scalar){.i=(EXPRESSION)},\
+	unsigned int: (Scalar){.u=(EXPRESSION)},\
+	signed long int: (Scalar){.i=(EXPRESSION)},\
+	unsigned long int: (Scalar){.u=(EXPRESSION)},\
+	signed long long int: (Scalar){.i=(EXPRESSION)},\
+	unsigned long long int: (Scalar){.u=(EXPRESSION)},\
+	float: (Scalar){.d=(EXPRESSION)},\
+	double: (Scalar){.d=(EXPRESSION)},\
+	long double: (Scalar){.d=(EXPRESSION)},\
+	default: (Scalar){.p=(Pointer)(EXPRESSION)})
+
 int main(int argc, char* argv[argc+1])
 {
 ////////////////////////////////////////////////////////////////////////

@@ -92,7 +92,8 @@ static ALWAYS inline bool _channel_full(Channel* this)
 // Channel life
 //
 
-static inline int channel_init(Channel* this, unsigned capacity)
+static inline int
+channel_init (Channel* this, unsigned capacity)
 {
 	// cleanup thunks to call before return
 	void(*_thunks[4])(void) = { 0 };
@@ -150,7 +151,8 @@ onerror:
 	return err;
 }
 
-static inline void channel_destroy(Channel* this)
+static inline void
+channel_destroy (Channel* this)
 {
 	assert(_channel_empty(this));
 
@@ -168,7 +170,8 @@ static inline void channel_destroy(Channel* this)
 	}
 }
 
-static inline void channel_close(Channel* this)
+static inline void
+channel_close (Channel* this)
 {
 	this->flags |= CHANNEL_CLOSED;
 	//?lock_acquire(&this->entry);
@@ -178,7 +181,8 @@ static inline void channel_close(Channel* this)
 	//?lock_release(&this->entry);
 }
 
-static ALWAYS inline bool channel_drained(Channel* this)
+static ALWAYS inline bool
+channel_drained (Channel* this)
 {
 	return (this->flags & CHANNEL_DRAINED);
 }
@@ -208,7 +212,8 @@ static ALWAYS inline bool channel_drained(Channel* this)
 		return err;\
 	}
 
-static inline int channel_send(Channel* this, Scalar message)
+static inline int
+channel_send (Channel* this, Scalar message)
 {
 	if (this->flags & CHANNEL_CLOSED) {
 		panic("channel_send cannot use a closed channel");
@@ -244,7 +249,8 @@ onerror:
 	return err;
 }
 
-static inline int channel_receive(Channel* this, Scalar* message)
+static inline int
+channel_receive (Channel* this, Scalar* message)
 {
 	if (this->flags & CHANNEL_DRAINED) {
 		if (message) *message = (Scalar)(Unsigned)0x0;

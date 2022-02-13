@@ -23,22 +23,38 @@ static ALWAYS inline int  condition_wait_for(Condition* this, union Lock lock, T
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-static ALWAYS inline int condition_init(Condition* this)
-{ return cnd_init(this); }
+static ALWAYS inline int
+condition_init (Condition* this)
+{
+	return cnd_init(this);
+}
 
-static ALWAYS inline void condition_destroy(Condition* this)
-{ cnd_destroy(this); }
+static ALWAYS inline void
+condition_destroy (Condition* this)
+{
+	cnd_destroy(this);
+}
 
-static ALWAYS inline int condition_notify(Condition* this)
-{ return cnd_signal(this); }
+static ALWAYS inline int
+condition_notify (Condition* this)
+{
+	return cnd_signal(this);
+}
 
-static ALWAYS inline int  condition_wait(Condition* this, union Lock lock)
-{ return cnd_wait(this, lock.mutex); }
+static ALWAYS inline int
+condition_wait (Condition* this, union Lock lock)
+{
+	return cnd_wait(this, lock.mutex);
+}
 
-static ALWAYS inline int condition_broadcast(Condition* this)
-{ return cnd_broadcast(this); }
+static ALWAYS inline int
+condition_broadcast (Condition* this)
+{
+	return cnd_broadcast(this);
+}
 
-static inline int condition_wait_for(Condition* this, union Lock lock, Time duration)
+static inline int
+condition_wait_for (Condition* this, union Lock lock, Time duration)
 {
 	Time t = now();
 	t += duration; // TIME_UTC based absolute calendar time point

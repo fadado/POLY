@@ -28,39 +28,55 @@ union TRANSPARENT Lock {
 
 static inline int  lock_acquire(union Lock this);
 static inline void lock_destroy(union Lock this);
-static inline int  lock_init_(union Lock this, int mask);
+static inline int  lock_init(union Lock this, unsigned mask);
 static inline int  lock_release(union Lock this);
 static inline int  lock_try(union Lock this);
 static inline int  lock_try_for(union Lock this, Time duration);
 
+////////////////////////////////////////////////////////////////////////
+// Implementation
+////////////////////////////////////////////////////////////////////////
+
+static ALWAYS inline int
+lock_init (union Lock this, unsigned mask)
+{
+	return mtx_init(this.mutex, mask);
+}
+
 // Deduce mask from lock type
-#define lock_init(LOCK) lock_init_((LOCK), \
+#define lock_init(LOCK) lock_init((LOCK), \
 	_Generic((LOCK),\
 		PlainLock*: mtx_plain,\
 		TimedLock*: mtx_timed,\
 		RecursiveLock*: mtx_plain|mtx_recursive,\
 		TimedRecursiveLock*: mtx_timed|mtx_recursive))
 
-////////////////////////////////////////////////////////////////////////
-// Implementation
-////////////////////////////////////////////////////////////////////////
+static ALWAYS inline void
+lock_destroy (union Lock this)
+{
+	mtx_destroy(this.mutex);
+}
 
-static ALWAYS inline int lock_init_(union Lock this, int mask)
-{ return mtx_init(this.mutex, mask); }
+static ALWAYS inline int
+lock_acquire (union Lock this)
+{
+	return mtx_lock(this.mutex);
+}
 
-static ALWAYS inline void lock_destroy(union Lock this)
-{ mtx_destroy(this.mutex); }
+static ALWAYS inline int
+lock_release (union Lock this)
+{
+	return mtx_unlock(this.mutex);
+}
 
-static ALWAYS inline int lock_acquire(union Lock this)
-{ return mtx_lock(this.mutex); }
+static ALWAYS inline int
+lock_try (union Lock this)
+{
+	return mtx_trylock(this.mutex);
+}
 
-static ALWAYS inline int lock_release(union Lock this)
-{ return mtx_unlock(this.mutex); }
-
-static ALWAYS inline int lock_try(union Lock this)
-{ return mtx_trylock(this.mutex); }
-
-static inline int lock_try_for(union Lock this, Time duration)
+static inline int
+lock_try_for (union Lock this, Time duration)
 {
 	Time t = now();
 	t += duration; // TIME_UTC based absolute calendar time point

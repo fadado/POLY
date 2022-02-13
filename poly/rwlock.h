@@ -31,7 +31,8 @@ static inline int  rwlock_release(RWLock* this);
 
 enum { RWLOCK_IDLE=0, RWLOCK_WRITING=-1 };
 
-static inline int rwlock_init(RWLock* this)
+static inline int
+rwlock_init (RWLock* this)
 {
 	this->counter = RWLOCK_IDLE;
 
@@ -46,7 +47,8 @@ static inline int rwlock_init(RWLock* this)
 	return err;
 }
 
-static inline void rwlock_destroy(RWLock* this)
+static inline void
+rwlock_destroy (RWLock* this)
 {
 	assert(this->counter == RWLOCK_IDLE);
 
@@ -77,7 +79,8 @@ static inline void rwlock_destroy(RWLock* this)
 //
 // Writer 
 //
-static inline int rwlock_acquire(RWLock* this)
+static inline int
+rwlock_acquire (RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
@@ -91,7 +94,8 @@ static inline int rwlock_acquire(RWLock* this)
 	LEAVE_RWLOCK_MONITOR
 }
 
-static inline int rwlock_release(RWLock* this)
+static inline int
+rwlock_release (RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
@@ -110,7 +114,8 @@ static inline int rwlock_release(RWLock* this)
 //
 // Readers
 //
-static inline int rwlock_enter(RWLock* this)
+static inline int
+rwlock_enter (RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 
@@ -123,7 +128,8 @@ static inline int rwlock_enter(RWLock* this)
 	LEAVE_RWLOCK_MONITOR
 }
 
-static inline int rwlock_leave(RWLock* this)
+static inline int
+rwlock_leave (RWLock* this)
 {
 	ENTER_RWLOCK_MONITOR
 

@@ -19,7 +19,7 @@ typedef struct Future {
 } Future;
 
 static inline int    task_join(Future* this);
-static inline int    task_spawn(Future* this, int root(void*), void* argument);
+static inline int    task_spawn(Future* this, int main(void*), void* argument);
 
 static inline int    future_set(Future* this, Scalar x);
 static inline Scalar future_get(Future* this);
@@ -36,7 +36,8 @@ static inline Scalar future_get(Future* this);
  * static inline bool finished(Future* this) { return !this->pending; }
  */
 
-static inline int task_spawn(Future* this, int root(void*), void* argument)
+static inline int
+task_spawn (Future* this, int main(void*), void* argument)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;
@@ -44,7 +45,7 @@ static inline int task_spawn(Future* this, int root(void*), void* argument)
 	this->pending = true;
 	this->result = (Scalar)(Unsigned)0xFabadaUL;
 	if ((err=channel_init(&this->port, syncronous)) == STATUS_SUCCESS) {
-		if ((err=thread_spawn(root, argument)) == STATUS_SUCCESS) {
+		if ((err=thread_spawn(main, argument)) == STATUS_SUCCESS) {
 			/*skip*/;
 		} else {
 			channel_destroy(&this->port);
@@ -54,7 +55,8 @@ static inline int task_spawn(Future* this, int root(void*), void* argument)
 }
 
 // to be called once from the client
-static inline int task_join(Future* this)
+static inline int
+task_join (Future* this)
 {
 	assert(this->pending);
 	int status = channel_receive(&this->port, &this->result);
@@ -71,7 +73,8 @@ static ALWAYS inline int future_set(Future* this, Scalar x)
 }
 
 // to be called any number of times from the client
-static ALWAYS inline Scalar future_get(Future* this)
+static ALWAYS inline Scalar
+future_get (Future* this)
 {
 	if (this->pending) { task_join(this); }
 	return this->result;

@@ -68,7 +68,8 @@ typedef unsigned long long Time;
 #define ns2ms(T)    (Time)((T)/1000000ull)
 #define ns2us(T)    (Time)((T)/1000ull)
 
-static ALWAYS inline Time now(void)
+static ALWAYS inline Time
+now (void)
 {
 	struct timespec ts;
 	timespec_get(&ts, TIME_UTC);
