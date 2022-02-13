@@ -4,8 +4,8 @@
 #ifndef POLY_H
 #include "POLY.h"
 #endif
-#include "monitor/lock.h"
-#include "monitor/queue.h"
+#include "../monitor/lock.h"
+#include "../monitor/queue.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Interface

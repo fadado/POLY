@@ -31,8 +31,11 @@ static inline int  queue_wait(Queue* this);
 ////////////////////////////////////////////////////////////////////////
 
 /*
-static ALWAYS inline int _queue_length(Queue* this)
-{ return this->waiting; }
+static ALWAYS inline int
+_queue_length (Queue* this)
+{
+	return this->waiting;
+}
 */
 
 static ALWAYS inline bool
