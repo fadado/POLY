@@ -8,7 +8,7 @@
 
 //static inline ALWAYS union Scalar scalar(union Scalar s) { return s;}
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[argc+1])
 {
 ////////////////////////////////////////////////////////////////////////
 
@@ -74,7 +74,9 @@ int main(int argc, char** argv)
 
 	Scalar s5 = (Scalar){.d=(Double)7.7};
 	Scalar s6 = (Scalar){.d=7.7};
+	Scalar s7 = (Scalar)(Double)7.7;
 	assert(cast(s5,double) == cast(s6,double));
+	assert(cast(s7,double) == cast(s6,double));
 	printf("%g\n", cast(s5,double));
 
 	return 0;

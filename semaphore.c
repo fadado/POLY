@@ -55,7 +55,7 @@ static void test_lock(void)
 	warn("COUNT: %lld\n", test_lock_counter);
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[argc+1])
 {
 	test_lock();
 

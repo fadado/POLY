@@ -71,7 +71,7 @@ THREAD_END
 #define hide_cursor() printf(HIDE)
 #define show_cursor() printf(SHOW)
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[argc+1])
 {
 	Time s,ms,us,ns, t = now();
 	int err = 0;

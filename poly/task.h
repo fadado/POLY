@@ -19,7 +19,7 @@ typedef struct Future {
 } Future;
 
 static inline int    task_join(Future* this);
-static inline int    task_spawn(Future* this, int(*root)(void*), void* argument);
+static inline int    task_spawn(Future* this, int root(void*), void* argument);
 
 static inline int    future_set(Future* this, Scalar x);
 static inline Scalar future_get(Future* this);
@@ -36,7 +36,7 @@ static inline Scalar future_get(Future* this);
  * static inline bool finished(Future* this) { return !this->pending; }
  */
 
-static inline int task_spawn(Future* this, int(*root)(void*), void* argument)
+static inline int task_spawn(Future* this, int root(void*), void* argument)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;

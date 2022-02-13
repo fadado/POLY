@@ -51,7 +51,7 @@ THREAD_END
 // Start generator and successive filters
 ////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[argc+1])
 {
 	enum { NPRIMES=100 };
 	int n = (argc == 1) ? NPRIMES : atoi(argv[1]);

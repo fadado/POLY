@@ -77,7 +77,7 @@ static int task_consumer(void* arg)
 /*
  *
  */
-int main(int argc, char* argv[])
+int main(int argc, char* argv[argc+1])
 {
 	int err, status;
 #	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) goto onerror
