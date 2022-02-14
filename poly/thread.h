@@ -93,11 +93,11 @@ thread_spawn (int main(void*), void* argument)
 }
 
 #define DEFINE_THREAD_ID(N)\
-	static atomic(int) _thread_id_count;\
+	static atomic(unsigned) _thread_id_count;\
 	static Thread _thread_id_vector[N];\
-	static int thread_id(void) {\
+	static unsigned thread_id(void) {\
 		Thread t = thread_current();\
-		int i, c = _thread_id_count;\
+		unsigned i, c = _thread_id_count;\
 		for (i=0; i < c; ++i)\
 			if (thread_equal(_thread_id_vector[i], t))\
 				return i;\

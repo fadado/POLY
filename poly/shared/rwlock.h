@@ -12,10 +12,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct RWLock {
-	int   counter; // -1: writing; 0: idle; >0: # of active readers
-	Lock  entry;
-	Queue readers;
-	Queue writers;
+	signed counter; // -1: writing; 0: idle; >0: # of active readers
+	Lock   entry;
+	Queue  readers;
+	Queue  writers;
 } RWLock;
 
 static inline int  rwlock_acquire(RWLock* this);
@@ -38,8 +38,13 @@ rwlock_init (RWLock* this)
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=queue_init2(&this->readers, &this->writers, &this->entry)) == STATUS_SUCCESS) {
-			/*skip*/;
+		if ((err=queue_init(&this->readers, lock)) == STATUS_SUCCESS) {
+			if ((err=queue_init(&this->writers, lock)) == STATUS_SUCCESS) {
+				/*skip*/;
+			} else {
+				queue_destroy(&this->readers);
+				lock_destroy(&this->entry);
+			}
 		} else {
 			lock_destroy(&this->entry);
 		}

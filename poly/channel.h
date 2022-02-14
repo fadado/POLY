@@ -17,10 +17,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
-	atomic(int) flags;
-	int capacity;
-	int occupation;
-	int front;
+	atomic(unsigned) flags;
+	unsigned capacity;
+	unsigned occupation;
+	unsigned front;
 	union {
 		Scalar* buffer; // for capacity > 1
 		Scalar  value;  // for capacity == 1
@@ -73,7 +73,9 @@ enum channel_flag {
 #endif
 
 // Same error management strategy in all this module
-#define catch(X) if ((err=(X))!=STATUS_SUCCESS) goto onerror
+#define catch(X)\
+	if ((err=(X)) != STATUS_SUCCESS)\
+		goto onerror
 
 //
 // Predicates
@@ -95,24 +97,26 @@ static ALWAYS inline bool _channel_full(Channel* this)
 static inline int
 channel_init (Channel* this, unsigned capacity)
 {
-	// cleanup thunks to call before return
-	void(*_thunks[4])(void) = { 0 };
-	int _thunk_index = 0;
-	inline void at_cleanup(void(*f)(void)) { _thunks[_thunk_index++]=f; }
-	void cleanup(void) {
-		if (_thunk_index > 0) {
-			assert(_thunk_index < sizeof(_thunks)/sizeof(_thunks[0]));
-			int i;
-			for (i=0; _thunks[i] != (void(*)(void))0; ++i)/*go end*/;
-			for (--i; i >= 0; --i) {
-				(*_thunks[i])();
-			}
-		}
-	}
 	inline void destroy_lock(void)   { lock_destroy(&this->entry); }
 	inline void destroy_empty(void)  { condition_destroy(&this->non_empty); }
 	inline void destroy_buffer(void) { free(this->buffer); }
+	inline void destroy_queue(void)  { queue_destroy(this->rendezvous+0); }
 
+	// cleanup thunks to call before return
+	void   (*_thunk_stack[4])(void) = { 0 };
+	unsigned _thunk_index = 0;
+
+	inline void at_cleanup(void thunk(void)) {
+		_thunk_stack[_thunk_index++] = thunk;
+	}
+	void cleanup(void) {
+		if (_thunk_index > 0) {
+			assert(_thunk_index < sizeof(_thunk_stack)/sizeof(_thunk_stack[0]));
+			for (signed i=_thunk_index-1; i >= 0; --i) {
+				_thunk_stack[i]();
+			}
+		}
+	}
 	//
 	int err;
 
@@ -123,17 +127,16 @@ channel_init (Channel* this, unsigned capacity)
 
 	switch (this->capacity) {
 		case 0:
-			catch (queue_init2(this->rendezvous+0, this->rendezvous+1, &this->entry));
+			catch (queue_init(this->rendezvous+0, &this->entry));
+			at_cleanup(destroy_queue);
+			catch (queue_init(this->rendezvous+1, &this->entry));
 			this->capacity = 1;
 			this->flags |= CHANNEL_BLOCKING;
 			break;
 		default: // > 1
 			this->front = 0;
 			this->buffer = calloc(this->capacity, sizeof(Scalar));
-			if (this->buffer == (Scalar*)0) {
-				err = STATUS_NOMEM;
-				goto onerror;
-			}
+			if (!this->buffer) catch (STATUS_NOMEM);
 			at_cleanup(destroy_buffer);
 			fallthrough;
 		case 1:
@@ -146,6 +149,7 @@ channel_init (Channel* this, unsigned capacity)
 	ASSERT_CHANNEL_INVARIANT
 
 	return STATUS_SUCCESS;
+
 onerror:
 	cleanup();
 	return err;

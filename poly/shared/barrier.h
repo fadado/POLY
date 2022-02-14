@@ -12,10 +12,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	int   capacity; // # of threads to wait before opening the barrier
-	int   places;   // # of threads still expected before opening
-	Lock  entry;
-	Queue move_on;
+	unsigned capacity; // # of threads to wait before opening the barrier
+	unsigned places;   // # of threads still expected before opening
+	Lock     entry;
+	Queue    move_on;
 } Barrier;
 
 static inline int  barrier_init(Barrier* this);

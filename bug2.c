@@ -33,12 +33,12 @@
 //
 ////////////////////////////////////////////////////////////////////////
 
-typedef signed long long   Integer;
+typedef signed long long   Signed;
 typedef unsigned long long Unsigned;
 typedef double             Double;
 typedef void*              Pointer;
 
-static_assert(sizeof(Double) == sizeof(Integer));
+static_assert(sizeof(Double) == sizeof(Signed));
 static_assert(sizeof(Double) == sizeof(Unsigned));
 static_assert(sizeof(Double) == sizeof(Pointer));
 static_assert(sizeof(Double) == 8);
@@ -47,7 +47,7 @@ static_assert(sizeof(Double) == 8);
 #define TRANSPARENT __attribute__((__transparent_union__))
 
 typedef union TRANSPARENT Scalar {
-	Integer  i;
+	Signed   i;
 	Unsigned u;
 	Double   d;
 	Pointer  p;
@@ -60,15 +60,15 @@ static inline ALWAYS union Scalar scalar(union Scalar s) { return s;}
 #define Scalar(EXPRESSION) (union Scalar)_Generic((EXPRESSION),\
 	_Bool: (Unsigned)(EXPRESSION),\
 	char: (Unsigned)(EXPRESSION),\
-	signed char: (Integer)(EXPRESSION),\
+	signed char: (Signed)(EXPRESSION),\
 	unsigned char: (Unsigned)(EXPRESSION),\
-	signed short int: (Integer)(EXPRESSION),\
+	signed short int: (Signed)(EXPRESSION),\
 	unsigned short int: (Unsigned)(EXPRESSION),\
-	signed int: (Integer)(EXPRESSION),\
+	signed int: (Signed)(EXPRESSION),\
 	unsigned int: (Unsigned)(EXPRESSION),\
-	signed long int: (Integer)(EXPRESSION),\
+	signed long int: (Signed)(EXPRESSION),\
 	unsigned long int: (Unsigned)(EXPRESSION),\
-	signed long long int: (Integer)(EXPRESSION),\
+	signed long long int: (Signed)(EXPRESSION),\
 	unsigned long long int: (Unsigned)(EXPRESSION),\
 	float: (Double)(EXPRESSION),\
 	double: (Double)(EXPRESSION),\

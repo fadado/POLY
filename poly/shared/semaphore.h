@@ -12,9 +12,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	int   counter; // <0: abs(#) of blocked threads; 0: idle; >0: available resources
-	Lock  entry;
-	Queue queue;
+	signed counter; // <0: abs(#) of blocked threads; 0: idle; >0: available resources
+	Lock   entry;
+	Queue  queue;
 } Semaphore;
 
 static inline void semaphore_destroy(Semaphore* this);
@@ -134,7 +134,7 @@ semaphore_V (Semaphore* this)
 {
 	ENTER_SEMAPHORE_MONITOR
 
-	int length = this->counter < 0 ? -this->counter : 0;
+	unsigned length = this->counter < 0 ? -this->counter : 0;
 	++this->counter;
 	if (length > 0) {
 		int err = queue_notify(&this->queue);

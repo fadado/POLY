@@ -57,7 +57,7 @@ THREAD_BEGIN (fibonacci)
 	calculating = true; // allow spinner to show
 	long result = slow_fib(this.n);
 	// ...long time...
-	future_set(this.future, (Integer)result); // what if error: return > 0 ???
+	future_set(this.future, (Unsigned)result); // what if error: return > 0 ???
 THREAD_END
 
 ////////////////////////////////////////////////////////////////////////

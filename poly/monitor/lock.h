@@ -43,7 +43,7 @@ lock_init (union Lock this, unsigned mask)
 	return mtx_init(this.mutex, mask);
 }
 
-// Deduce mask from lock type
+// Deduce mask from lock type, and hide lock_init function
 #define lock_init(LOCK) lock_init((LOCK), \
 	_Generic((LOCK),\
 		PlainLock*: mtx_plain,\
@@ -78,8 +78,7 @@ lock_try (union Lock this)
 static inline int
 lock_try_for (union Lock this, Time duration)
 {
-	Time t = now();
-	t += duration; // TIME_UTC based absolute calendar time point
+	Time   t  = now() + duration;
 	time_t s  = ns2s(t);
 	long   ns = t - s2ns(s);
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});

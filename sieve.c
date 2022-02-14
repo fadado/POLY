@@ -20,9 +20,9 @@ THREAD_BODY (generate_candidates)
 THREAD_BEGIN (generate_candidates)
 	assert(this.input == (Channel*)0);
 	int n = 2;
-	channel_send(this.output, (Integer)n);
+	channel_send(this.output, (Signed)n);
 	for (n=3; true; n+=2)  {
-		channel_send(this.output, (Integer)n);
+		channel_send(this.output, (Signed)n);
 	}
 THREAD_END
 
@@ -57,14 +57,14 @@ int main(int argc, char* argv[argc+1])
 	int n = (argc == 1) ? NPRIMES : atoi(argv[1]);
 	if (n <= 0) n = NPRIMES; // ignore bad parameter
 
-	Channel _chn_pool[n+1], *_chn_ptr=_chn_pool;
+	Channel _chn_arena[n+1], *_chn_ptr=_chn_arena;
 	inline Channel* alloc(void) { return _chn_ptr++; }
 
 	Channel* input = alloc();
 	channel_init(input, 1);
 	spawn_filter((Channel*)0, input, generate_candidates);
 
-	for (int i=0; i < n; ++i) {
+	for (int i=1; i <= n; ++i) {
 		Scalar s;
 		channel_receive(input, &s);
 		int prime = cast(s, int);
@@ -73,7 +73,7 @@ int main(int argc, char* argv[argc+1])
 		channel_init(output, 1);
 		spawn_filter(input, output, filter_multiples, .prime=prime);
 
-		printf("%4d%c", prime, ((i+1)%10==0 ? '\n' : ' '));
+		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));
 
 		input = output;
 	}

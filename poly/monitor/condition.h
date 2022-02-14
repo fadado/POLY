@@ -56,8 +56,7 @@ condition_broadcast (Condition* this)
 static inline int
 condition_wait_for (Condition* this, union Lock lock, Time duration)
 {
-	Time t = now();
-	t += duration; // TIME_UTC based absolute calendar time point
+	Time   t  = now() + duration;
 	time_t s  = ns2s(t);
 	long   ns = t - s2ns(s);
 	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});

@@ -11,7 +11,7 @@
 #include "poly/shared/semaphore.h"
 
 static Semaphore test_lock_mutex;
-static Integer test_lock_counter;
+static Signed test_lock_counter;
 enum { N=10, M=10000 };
 
 int thread_test(void* arg)
@@ -22,9 +22,9 @@ int thread_test(void* arg)
 #endif
 	for (int i=0; i < M; ++i) {
 		semaphore_acquire(&test_lock_mutex);
-		Integer* pi = &test_lock_counter;
-		Integer** ppi = &pi;
-		Integer tmp = (**ppi-1) + 2;
+		Signed* pi = &test_lock_counter;
+		Signed** ppi = &pi;
+		Signed tmp = (**ppi-1) + 2;
 		**ppi = tmp;
 		semaphore_release(&test_lock_mutex);
 	}

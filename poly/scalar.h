@@ -9,18 +9,18 @@
 // Scalar type and 64 bit scalar types
 ////////////////////////////////////////////////////////////////////////
 
-typedef signed long long   Integer;
+typedef signed long long   Signed;
 typedef unsigned long long Unsigned;
 typedef double             Double;
 typedef void*              Pointer;
 
-static_assert(sizeof(Double) == sizeof(Integer));
+static_assert(sizeof(Double) == sizeof(Signed));
 static_assert(sizeof(Double) == sizeof(Unsigned));
 static_assert(sizeof(Double) == sizeof(Pointer));
 static_assert(sizeof(Double) == 8);
 
 typedef union TRANSPARENT Scalar {
-	Integer  i;
+	Signed   i;
 	Unsigned u;
 	Double   d;
 	Pointer  p;
@@ -31,27 +31,6 @@ static_assert(sizeof(union Scalar) == 8);
 ////////////////////////////////////////////////////////////////////////
 // Cast to and from Scalar
 ////////////////////////////////////////////////////////////////////////
-
-#if 0
-// Cast from any native scalar EXPRESSION to an Scalar
-#define Scalar(EXPRESSION) _Generic((EXPRESSION),\
-	_Bool: (Scalar){.u=(EXPRESSION)},\
-	char: (Scalar){.u=(EXPRESSION)},\
-	signed char: (Scalar){.i=(EXPRESSION)},\
-	unsigned char: (Scalar){.u=(EXPRESSION)},\
-	signed short int: (Scalar){.i=(EXPRESSION)},\
-	unsigned short int: (Scalar){.u=(EXPRESSION)},\
-	signed int: (Scalar){.i=(EXPRESSION)},\
-	unsigned int: (Scalar){.u=(EXPRESSION)},\
-	signed long int: (Scalar){.i=(EXPRESSION)},\
-	unsigned long int: (Scalar){.u=(EXPRESSION)},\
-	signed long long int: (Scalar){.i=(EXPRESSION)},\
-	unsigned long long int: (Scalar){.u=(EXPRESSION)},\
-	float: (Scalar){.d=(EXPRESSION)},\
-	double: (Scalar){.d=(EXPRESSION)},\
-	long double: (Scalar){.d=(EXPRESSION)},\
-	default: (Scalar){.p=(Pointer)(EXPRESSION)})
-#endif
 
 // Cast an union Scalar to the TYPE specified
 #define cast(SCALAR,TYPE) _Generic(((TYPE){0}),\
