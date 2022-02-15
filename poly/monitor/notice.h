@@ -1,5 +1,5 @@
-#ifndef QUEUE_H
-#define QUEUE_H
+#ifndef NOTICE_H
+#define NOTICE_H
 
 #ifndef POLY_H
 #include "POLY.h"
@@ -10,20 +10,20 @@
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-typedef struct Queue {
+typedef struct Notice {
 	unsigned permits; // # of threads allowed to leave the queue
 	unsigned waiting; // # of threads waiting in the queue
 	mtx_t*   mutex;   // monitor lock
 	cnd_t    queue;   // monitor condition
-} Queue;
+} Notice;
 
-static inline int  queue_broadcast(Queue* this);
-static inline int  queue_check(Queue* this);
-static inline void queue_destroy(Queue* this);
-static inline bool queue_empty(Queue* this);
-static inline int  queue_init(Queue* this, union Lock lock);
-static inline int  queue_notify(Queue* this);
-static inline int  queue_wait(Queue* this);
+static inline int  notice_broadcast(Notice* this);
+static inline int  notice_check(Notice* this);
+static inline void notice_destroy(Notice* this);
+static inline bool notice_empty(Notice* this);
+static inline int  notice_init(Notice* this, union Lock lock);
+static inline int  notice_notify(Notice* this);
+static inline int  notice_wait(Notice* this);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -31,20 +31,20 @@ static inline int  queue_wait(Queue* this);
 
 /*
 static ALWAYS inline int
-_queue_length (Queue* this)
+_notice_length (Notice* this)
 {
 	return this->waiting;
 }
 */
 
 static ALWAYS inline bool
-queue_empty (Queue* this)
+notice_empty (Notice* this)
 {
 	return this->waiting == 0;
 }
 
 static inline int
-queue_init (Queue* this, union Lock lock)
+notice_init (Notice* this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
@@ -52,7 +52,7 @@ queue_init (Queue* this, union Lock lock)
 }
 
 static inline void
-queue_destroy (Queue* this)
+notice_destroy (Notice* this)
 {
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
@@ -62,7 +62,7 @@ queue_destroy (Queue* this)
 }
 
 static inline int
-queue_check (Queue* this)
+notice_check (Notice* this)
 {
 	// until permits > 0
 	while (this->permits == 0) {
@@ -76,7 +76,7 @@ queue_check (Queue* this)
 }
 
 static inline int
-queue_wait (Queue* this)
+notice_wait (Notice* this)
 {
 	do {
 		++this->waiting;
@@ -90,14 +90,14 @@ queue_wait (Queue* this)
 }
 
 static ALWAYS inline int
-queue_notify (Queue* this)
+notice_notify (Notice* this)
 {
 	++this->permits;
 	return cnd_signal(&this->queue);
 }
 
 static ALWAYS inline int
-queue_broadcast (Queue* this)
+notice_broadcast (Notice* this)
 {
 	if (this->waiting > 0) {
 		this->permits += this->waiting;

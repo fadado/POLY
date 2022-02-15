@@ -9,7 +9,7 @@
 #include "scalar.h"
 #include "monitor/lock.h"
 #include "monitor/condition.h"
-#include "monitor/queue.h"
+#include "monitor/notice.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -33,7 +33,7 @@ typedef struct Channel {
 			Condition non_full;
 		};
 		// blocking channel
-		Queue rendezvous[2];
+		Notice rendezvous[2];
 	};
 } Channel;
 
@@ -100,7 +100,7 @@ channel_init (Channel* this, unsigned capacity)
 	inline void destroy_lock(void)   { lock_destroy(&this->entry); }
 	inline void destroy_empty(void)  { condition_destroy(&this->non_empty); }
 	inline void destroy_buffer(void) { free(this->buffer); }
-	inline void destroy_queue(void)  { queue_destroy(this->rendezvous+0); }
+	inline void destroy_notice(void) { notice_destroy(this->rendezvous+0); }
 
 	// cleanup thunks to call before return
 	void   (*_thunk_stack[4])(void) = { 0 };
@@ -127,9 +127,9 @@ channel_init (Channel* this, unsigned capacity)
 
 	switch (this->capacity) {
 		case 0:
-			catch (queue_init(this->rendezvous+0, &this->entry));
-			at_cleanup(destroy_queue);
-			catch (queue_init(this->rendezvous+1, &this->entry));
+			catch (notice_init(this->rendezvous+0, &this->entry));
+			at_cleanup(destroy_notice);
+			catch (notice_init(this->rendezvous+1, &this->entry));
 			this->capacity = 1;
 			this->flags |= CHANNEL_BLOCKING;
 			break;
@@ -164,8 +164,8 @@ channel_destroy (Channel* this)
 		condition_destroy(&this->non_full);
 		condition_destroy(&this->non_empty);
 	} else if (this->flags & CHANNEL_BLOCKING) {
-		queue_destroy(this->rendezvous+1);
-		queue_destroy(this->rendezvous+0);
+		notice_destroy(this->rendezvous+1);
+		notice_destroy(this->rendezvous+0);
 	}
 	lock_destroy(&this->entry);
 	if (this->capacity > 1) {
@@ -231,9 +231,9 @@ channel_send (Channel* this, Scalar message)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (queue_check(this->rendezvous+0));
+		catch (notice_check(this->rendezvous+0));
 		this->value = message;
-		catch (queue_notify(this->rendezvous+1));
+		catch (notice_notify(this->rendezvous+1));
 	} else if (this->capacity == 1) {
 		assert(_channel_empty(this));
 		this->value = message;
@@ -269,8 +269,8 @@ channel_receive (Channel* this, Scalar* message)
 		// protocol
 		//    thread a: wait(0)-A-notify(1)
 		//    thread b: notify(0)-wait(1)-B
-		catch (queue_notify(this->rendezvous+0));
-		catch (queue_check(this->rendezvous+1));
+		catch (notice_notify(this->rendezvous+0));
+		catch (notice_check(this->rendezvous+1));
 		if (message) *message = this->value;
 	} else if (this->capacity == 1) {
 		assert(_channel_full(this));

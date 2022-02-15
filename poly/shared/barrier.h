@@ -5,7 +5,7 @@
 #include "POLY.h"
 #endif
 #include "../monitor/lock.h"
-#include "../monitor/queue.h"
+#include "../monitor/notice.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Interface
@@ -15,7 +15,7 @@ typedef struct Barrier {
 	unsigned capacity; // # of threads to wait before opening the barrier
 	unsigned places;   // # of threads still expected before opening
 	Lock     entry;
-	Queue    move_on;
+	Notice   move_on;
 } Barrier;
 
 static inline int  barrier_init(Barrier* this);
@@ -46,8 +46,8 @@ barrier_init (Barrier* this, int capacity)
 
 	int err;
 	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=queue_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
-			return STATUS_SUCCESS;
+		if ((err=notice_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
+			/*skip*/;
 		} else {
 			lock_destroy(&this->entry);
 		}
@@ -60,7 +60,7 @@ barrier_destroy (Barrier* this)
 {
 	assert(this->places == 0);
 
-	queue_destroy(&this->move_on);
+	notice_destroy(&this->move_on);
 	lock_destroy(&this->entry);
 }
 
@@ -91,10 +91,10 @@ barrier_wait (Barrier* this)
 	if (--this->places == 0) {
 		this->places = this->capacity;
 		status  = BARRIER_FULL;
-		int err = queue_broadcast(&this->move_on);
+		int err = notice_broadcast(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	} else {
-		int err = queue_wait(&this->move_on);
+		int err = notice_wait(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	}
 
