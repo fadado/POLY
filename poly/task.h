@@ -13,7 +13,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Future {
-	bool    pending; // still not finished?
+	bool    finished;// still not finished?
 	Scalar  result;  // memoized result
 	Channel port;    // shared message box
 } Future;
@@ -21,8 +21,8 @@ typedef struct Future {
 static inline int    task_join(Future* this);
 static inline int    task_spawn(Future* this, int main(void*), void* argument);
 
-static inline int    future_set(Future* this, Scalar x);
-static inline Scalar future_get(Future* this);
+static inline int    task_set(Future* this, Scalar x);
+static inline Scalar task_get(Future* this);
 
 // handy macro
 #define spawn_task(F,R,...)\
@@ -32,8 +32,8 @@ static inline Scalar future_get(Future* this);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-/* atomic(bool) pending?
- * static inline bool finished(Future* this) { return !this->pending; }
+/* atomic(bool) finished?
+ * static inline bool finished(Future* this) { return this->finished; }
  */
 
 static inline int
@@ -42,7 +42,7 @@ task_spawn (Future* this, int main(void*), void* argument)
 	enum { syncronous=0, asyncronous=1 };
 	int err;
 
-	this->pending = true;
+	this->finished = false;
 	this->result = (Scalar)(Unsigned)0xFabada;
 	if ((err=channel_init(&this->port, syncronous)) == STATUS_SUCCESS) {
 		if ((err=thread_spawn(main, argument)) == STATUS_SUCCESS) {
@@ -58,25 +58,25 @@ task_spawn (Future* this, int main(void*), void* argument)
 static inline int
 task_join (Future* this)
 {
-	assert(this->pending);
+	assert(!this->finished);
 	int status = channel_receive(&this->port, &this->result);
-	this->pending = false;
+	this->finished = true;
 	channel_destroy(&this->port);
 	return status;
 }
 
 // to be called once from the promise
-static ALWAYS inline int future_set(Future* this, Scalar x)
+static ALWAYS inline int task_set(Future* this, Scalar x)
 {
-	assert(this->pending);
+	assert(!this->finished);
 	return channel_send(&this->port, x);
 }
 
 // to be called any number of times from the client
 static ALWAYS inline Scalar
-future_get (Future* this)
+task_get (Future* this)
 {
-	if (this->pending) { task_join(this); }
+	if (!this->finished) { task_join(this); }
 	return this->result;
 }
 

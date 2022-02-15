@@ -57,7 +57,7 @@ THREAD_BEGIN (fibonacci)
 	calculating = true; // allow spinner to show
 	long result = slow_fib(this.n);
 	// ...long time...
-	future_set(this.future, (Unsigned)result); // what if error: return > 0 ???
+	task_set(this.future, (Unsigned)result); // what if error: return > 0 ???
 THREAD_END
 
 ////////////////////////////////////////////////////////////////////////
@@ -89,10 +89,10 @@ int main(int argc, char* argv[argc+1])
 
 	assert(err==0);
 
-	long n = cast(future_get(&future), long);
+	long n = cast(task_get(&future), long);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(future_get(&future), long);
+	n = cast(task_get(&future), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;
