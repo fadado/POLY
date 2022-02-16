@@ -18,12 +18,12 @@ typedef struct RWLock {
 	Notice writers;
 } RWLock;
 
-static inline int  rwlock_acquire(RWLock* this);
-static inline void rwlock_destroy(RWLock* this);
-static inline int  rwlock_enter(RWLock* this);
-static inline int  rwlock_init(RWLock* this);
-static inline int  rwlock_leave(RWLock* this);
-static inline int  rwlock_release(RWLock* this);
+static int  rwlock_acquire(RWLock *const this);
+static void rwlock_destroy(RWLock *const this);
+static int  rwlock_enter(RWLock *const this);
+static int  rwlock_init(RWLock *const this);
+static int  rwlock_leave(RWLock *const this);
+static int  rwlock_release(RWLock *const this);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -32,7 +32,7 @@ static inline int  rwlock_release(RWLock* this);
 enum { RWLOCK_IDLE=0, RWLOCK_WRITING=-1 };
 
 static inline int
-rwlock_init (RWLock* this)
+rwlock_init (RWLock *const this)
 {
 	this->counter = RWLOCK_IDLE;
 
@@ -53,7 +53,7 @@ rwlock_init (RWLock* this)
 }
 
 static inline void
-rwlock_destroy (RWLock* this)
+rwlock_destroy (RWLock *const this)
 {
 	assert(this->counter == RWLOCK_IDLE);
 
@@ -85,7 +85,7 @@ rwlock_destroy (RWLock* this)
 // Writer 
 //
 static inline int
-rwlock_acquire (RWLock* this)
+rwlock_acquire (RWLock *const this)
 {
 	ENTER_RWLOCK_MONITOR
 
@@ -100,7 +100,7 @@ rwlock_acquire (RWLock* this)
 }
 
 static inline int
-rwlock_release (RWLock* this)
+rwlock_release (RWLock *const this)
 {
 	ENTER_RWLOCK_MONITOR
 
@@ -120,7 +120,7 @@ rwlock_release (RWLock* this)
 // Readers
 //
 static inline int
-rwlock_enter (RWLock* this)
+rwlock_enter (RWLock *const this)
 {
 	ENTER_RWLOCK_MONITOR
 
@@ -134,7 +134,7 @@ rwlock_enter (RWLock* this)
 }
 
 static inline int
-rwlock_leave (RWLock* this)
+rwlock_leave (RWLock *const this)
 {
 	ENTER_RWLOCK_MONITOR
 

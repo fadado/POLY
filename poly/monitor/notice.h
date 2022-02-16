@@ -17,34 +17,26 @@ typedef struct Notice {
 	cnd_t    queue;   // monitor condition
 } Notice;
 
-static inline int  notice_broadcast(Notice* this);
-static inline int  notice_check(Notice* this);
-static inline void notice_destroy(Notice* this);
-static inline bool notice_empty(Notice* this);
-static inline int  notice_init(Notice* this, union Lock lock);
-static inline int  notice_notify(Notice* this);
-static inline int  notice_wait(Notice* this);
+static int  notice_broadcast(Notice *const this);
+static int  notice_check(Notice *const this);
+static void notice_destroy(Notice *const this);
+static int  notice_init(Notice *const this, union Lock lock);
+static int  notice_notify(Notice *const this);
+static bool notice_pending (Notice *const this);
+static int  notice_wait(Notice *const this);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-/*
-static ALWAYS inline int
-_notice_length (Notice* this)
-{
-	return this->waiting;
-}
-*/
-
 static ALWAYS inline bool
-notice_empty (Notice* this)
+notice_pending (Notice *const this)
 {
-	return this->waiting == 0;
+	return this->waiting > 0;
 }
 
 static inline int
-notice_init (Notice* this, union Lock lock)
+notice_init (Notice *const this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
@@ -52,7 +44,7 @@ notice_init (Notice* this, union Lock lock)
 }
 
 static inline void
-notice_destroy (Notice* this)
+notice_destroy (Notice *const this)
 {
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
@@ -62,7 +54,7 @@ notice_destroy (Notice* this)
 }
 
 static inline int
-notice_check (Notice* this)
+notice_check (Notice *const this)
 {
 	// until permits > 0
 	while (this->permits == 0) {
@@ -76,7 +68,7 @@ notice_check (Notice* this)
 }
 
 static inline int
-notice_wait (Notice* this)
+notice_wait (Notice *const this)
 {
 	do {
 		++this->waiting;
@@ -90,14 +82,14 @@ notice_wait (Notice* this)
 }
 
 static ALWAYS inline int
-notice_notify (Notice* this)
+notice_notify (Notice *const this)
 {
 	++this->permits;
 	return cnd_signal(&this->queue);
 }
 
 static ALWAYS inline int
-notice_broadcast (Notice* this)
+notice_broadcast (Notice *const this)
 {
 	if (this->waiting > 0) {
 		this->permits += this->waiting;

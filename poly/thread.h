@@ -11,18 +11,19 @@
 
 typedef thrd_t Thread;
 
-static inline Thread thread_current(void);
-static inline int    thread_detach(Thread thread);
-static inline bool   thread_equal(Thread lhs, Thread rhs);
-static inline void   thread_exit(int result);
-static inline int    thread_fork(int main(void*), void* argument, Thread* thread);
-static inline int    thread_join(Thread thread, int* result);
-static inline int    thread_sleep(Time duration);
-static inline int    thread_spawn(int main(void*), void* argument);
-static inline void   thread_yield(void);
+static Thread thread_current(void);
+static int    thread_detach(Thread thread);
+static bool   thread_equal(Thread lhs, Thread rhs);
+static void   thread_exit(int result);
+static int    thread_fork(int main(void*), void* argument, Thread* thread);
+static int    thread_join(Thread thread, int* result);
+static int    thread_sleep(Time duration);
+static int    thread_spawn(int main(void*), void* argument);
+static void   thread_yield(void);
 
 // handy macro
-#define spawn_thread(T,...) thread_spawn(T,&(struct T){__VA_ARGS__})
+#define spawn_thread(T,...)\
+	thread_spawn(T, &(struct T){__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -121,7 +122,7 @@ thread_spawn (int main(void*), void* argument)
 #define THREAD_BEGIN(T)\
 	};\
 	int T(void* arg_) {\
-		struct T this = *((struct T*)arg_);
+		struct T const this = *((struct T*)arg_);
 
 #define THREAD_END\
 	return 0; }

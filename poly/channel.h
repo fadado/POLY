@@ -37,16 +37,16 @@ typedef struct Channel {
 	};
 } Channel;
 
-static inline void channel_close(Channel* this);
-static inline void channel_destroy(Channel* this);
-static inline bool channel_drained(Channel* this);
-static inline int  channel_init(Channel* this, unsigned capacity);
-static inline int  channel_receive(Channel* this, Scalar* message);
-static inline int  channel_send(Channel* this, Scalar message);
+static void channel_close(Channel* this);
+static void channel_destroy(Channel* this);
+static bool channel_drained(Channel* this);
+static int  channel_init(Channel* this, unsigned capacity);
+static int  channel_receive(Channel* this, Scalar* message);
+static int  channel_send(Channel* this, Scalar message);
 
 // handy macro
 #define spawn_filter(I,O,T,...)\
-	thread_spawn(T,&(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
+	thread_spawn(T, &(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -94,13 +94,13 @@ static ALWAYS inline bool _channel_full(Channel* this)
 // Channel life
 //
 
-static inline int
+static int
 channel_init (Channel* this, unsigned capacity)
 {
-	inline void destroy_lock(void)   { lock_destroy(&this->entry); }
-	inline void destroy_empty(void)  { condition_destroy(&this->non_empty); }
-	inline void destroy_buffer(void) { free(this->buffer); }
-	inline void destroy_notice(void) { notice_destroy(this->rendezvous+0); }
+	void destroy_lock(void)   { lock_destroy(&this->entry); }
+	void destroy_empty(void)  { condition_destroy(&this->non_empty); }
+	void destroy_buffer(void) { free(this->buffer); }
+	void destroy_notice(void) { notice_destroy(this->rendezvous+0); }
 
 	// cleanup thunks to call before return
 	void   (*_thunk_stack[4])(void) = { 0 };

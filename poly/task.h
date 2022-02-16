@@ -18,26 +18,25 @@ typedef struct Future {
 	Channel port;    // shared message box
 } Future;
 
-static inline int    task_join(Future* this);
-static inline int    task_spawn(Future* this, int main(void*), void* argument);
-
-static inline int    task_set(Future* this, Scalar x);
-static inline Scalar task_get(Future* this);
+static Scalar task_get(Future *const this);
+static int    task_join(Future *const this);
+static int    task_set(Future *const this, Scalar x);
+static int    task_spawn(Future *const this, int main(void*), void* argument);
 
 // handy macro
 #define spawn_task(F,R,...)\
-	task_spawn(F,R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
+	task_spawn(F, R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
 /* atomic(bool) finished?
- * static inline bool finished(Future* this) { return this->finished; }
+ * static inline bool finished(Future *const this) { return this->finished; }
  */
 
 static inline int
-task_spawn (Future* this, int main(void*), void* argument)
+task_spawn (Future *const this, int main(void*), void* argument)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;
@@ -56,7 +55,7 @@ task_spawn (Future* this, int main(void*), void* argument)
 
 // to be called once from the client
 static inline int
-task_join (Future* this)
+task_join (Future *const this)
 {
 	assert(!this->finished);
 	int status = channel_receive(&this->port, &this->result);
@@ -66,7 +65,8 @@ task_join (Future* this)
 }
 
 // to be called once from the promise
-static ALWAYS inline int task_set(Future* this, Scalar x)
+static ALWAYS inline int
+task_set (Future *const this, Scalar x)
 {
 	assert(!this->finished);
 	return channel_send(&this->port, x);
@@ -74,7 +74,7 @@ static ALWAYS inline int task_set(Future* this, Scalar x)
 
 // to be called any number of times from the client
 static ALWAYS inline Scalar
-task_get (Future* this)
+task_get (Future *const this)
 {
 	if (!this->finished) { task_join(this); }
 	return this->result;

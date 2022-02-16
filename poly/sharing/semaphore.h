@@ -17,10 +17,10 @@ typedef struct Semaphore {
 	Notice queue;
 } Semaphore;
 
-static inline void semaphore_destroy(Semaphore* this);
-static inline int  semaphore_init(Semaphore* this, unsigned count);
-static inline int  semaphore_P(Semaphore* this);
-static inline int  semaphore_V(Semaphore* this);
+static void semaphore_destroy(Semaphore *const this);
+static int  semaphore_init(Semaphore *const this, unsigned count);
+static int  semaphore_P(Semaphore *const this);
+static int  semaphore_V(Semaphore *const this);
 
 #define            semaphore_down(s) semaphore_P(s)
 #define            semaphore_wait(s) semaphore_P(s)
@@ -38,28 +38,28 @@ static inline int  semaphore_V(Semaphore* this);
 /*
 // Number of available resources
 static ALWAYS inline int
-_semaphore_value (Semaphore* this)
+_semaphore_value (Semaphore *const this)
 {
 	return (this->counter > 0) ? this->counter : 0;
 }
 
 // Number of blocked threads in the queue
 static ALWAYS inline int
-_semaphore_length (Semaphore* this)
+_semaphore_length (Semaphore *const this)
 {
 	return (this->counter < 0) ? -this->counter : 0;
 }
 
 // Idle state ("red" semaphore)? value==0 and length==0
 static ALWAYS inline bool
-_semaphore_idle (Semaphore* this)
+_semaphore_idle (Semaphore *const this)
 {
 	return this->counter == 0;
 }
 */
 
 static inline int
-semaphore_init (Semaphore* this, unsigned count)
+semaphore_init (Semaphore *const this, unsigned count)
 {
 	this->counter = count;
 
@@ -75,7 +75,7 @@ semaphore_init (Semaphore* this, unsigned count)
 }
 
 static inline void
-semaphore_destroy (Semaphore* this)
+semaphore_destroy (Semaphore *const this)
 {
 	assert(this->counter == 0 );
 
@@ -109,7 +109,7 @@ added to the semaphore's queue). Otherwise, the process continues execution,
 having used a unit of the resource.
 */
 static inline int
-semaphore_P (Semaphore* this)
+semaphore_P (Semaphore *const this)
 {
 	ENTER_SEMAPHORE_MONITOR
 
@@ -130,7 +130,7 @@ resource), it transfers a blocked process from the semaphore's waiting queue
 to the ready queue.
 */
 static inline int
-semaphore_V (Semaphore* this)
+semaphore_V (Semaphore *const this)
 {
 	ENTER_SEMAPHORE_MONITOR
 

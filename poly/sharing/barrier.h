@@ -18,9 +18,9 @@ typedef struct Barrier {
 	Notice   move_on;
 } Barrier;
 
-static inline int  barrier_init(Barrier* this);
-static inline void barrier_destroy(Barrier* this);
-static inline int  barrier_wait(Barrier* this);
+static int  barrier_init(Barrier *const this);
+static void barrier_destroy(Barrier *const this);
+static int  barrier_wait(Barrier *const this);
 
 enum { BARRIER_FULL = -1 };
 
@@ -31,14 +31,14 @@ enum { BARRIER_FULL = -1 };
 /*
 //
 static ALWAYS inline int
-_barrier_empty (Barrier* this)
+_barrier_empty (Barrier *const this)
 {
 	return this->places == this->capacity;
 }
 */
 
 static inline int
-barrier_init (Barrier* this, int capacity)
+barrier_init (Barrier *const this, int capacity)
 {
 	assert(capacity > 1);
 
@@ -56,7 +56,7 @@ barrier_init (Barrier* this, int capacity)
 }
 
 static inline void
-barrier_destroy (Barrier* this)
+barrier_destroy (Barrier *const this)
 {
 	assert(this->places == 0);
 
@@ -83,7 +83,7 @@ barrier_destroy (Barrier* this)
 	}
 
 static inline int
-barrier_wait (Barrier* this)
+barrier_wait (Barrier *const this)
 {
 	int status = STATUS_SUCCESS;
 	ENTER_BARRIER_MONITOR

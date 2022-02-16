@@ -8,7 +8,7 @@
 #define DEBUG
 #include "poly/scalar.h"
 #include "poly/thread.h"
-#include "poly/shared/semaphore.h"
+#include "poly/sharing/semaphore.h"
 
 static Semaphore test_lock_mutex;
 static Signed test_lock_counter;

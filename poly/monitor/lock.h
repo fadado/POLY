@@ -26,12 +26,12 @@ union TRANSPARENT Lock {
 	TimedRecursiveLock* _4;
 };
 
-static inline int  lock_acquire(union Lock this);
-static inline void lock_destroy(union Lock this);
-static inline int  lock_init(union Lock this, unsigned mask);
-static inline int  lock_release(union Lock this);
-static inline int  lock_try(union Lock this);
-static inline int  lock_try_for(union Lock this, Time duration);
+static int  lock_acquire(union Lock this);
+static void lock_destroy(union Lock this);
+static int  lock_init(union Lock this, unsigned mask);
+static int  lock_release(union Lock this);
+static int  lock_try(union Lock this);
+static int  lock_try_for(union Lock this, Time duration);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
