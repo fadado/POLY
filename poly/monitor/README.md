@@ -1,4 +1,4 @@
-# Extensions to message passing
+# Syncronization types to implement monitors
 
 + lock.h
 + condition.h

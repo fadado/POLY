@@ -1,4 +1,4 @@
-# Shared memory tools
+# Shared memory types
 
 + barrier.h
 + rwlock.h

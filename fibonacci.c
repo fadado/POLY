@@ -3,16 +3,15 @@
 
 #include <stdio.h>
 
-// uncomment next line to enable assertions
+// comment next line to disable assertions
 #define DEBUG
+
+// define thread_id() for 10 threads max.
+#define THREAD_ID_SIZE 10
+
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/task.h"
-
-THREAD_SPEC (spinner, static)
-THREAD_SPEC (fibonacci, static)
-
-DEFINE_THREAD_ID (10) // max 10 threads
 
 static atomic(bool) calculating;
 
@@ -44,8 +43,8 @@ THREAD_END
 ////////////////////////////////////////////////////////////////////////
 
 THREAD_BODY  (fibonacci)
-	Future* future;  // this is a task: a thread with future!
-	long    n;
+	Task* future;  // this is a task: a thread with future!
+	long  n;
 THREAD_BEGIN (fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
@@ -83,7 +82,7 @@ int main(int argc, char* argv[argc+1])
 
 	err += spawn_thread(spinner, .delay=us2ns(usDELAY));
 
-	Future future;
+	Task future;
 	err += spawn_task(&future, fibonacci, .n=N);
 	err += task_join(&future);
 

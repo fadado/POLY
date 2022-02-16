@@ -37,12 +37,12 @@ typedef struct Channel {
 	};
 } Channel;
 
-static void channel_close(Channel* this);
-static void channel_destroy(Channel* this);
-static bool channel_drained(Channel* this);
-static int  channel_init(Channel* this, unsigned capacity);
-static int  channel_receive(Channel* this, Scalar* message);
-static int  channel_send(Channel* this, Scalar message);
+static void channel_close(Channel *const this);
+static void channel_destroy(Channel *const this);
+static bool channel_drained(Channel const*const this);
+static int  channel_init(Channel *const this, unsigned capacity);
+static int  channel_receive(Channel *const this, Scalar* message);
+static int  channel_send(Channel *const this, Scalar message);
 
 // handy macro
 #define spawn_filter(I,O,T,...)\
@@ -65,7 +65,7 @@ enum channel_flag {
 		assert(0 <= this->occupation && this->occupation <= this->capacity);\
 		if (this->capacity > 1) {\
 			assert(0 <= this->front && this->front <  this->capacity);\
-			assert(this->buffer != (Scalar*)0);\
+			assert(this->buffer != (union Scalar*)0);\
 		}\
 		assert(!(_channel_empty(this) && _channel_full(this)));
 #else
@@ -80,12 +80,12 @@ enum channel_flag {
 //
 // Predicates
 //
-static ALWAYS inline bool _channel_empty(Channel* this)
+static ALWAYS inline bool _channel_empty(Channel const*const this)
 {
 	return this->occupation == 0;
 }
 
-static ALWAYS inline bool _channel_full(Channel* this)
+static ALWAYS inline bool _channel_full(Channel const*const this)
 {
 	return this->occupation == this->capacity;
 }
@@ -95,7 +95,7 @@ static ALWAYS inline bool _channel_full(Channel* this)
 //
 
 static int
-channel_init (Channel* this, unsigned capacity)
+channel_init (Channel *const this, unsigned capacity)
 {
 	void destroy_lock(void)   { lock_destroy(&this->entry); }
 	void destroy_empty(void)  { condition_destroy(&this->non_empty); }
@@ -135,7 +135,7 @@ channel_init (Channel* this, unsigned capacity)
 			break;
 		default: // > 1
 			this->front = 0;
-			this->buffer = calloc(this->capacity, sizeof(Scalar));
+			this->buffer = calloc(this->capacity, sizeof(union Scalar));
 			if (!this->buffer) catch (STATUS_NOMEM);
 			at_cleanup(destroy_buffer);
 			fallthrough;
@@ -156,7 +156,7 @@ onerror:
 }
 
 static inline void
-channel_destroy (Channel* this)
+channel_destroy (Channel *const this)
 {
 	assert(_channel_empty(this));
 
@@ -170,12 +170,12 @@ channel_destroy (Channel* this)
 	lock_destroy(&this->entry);
 	if (this->capacity > 1) {
 		free(this->buffer);
-		this->buffer = (Scalar*)0;
+		this->buffer = (union Scalar*)0;
 	}
 }
 
 static inline void
-channel_close (Channel* this)
+channel_close (Channel *const this)
 {
 	this->flags |= CHANNEL_CLOSED;
 	//?lock_acquire(&this->entry);
@@ -186,7 +186,7 @@ channel_close (Channel* this)
 }
 
 static ALWAYS inline bool
-channel_drained (Channel* this)
+channel_drained (Channel const*const this)
 {
 	return (this->flags & CHANNEL_DRAINED);
 }
@@ -217,7 +217,7 @@ channel_drained (Channel* this)
 	}
 
 static inline int
-channel_send (Channel* this, Scalar message)
+channel_send (Channel *const this, Scalar message)
 {
 	if (this->flags & CHANNEL_CLOSED) {
 		panic("channel_send cannot use a closed channel");
@@ -254,10 +254,10 @@ onerror:
 }
 
 static inline int
-channel_receive (Channel* this, Scalar* message)
+channel_receive (Channel *const this, Scalar* message)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (message) *message = (Scalar)(Unsigned)0x0;
+		if (message) *message = (union Scalar)(Unsigned)0x0;
 		return STATUS_SUCCESS;
 	}
 

@@ -1,6 +1,10 @@
 #ifndef POLY_H
 #define POLY_H
 
+/* Module parameters:
+ *     DEBUG
+ */
+
 #include <stdbool.h>
 #include <threads.h> // include <time.h>
 
@@ -44,7 +48,7 @@ enum {
 
 // GCC optimization
 #ifdef __GNUC__
-#	define ALWAYS __attribute__((always_inline))
+#	define ALWAYS      __attribute__((always_inline))
 #	define TRANSPARENT __attribute__((__transparent_union__))
 #	define fallthrough __attribute__((fallthrough))
 #else
@@ -69,7 +73,7 @@ typedef unsigned long long Time;
 #define ns2us(T)    (Time)((T)/1000ull)
 
 // TIME_UTC based absolute calendar time point
-static ALWAYS inline Time
+static inline Time
 now (void)
 {
 	struct timespec ts;

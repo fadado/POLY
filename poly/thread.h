@@ -1,5 +1,9 @@
-#ifndef SPINNER_H
-#define SPINNER_H
+#ifndef THREAD_H
+#define THREAD_H
+
+/* Module parameters:
+ *     THREAD_ID_SIZE
+ */
 
 #ifndef POLY_H
 #include "POLY.h"
@@ -16,7 +20,7 @@ static int    thread_detach(Thread thread);
 static bool   thread_equal(Thread lhs, Thread rhs);
 static void   thread_exit(int result);
 static int    thread_fork(int main(void*), void* argument, Thread* thread);
-static int    thread_join(Thread thread, int* result);
+static int    thread_join(Thread thread, int *const result);
 static int    thread_sleep(Time duration);
 static int    thread_spawn(int main(void*), void* argument);
 static void   thread_yield(void);
@@ -36,7 +40,7 @@ thread_fork (int main(void*), void* argument, Thread* thread)
 }
 
 static ALWAYS inline int
-thread_join (Thread thread, int* result)
+thread_join (Thread thread, int *const result)
 { 
 	return thrd_join(thread, result);
 }
@@ -80,7 +84,7 @@ thread_exit (int result)
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Extensions to C11 API
+// Extensions to C11 thrd_t API
 ////////////////////////////////////////////////////////////////////////
 
 static inline int
@@ -93,20 +97,27 @@ thread_spawn (int main(void*), void* argument)
 	return thread_detach(thread);
 }
 
-#define DEFINE_THREAD_ID(N)\
-	static atomic(unsigned) _thread_id_count;\
-	static Thread _thread_id_vector[N];\
-	static unsigned thread_id(void) {\
-		Thread t = thread_current();\
-		unsigned i, c = _thread_id_count;\
-		for (i=0; i < c; ++i)\
-			if (thread_equal(_thread_id_vector[i], t))\
-				return i;\
-		i = _thread_id_count++;\
-		if (i >= N) panic("looser");\
-		_thread_id_vector[i] = t;\
-		return i;\
-	}
+#ifdef THREAD_ID_SIZE
+
+static_assert(THREAD_ID_SIZE > 0);
+
+static atomic(unsigned) thread_id_count_ = {0};
+static Thread           thread_id_vector_[THREAD_ID_SIZE] = {0};
+
+static unsigned thread_id(void)
+{
+	Thread current = thread_current();
+	unsigned i, count = thread_id_count_;
+	for (i=0; i < count; ++i)
+		if (thread_equal(thread_id_vector_[i], current))
+			return i;
+	i = thread_id_count_++;
+	if (i >= THREAD_ID_SIZE) panic("looser");
+	thread_id_vector_[i] = current;
+	return i;
+}
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Macros to define threads, tasks, filters...
