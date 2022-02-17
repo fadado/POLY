@@ -22,7 +22,7 @@ static int  notice_check(Notice *const this);
 static void notice_destroy(Notice *const this);
 static int  notice_init(Notice *const this, union Lock lock);
 static int  notice_notify(Notice *const this);
-static bool notice_pending (Notice *const this);
+static bool notice_pending (Notice const*const this);
 static int  notice_wait(Notice *const this);
 
 ////////////////////////////////////////////////////////////////////////
@@ -30,7 +30,7 @@ static int  notice_wait(Notice *const this);
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline bool
-notice_pending (Notice *const this)
+notice_pending (Notice const*const this)
 {
 	return this->waiting > 0;
 }

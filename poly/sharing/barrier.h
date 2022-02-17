@@ -31,7 +31,7 @@ enum { BARRIER_FULL = -1 };
 /*
 //
 static ALWAYS inline int
-_barrier_empty (Barrier *const this)
+_barrier_empty (Barrier const*const this)
 {
 	return this->places == this->capacity;
 }
