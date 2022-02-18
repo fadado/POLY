@@ -1,4 +1,6 @@
-# Shared memory types
+# Shared memory modules
+
+Contents:
 
 + barrier.h
 + rwlock.h

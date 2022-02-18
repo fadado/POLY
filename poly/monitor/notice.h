@@ -2,7 +2,7 @@
 #define NOTICE_H
 
 #ifndef POLY_H
-#include "POLY.h"
+#include "../POLY.h"
 #endif
 #include "lock.h"
 

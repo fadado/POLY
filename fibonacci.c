@@ -12,6 +12,7 @@
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/task.h"
+#include "poly/sugar.h"
 
 static atomic(bool) calculating;
 

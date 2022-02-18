@@ -25,10 +25,6 @@ static int    thread_sleep(Time duration);
 static int    thread_spawn(int main(void*), void* argument);
 static void   thread_yield(void);
 
-// handy macro
-#define spawn_thread(T,...)\
-	thread_spawn(T, &(struct T){__VA_ARGS__})
-
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
@@ -117,25 +113,6 @@ static unsigned thread_id(void)
 	return i;
 }
 
-#endif
-
-////////////////////////////////////////////////////////////////////////
-// Macros to define threads, tasks, filters...
-////////////////////////////////////////////////////////////////////////
-
-#define THREAD_SPEC(T,...)\
-	struct T;\
-	__VA_ARGS__ int T(void*);
-
-#define THREAD_BODY(T)\
-	struct T {
-
-#define THREAD_BEGIN(T)\
-	};\
-	int T(void* arg_) {\
-		struct T const this = *((struct T*)arg_);
-
-#define THREAD_END\
-	return 0; }
+#endif // THREAD_ID_SIZE
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

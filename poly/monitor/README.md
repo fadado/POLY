@@ -1,4 +1,6 @@
-# Syncronization types to implement monitors
+# Monitor modules
+
+Contents:
 
 + lock.h
 + condition.h

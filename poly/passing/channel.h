@@ -4,12 +4,12 @@
 #include <stdlib.h> // calloc
 
 #ifndef POLY_H
-#include "POLY.h"
+#include "../POLY.h"
 #endif
-#include "scalar.h"
-#include "monitor/lock.h"
-#include "monitor/condition.h"
-#include "monitor/notice.h"
+#include "../scalar.h"
+#include "../monitor/lock.h"
+#include "../monitor/condition.h"
+#include "../monitor/notice.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Channel (of scalars)
@@ -44,10 +44,6 @@ static int  channel_init(Channel *const this, unsigned capacity);
 static int  channel_receive(Channel *const this, Scalar* message);
 static int  channel_send(Channel *const this, Scalar message);
 
-// handy macro
-#define spawn_filter(I,O,T,...)\
-	thread_spawn(T, &(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
-
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
@@ -65,7 +61,7 @@ enum channel_flag {
 		assert(0 <= this->occupation && this->occupation <= this->capacity);\
 		if (this->capacity > 1) {\
 			assert(0 <= this->front && this->front <  this->capacity);\
-			assert(this->buffer != (union Scalar*)0);\
+			assert(this->buffer != (Scalar*)0);\
 		}\
 		assert(!(_channel_empty(this) && _channel_full(this)));
 #else
@@ -135,7 +131,7 @@ channel_init (Channel *const this, unsigned capacity)
 			break;
 		default: // > 1
 			this->front = 0;
-			this->buffer = calloc(this->capacity, sizeof(union Scalar));
+			this->buffer = calloc(this->capacity, sizeof(Scalar));
 			if (!this->buffer) catch (STATUS_NOMEM);
 			at_cleanup(destroy_buffer);
 			fallthrough;
@@ -170,7 +166,7 @@ channel_destroy (Channel *const this)
 	lock_destroy(&this->entry);
 	if (this->capacity > 1) {
 		free(this->buffer);
-		this->buffer = (union Scalar*)0;
+		this->buffer = (Scalar*)0;
 	}
 }
 
@@ -257,7 +253,7 @@ static inline int
 channel_receive (Channel *const this, Scalar* message)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (message) *message = (union Scalar)(Unsigned)0x0;
+		if (message) *message = (Scalar)(Unsigned)0x0;
 		return STATUS_SUCCESS;
 	}
 

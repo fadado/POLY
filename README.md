@@ -7,13 +7,14 @@ Contents:
     + poly/POLY.h
     + poly/scalar.h
     + poly/thread.h
-    + poly/condition.h
-    + poly/lock.h
-    + poly/queue.h
-    + poly/channel.h
     + poly/task.h
-    + poly/rwlock.h
-    + poly/barrier.h
-    + poly/semaphore.h
+    + poly/sugar.h
+    + poly/monitor/lock.h
+    + poly/monitor/condition.h
+    + poly/monitor/notice.h
+    + poly/passing/channel.h
+    + poly/sharing/rwlock.h
+    + poly/sharing/barrier.h
+    + poly/sharing/semaphore.h
 
 ![Tara Goddess](assets/tara.jpg)

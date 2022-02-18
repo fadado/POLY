@@ -2,7 +2,7 @@
 #define BARRIER_H
 
 #ifndef POLY_H
-#include "POLY.h"
+#include "../POLY.h"
 #endif
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"

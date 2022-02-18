@@ -6,7 +6,7 @@
 #endif
 #include "scalar.h"
 #include "thread.h"
-#include "channel.h"
+#include "passing/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Interface
@@ -23,10 +23,6 @@ static int    task_join(Task *const this);
 static int    task_set(Task *const this, Scalar x);
 static int    task_spawn(Task *const this, int main(void*), void* argument);
 
-// handy macro
-#define spawn_task(F,R,...)\
-	task_spawn(F, R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
-
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
@@ -42,7 +38,7 @@ task_spawn (Task *const this, int main(void*), void* argument)
 	int err;
 
 	this->finished = false;
-	this->result = (union Scalar)(Unsigned)0xFabada;
+	this->result = (Scalar)(Unsigned)0xFabada;
 	if ((err=channel_init(&this->mbox, syncronous)) == STATUS_SUCCESS) {
 		if ((err=thread_spawn(main, argument)) == STATUS_SUCCESS) {
 			/*skip*/;
