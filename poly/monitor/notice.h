@@ -59,7 +59,7 @@ notice_check (Notice *const this)
 	// until permits > 0
 	while (this->permits == 0) {
 		++this->waiting;
-		int err = cnd_wait(&this->queue, this->mutex);
+		const int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
 		if (err != STATUS_SUCCESS) return err;
 	}
@@ -72,7 +72,7 @@ notice_wait (Notice *const this)
 {
 	do {
 		++this->waiting;
-		int err = cnd_wait(&this->queue, this->mutex);
+		const int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
 		if (err != STATUS_SUCCESS) return err;
 	// until permits > 0

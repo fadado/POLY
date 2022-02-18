@@ -6,34 +6,14 @@
 #define DEBUG
 #include "poly/scalar.h"
 
-//static inline ALWAYS union Scalar scalar(union Scalar s) { return s;}
-
-#define coerce(EXPRESSION) _Generic((EXPRESSION),\
-	_Bool: (Scalar){.u=(EXPRESSION)},\
-	char: (Scalar){.u=(EXPRESSION)},\
-	signed char: (Scalar){.i=(EXPRESSION)},\
-	unsigned char: (Scalar){.u=(EXPRESSION)},\
-	signed short int: (Scalar){.i=(EXPRESSION)},\
-	unsigned short int: (Scalar){.u=(EXPRESSION)},\
-	signed int: (Scalar){.i=(EXPRESSION)},\
-	unsigned int: (Scalar){.u=(EXPRESSION)},\
-	signed long int: (Scalar){.i=(EXPRESSION)},\
-	unsigned long int: (Scalar){.u=(EXPRESSION)},\
-	signed long long int: (Scalar){.i=(EXPRESSION)},\
-	unsigned long long int: (Scalar){.u=(EXPRESSION)},\
-	float: (Scalar){.d=(EXPRESSION)},\
-	double: (Scalar){.d=(EXPRESSION)},\
-	long double: (Scalar){.d=(EXPRESSION)},\
-	default: (Scalar){.p=(Pointer)(EXPRESSION)})
-
 int main(int argc, char* argv[argc+1])
 {
 ////////////////////////////////////////////////////////////////////////
 
-	Scalar s1, s2;
+	Scalar s1, s2 = {0};
 
 	int i1, i2;
-	s1 = (Scalar)-777LL;
+	s1 = Signed(-777LL);
 	s2 = s1;
 	i1 = cast(s1, int);
 	assert(i1 == s1.i);
@@ -43,7 +23,7 @@ int main(int argc, char* argv[argc+1])
 	assert(i1 == i2);
 
 	unsigned w1;
-	s1 = (Scalar)0x1000000ULL;
+	s1 = Unsigned(0x1000000ULL);
 	s2 = s1;
 	w1 = cast(s1, unsigned);
 	assert(w1 == 0x1000000U);
@@ -51,7 +31,7 @@ int main(int argc, char* argv[argc+1])
 	assert(w1 == s2.u);
 
 	double d1, d2;
-	s1 = (Scalar)123.456;
+	s1 = Double(123.456);
 	s2 = s1;
 	d1 = cast(s1, double);
 	d2 = cast(s2, double);
@@ -65,37 +45,20 @@ int main(int argc, char* argv[argc+1])
 	int *p1;
 	i1 = 123456;
 	p1 = &i1;
-	s1 = (Scalar)(Pointer)(p1);
+	s1 = Pointer(p1);
 	p1 = cast(s1, int*);
 	assert(p1 == s1.p);
 
 	int *p2;
 	i1 = 123456;
 	p2 = &i1;
-	s1 = (Scalar)(void*)p2;
+	s1 = Pointer(p2);
 	p2 = cast(s1, int*);
 	assert(p2 == s1.p);
-	s1 = (Scalar)((void*)0);
+	s1 = Pointer(00);
 	p2 = cast(s1, int*);
 	assert(p2 == s1.p);
 
-////////////////////////////////////////////////////////////////////////
-
-	s1 = (Scalar)0LL;
-	s1 = (Scalar)0x0LLU;
-	s1 = (Scalar)0e0;
-	s1 = (Scalar)0LL;
-
-	Scalar s3 = { .i=-77 };
-	Scalar s4 = { -77 };
-	assert(cast(s3,int) == cast(s4,int));
-
-	Scalar s5 = (Scalar){.d=(Double)7.7};
-	Scalar s6 = (Scalar){.d=7.7};
-	Scalar s7 = (Scalar)(Double)7.7;
-	assert(cast(s5,double) == cast(s6,double));
-	assert(cast(s7,double) == cast(s6,double));
-	printf("%g\n", cast(s5,double));
 
 	return 0;
 }

@@ -68,8 +68,8 @@ thread_yield (void)
 static ALWAYS inline int
 thread_sleep (Time duration)
 {
-	time_t s  = ns2s(duration);
-	long   ns = duration - s2ns(s);
+	const time_t s  = ns2s(duration);
+	const long   ns = duration - s2ns(s);
 	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, (void*)0);
 }
 
@@ -87,9 +87,9 @@ static inline int
 thread_spawn (int main(void*), void* argument)
 {
 	Thread thread;
-	int err = thread_fork(main, argument, &thread);
+	const int err = thread_fork(main, argument, &thread);
 	if (err != STATUS_SUCCESS) return err;
-	// TODO: thread_yield(): ensure main has been called???
+	// TODO: thread_yield()? ensure main has been called!
 	return thread_detach(thread);
 }
 
@@ -102,12 +102,15 @@ static Thread           thread_id_vector_[THREAD_ID_SIZE] = {0};
 
 static unsigned thread_id(void)
 {
-	Thread current = thread_current();
-	unsigned i, count = thread_id_count_;
-	for (i=0; i < count; ++i)
-		if (thread_equal(thread_id_vector_[i], current))
+	Thread current  = thread_current();
+	const int count = thread_id_count_;
+
+	for (unsigned i=0; i < count; ++i) {
+		if (thread_equal(thread_id_vector_[i], current)) {
 			return i;
-	i = thread_id_count_++;
+		}
+	}
+	const unsigned i = thread_id_count_++;
 	if (i >= THREAD_ID_SIZE) panic("looser");
 	thread_id_vector_[i] = current;
 	return i;

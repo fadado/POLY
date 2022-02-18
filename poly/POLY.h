@@ -1,3 +1,6 @@
+#ifndef __GNUC__
+#error I need the GNU C compiler. Sorry.
+#endif
 #ifndef POLY_H
 #define POLY_H
 
@@ -5,26 +8,19 @@
  *     DEBUG
  */
 
+#ifndef DEBUG
+#define NDEBUG
+#endif
+
+#include <assert.h>
+#include <errno.h>
+#include <error.h>
 #include <stdbool.h>
 #include <threads.h> // include <time.h>
 
 ////////////////////////////////////////////////////////////////////////
 // Error management
 ////////////////////////////////////////////////////////////////////////
-
-#include <errno.h>
-#include <error.h>
-
-#ifndef DEBUG
-#define NDEBUG
-#endif
-#include <assert.h>
-
-// for assert unconditional failure
-enum {
-	not_implemented = 0,
-	internal_error  = 0,
-};
 
 // message to stderr
 #define warn(...) error(0, 0, __VA_ARGS__)
@@ -46,18 +42,17 @@ enum {
 // Other facilities
 ////////////////////////////////////////////////////////////////////////
 
-// GCC optimization
-#ifdef __GNUC__
-#	define ALWAYS      __attribute__((always_inline))
-#	define TRANSPARENT __attribute__((__transparent_union__))
-#	define fallthrough __attribute__((fallthrough))
-#else
-#	define ALWAYS       /*NOP*/
-#	define TRANSPARENT  /*NOP*/
-#	define fallthrough  /*NOP*/
-#endif
+// force inlining for functions
+#define ALWAYS      __attribute__((always_inline))
 
-#define atomic(T)  _Atomic T
+// handy trick: see `scalar.h` and `lock.h` for examples
+#define TRANSPARENT __attribute__((__transparent_union__))
+
+// disable warnings on `case:...no break...fallthrough;case:` 
+#define fallthrough __attribute__((fallthrough))
+
+// sequential consistency
+#define atomic(T)  _Atomic(T)
 
 ////////////////////////////////////////////////////////////////////////
 // Time measured in nanoseconds

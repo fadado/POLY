@@ -56,9 +56,9 @@ condition_broadcast (Condition *const this)
 static inline int
 condition_wait_for (Condition *const this, union Lock lock, Time duration)
 {
-	Time   t  = now() + duration;
-	time_t s  = ns2s(t);
-	long   ns = t - s2ns(s);
+	const Time   t  = now() + duration;
+	const time_t s  = ns2s(t);
+	const long   ns = t - s2ns(s);
 	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 

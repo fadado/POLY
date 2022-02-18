@@ -116,7 +116,7 @@ semaphore_P (Semaphore *const this)
 	--this->counter;
 	register int length = this->counter < 0 ? -this->counter : 0;
 	if (length > 0) {
-		int err = notice_wait(&this->queue);
+		const int err = notice_wait(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 
@@ -137,7 +137,7 @@ semaphore_V (Semaphore *const this)
 	unsigned length = this->counter < 0 ? -this->counter : 0;
 	++this->counter;
 	if (length > 0) {
-		int err = notice_notify(&this->queue);
+		const int err = notice_notify(&this->queue);
 		CHECK_SEMAPHORE_MONITOR (err)
 	}
 

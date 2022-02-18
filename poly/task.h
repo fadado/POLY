@@ -38,7 +38,7 @@ task_spawn (Task *const this, int main(void*), void* argument)
 	int err;
 
 	this->finished = false;
-	this->result = (Scalar)(Unsigned)0xFabada;
+	this->result = Unsigned(0xFabada);
 	if ((err=channel_init(&this->mbox, syncronous)) == STATUS_SUCCESS) {
 		if ((err=thread_spawn(main, argument)) == STATUS_SUCCESS) {
 			/*skip*/;
@@ -54,7 +54,7 @@ static inline int
 task_join (Task *const this)
 {
 	assert(!this->finished);
-	int status = channel_receive(&this->mbox, &this->result);
+	const int status = channel_receive(&this->mbox, &this->result);
 	this->finished = true;
 	channel_destroy(&this->mbox);
 	return status;

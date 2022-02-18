@@ -32,6 +32,11 @@ static_assert(sizeof(union Scalar) == 8);
 // Cast to and from Scalar
 ////////////////////////////////////////////////////////////////////////
 
+#define Signed(x)   ((union Scalar)(Signed)x)
+#define Unsigned(x) ((union Scalar)(Unsigned)x)
+#define Double(x)   ((union Scalar)(Double)x)
+#define Pointer(x)  ((union Scalar)(Pointer)x)
+
 // Cast an union Scalar to the TYPE specified
 #define cast(SCALAR,TYPE) _Generic(((TYPE){0}),\
 	_Bool: (_Bool)(SCALAR).u,\

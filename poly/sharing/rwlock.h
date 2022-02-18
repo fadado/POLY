@@ -90,7 +90,7 @@ rwlock_acquire (RWLock *const this)
 	ENTER_RWLOCK_MONITOR
 
 	if (this->counter != RWLOCK_IDLE) {
-		int err = notice_check(&this->writers);
+		const int err = notice_check(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
 		assert(this->counter == RWLOCK_IDLE);
 	}
@@ -106,10 +106,10 @@ rwlock_release (RWLock *const this)
 
 	this->counter = RWLOCK_IDLE;
 	if (!notice_empty(&this->writers)) {
-		int err = notice_notify(&this->writers);
+		const int err = notice_notify(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
 	} else if (!notice_empty(&this->readers)) {
-		int err = notice_broadcast(&this->readers);
+		const int err = notice_broadcast(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
 
@@ -125,7 +125,7 @@ rwlock_enter (RWLock *const this)
 	ENTER_RWLOCK_MONITOR
 
 	while (this->counter == RWLOCK_WRITING) {
-		int err = notice_wait(&this->readers);
+		const int err = notice_wait(&this->readers);
 		CHECK_RWLOCK_MONITOR (err)
 	}
 	++this->counter;
@@ -140,7 +140,7 @@ rwlock_leave (RWLock *const this)
 
 	if (--this->counter == RWLOCK_IDLE) {
 		if (!notice_empty(&this->writers)) {
-			int err = notice_notify(&this->writers);
+			const int err = notice_notify(&this->writers);
 			CHECK_RWLOCK_MONITOR (err)
 		}
 	}

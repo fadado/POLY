@@ -116,7 +116,7 @@ onerror:
 			error(EXIT_FAILURE, ECANCELED, "%s", ename[err]);
 		case STATUS_TIMEDOUT:
 			error(EXIT_FAILURE, ETIMEDOUT, "%s", ename[err]);
-		default: assert(internal_error);
+		default: assert(00);
 	}
 	return EXIT_FAILURE;
 }

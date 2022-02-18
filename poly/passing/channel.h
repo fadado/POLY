@@ -76,12 +76,14 @@ enum channel_flag {
 //
 // Predicates
 //
-static ALWAYS inline bool _channel_empty(Channel const*const this)
+static ALWAYS inline bool
+_channel_empty (Channel const*const this)
 {
 	return this->occupation == 0;
 }
 
-static ALWAYS inline bool _channel_full(Channel const*const this)
+static ALWAYS inline bool
+_channel_full (Channel const*const this)
 {
 	return this->occupation == this->capacity;
 }
@@ -253,7 +255,7 @@ static inline int
 channel_receive (Channel *const this, Scalar* message)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (message) *message = (Scalar)(Unsigned)0x0;
+		if (message) *message = Unsigned(0x0);
 		return STATUS_SUCCESS;
 	}
 

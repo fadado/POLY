@@ -38,12 +38,6 @@ typedef unsigned long long Unsigned;
 typedef double             Double;
 typedef void*              Pointer;
 
-static_assert(sizeof(Double) == sizeof(Signed));
-static_assert(sizeof(Double) == sizeof(Unsigned));
-static_assert(sizeof(Double) == sizeof(Pointer));
-static_assert(sizeof(Double) == 8);
-
-#define ALWAYS __attribute__((always_inline))
 #define TRANSPARENT __attribute__((__transparent_union__))
 
 typedef union TRANSPARENT Scalar {
@@ -53,28 +47,24 @@ typedef union TRANSPARENT Scalar {
 	Pointer  p;
 } Scalar;
 
-static_assert(sizeof(union Scalar) == 8);
-
-static inline ALWAYS union Scalar scalar(union Scalar s) { return s;}
-
-#define Scalar(EXPRESSION) (union Scalar)_Generic((EXPRESSION),\
-	_Bool: (Unsigned)(EXPRESSION),\
-	char: (Unsigned)(EXPRESSION),\
-	signed char: (Signed)(EXPRESSION),\
-	unsigned char: (Unsigned)(EXPRESSION),\
-	signed short int: (Signed)(EXPRESSION),\
-	unsigned short int: (Unsigned)(EXPRESSION),\
-	signed int: (Signed)(EXPRESSION),\
-	unsigned int: (Unsigned)(EXPRESSION),\
-	signed long int: (Signed)(EXPRESSION),\
-	unsigned long int: (Unsigned)(EXPRESSION),\
-	signed long long int: (Signed)(EXPRESSION),\
-	unsigned long long int: (Unsigned)(EXPRESSION),\
-	float: (Double)(EXPRESSION),\
-	double: (Double)(EXPRESSION),\
-	long double: (Double)(EXPRESSION)\
+#define scalar(EXPRESSION) _Generic((EXPRESSION),\
+	_Bool: (union Scalar)(Unsigned)(EXPRESSION),\
+	char: (union Scalar)(Unsigned)(EXPRESSION),\
+	signed char: (union Scalar)(Signed)(EXPRESSION),\
+	unsigned char: (union Scalar)(Unsigned)(EXPRESSION),\
+	signed short int: (union Scalar)(Signed)(EXPRESSION),\
+	unsigned short int: (union Scalar)(Unsigned)(EXPRESSION),\
+	signed int: (union Scalar)(Signed)(EXPRESSION),\
+	unsigned int: (union Scalar)(Unsigned)(EXPRESSION),\
+	signed long int: (union Scalar)(Signed)(EXPRESSION),\
+	unsigned long int: (union Scalar)(Unsigned)(EXPRESSION),\
+	signed long long int: (union Scalar)(Signed)(EXPRESSION),\
+	unsigned long long int: (union Scalar)(Unsigned)(EXPRESSION),\
+	float: (union Scalar)(Double)(EXPRESSION),\
+	double: (union Scalar)(Double)(EXPRESSION),\
+	long double: (union Scalar)(Double)(EXPRESSION),\
+	default: (union Scalar)(Pointer)(Unsigned)(EXPRESSION)\
 )
-	//default: (Pointer)(EXPRESSION))
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -82,9 +72,17 @@ static inline ALWAYS union Scalar scalar(union Scalar s) { return s;}
 
 int main()
 {
-	Scalar s1 = Scalar(1.1F);
-	assert(s1.d == 1.1);
+	Scalar s1;
 
+	s1 = scalar(7.7L);
+	assert(s1.d == 7.7);
+	s1 = scalar(7.7F);
+	assert(s1.d == 7.7F);
+	s1 = scalar(7.7F);
+	assert(s1.d == 7.7F);
+
+	s1 = scalar((void*)&s1);
+	assert(s1.p == &s1);
 
 
 	assert(streql(TypeName((_Bool)0), "_Bool"));

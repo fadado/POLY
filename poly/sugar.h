@@ -2,13 +2,25 @@
 #define SUGAR_H
 
 ////////////////////////////////////////////////////////////////////////
-// Defining threads
+// Declaring and defining threads
 ////////////////////////////////////////////////////////////////////////
 
-#define THREAD_SPEC(T,...)\
+/*
+ * THREAD_DECL (name, [extern | static])
+ */
+#define THREAD_DECL(T,...)\
 	struct T;\
 	__VA_ARGS__ int T(void*);
 
+/*
+ * THREAD_BODY  (name)
+ * 	type var;
+ * 	...
+ * THREAD_BEGIN (name)
+ * 	code
+ * 	...
+ * THREAD_END
+ */
 #define THREAD_BODY(T)\
 	struct T {
 
@@ -21,19 +33,40 @@
 	return 0; }
 
 ////////////////////////////////////////////////////////////////////////
-// Spawning threads
+// Spawning threads, tasks, filters...
 ////////////////////////////////////////////////////////////////////////
 
-// require poly/thread.h
+/*
+ * THREAD_BODY  (name)
+ * 	...
+ * THREAD_BEGIN (name)
+ * 	...
+ * THREAD_END
+ */
 #define spawn_thread(T,...)\
 	thread_spawn(T, &(struct T){__VA_ARGS__})
 
-// require poly/task.h
-#define spawn_task(F,R,...)\
-	task_spawn(F, R,&(struct R){.future=F __VA_OPT__(,)__VA_ARGS__})
+/*
+ * THREAD_BODY  (name)
+ * 	Task* future;
+ * 	...
+ * THREAD_BEGIN (name)
+ * 	...
+ * THREAD_END
+ */
+#define spawn_task(T,R,...)\
+	task_spawn(T, R, &(struct R){.future=T __VA_OPT__(,)__VA_ARGS__})
 
-// require poly/thread.h and poly/passing/channel.h
+/*
+ * THREAD_BODY  (name)
+ * 	Channel* input;
+ * 	Channel* output;
+ * 	...
+ * THREAD_BEGIN (name)
+ * 	...
+ * THREAD_END
+ */
 #define spawn_filter(I,O,T,...)\
-	thread_spawn(T, &(struct T){.input=I,.output=O __VA_OPT__(,)__VA_ARGS__ })
+	thread_spawn(T, &(struct T){.input=I, .output=O __VA_OPT__(,)__VA_ARGS__})
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

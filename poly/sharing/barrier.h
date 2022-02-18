@@ -91,10 +91,10 @@ barrier_wait (Barrier *const this)
 	if (--this->places == 0) {
 		this->places = this->capacity;
 		status  = BARRIER_FULL;
-		int err = notice_broadcast(&this->move_on);
+		const int err = notice_broadcast(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	} else {
-		int err = notice_wait(&this->move_on);
+		int const err = notice_wait(&this->move_on);
 		CHECK_BARRIER_MONITOR (err)
 	}
 
