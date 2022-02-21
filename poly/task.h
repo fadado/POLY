@@ -18,10 +18,10 @@ typedef struct Task {
 	Channel mbox;    // message box
 } Task;
 
+static int    task_fork(int main(void*), void* argument, Task *const this);
 static Scalar task_get(Task *const this);
 static int    task_join(Task *const this);
 static int    task_set(Task *const this, Scalar x);
-static int    task_spawn(Task *const this, int main(void*), void* argument);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -32,15 +32,15 @@ static int    task_spawn(Task *const this, int main(void*), void* argument);
  */
 
 static inline int
-task_spawn (Task *const this, int main(void*), void* argument)
+task_fork (int main(void*), void* argument, Task *const this)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;
 
 	this->finished = false;
 	this->result = Unsigned(0xFabada);
-	if ((err=channel_init(&this->mbox, syncronous)) == STATUS_SUCCESS) {
-		if ((err=thread_spawn(main, argument)) == STATUS_SUCCESS) {
+	if ((err=channel_init(&this->mbox, asyncronous)) == STATUS_SUCCESS) {
+		if ((err=thread_fork(main, argument, &(Thread){0})) == STATUS_SUCCESS) {
 			/*skip*/;
 		} else {
 			channel_destroy(&this->mbox);

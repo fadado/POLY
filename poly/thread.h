@@ -19,10 +19,9 @@ static Thread thread_current(void);
 static int    thread_detach(Thread thread);
 static bool   thread_equal(Thread lhs, Thread rhs);
 static void   thread_exit(int result);
-static int    thread_fork(int main(void*), void* argument, Thread* thread);
+static int    thread_fork(int main(void*), void* argument, Thread* this);
 static int    thread_join(Thread thread, int *const result);
 static int    thread_sleep(Time duration);
-static int    thread_spawn(int main(void*), void* argument);
 static void   thread_yield(void);
 
 ////////////////////////////////////////////////////////////////////////
@@ -30,9 +29,9 @@ static void   thread_yield(void);
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int
-thread_fork (int main(void*), void* argument, Thread* thread)
+thread_fork (int main(void*), void* argument, Thread* this)
 {
-	return thrd_create(thread, main, argument);
+	return thrd_create(this, main, argument);
 }
 
 static ALWAYS inline int
@@ -80,18 +79,8 @@ thread_exit (int result)
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Extensions to C11 thrd_t API
+// Experimental: thread IDs from 0..
 ////////////////////////////////////////////////////////////////////////
-
-static inline int
-thread_spawn (int main(void*), void* argument)
-{
-	Thread thread;
-	const int err = thread_fork(main, argument, &thread);
-	if (err != STATUS_SUCCESS) return err;
-	// TODO: thread_yield()? ensure main has been called!
-	return thread_detach(thread);
-}
 
 #ifdef THREAD_ID_SIZE
 
@@ -105,12 +94,12 @@ static unsigned thread_id(void)
 	Thread current  = thread_current();
 	const int count = thread_id_count_;
 
-	for (unsigned i=0; i < count; ++i) {
+	for (register unsigned i=0; i < count; ++i) {
 		if (thread_equal(thread_id_vector_[i], current)) {
 			return i;
 		}
 	}
-	const unsigned i = thread_id_count_++;
+	register unsigned const i = thread_id_count_++;
 	if (i >= THREAD_ID_SIZE) panic("looser");
 	thread_id_vector_[i] = current;
 	return i;

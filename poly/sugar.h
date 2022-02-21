@@ -27,7 +27,8 @@
 #define THREAD_BEGIN(T)\
 	};\
 	int T(void* arg_) {\
-		struct T const this = *((struct T*)arg_);
+		struct T const this = *((struct T*)arg_);\
+		thread_detach(thread_current());
 
 #define THREAD_END\
 	return 0; }
@@ -44,7 +45,7 @@
  * THREAD_END
  */
 #define spawn_thread(T,...)\
-	thread_spawn(T, &(struct T){__VA_ARGS__})
+	thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
 
 /*
  * THREAD_BODY  (name)
@@ -54,8 +55,8 @@
  * 	...
  * THREAD_END
  */
-#define spawn_task(T,R,...)\
-	task_spawn(T, R, &(struct R){.future=T __VA_OPT__(,)__VA_ARGS__})
+#define spawn_task(F,T,...)\
+	task_fork((T), &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
 /*
  * THREAD_BODY  (name)
@@ -67,6 +68,8 @@
  * THREAD_END
  */
 #define spawn_filter(I,O,T,...)\
-	thread_spawn(T, &(struct T){.input=I, .output=O __VA_OPT__(,)__VA_ARGS__})
+	thread_fork(T, \
+			&(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
+			&(Thread){0})
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

@@ -52,7 +52,7 @@ enum {
 #define fallthrough __attribute__((fallthrough))
 
 // sequential consistency
-#define atomic(T)  _Atomic(T)
+#define atomic(T)   _Atomic(T)
 
 ////////////////////////////////////////////////////////////////////////
 // Time measured in nanoseconds
