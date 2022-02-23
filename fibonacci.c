@@ -14,7 +14,9 @@
 #include "poly/task.h"
 #include "poly/sugar.h"
 
-static atomic(bool) calculating;
+#include "poly/linear.h"
+
+static atomic_flag calculating = ATOMIC_FLAG_INIT;
 
 ////////////////////////////////////////////////////////////////////////
 // Run forever painting the spinner
@@ -30,7 +32,9 @@ THREAD_BEGIN (spinner)
 		thread_sleep(this.delay);
 	}
 
-	while (!calculating) /*wait*/;
+	TAS(&calculating, RELAXED); // SET flag
+	while (TAS(&calculating, SEQ_CST) != FLAG_CLEAR) /*wait*/;
+
 	spin(0);
 	for (;;)  {
 		for (int i = 0; s[i] != '\0'; ++i) {
@@ -54,7 +58,8 @@ THREAD_BEGIN (fibonacci)
 
 	warn("ThreadID: %d", thread_id());
 
-	calculating = true; // allow spinner to show
+	CLEAR(&calculating, SEQ_CST); // allow spinner to show
+
 	long result = slow_fib(this.n);
 	// ...long time...
 	task_set(this.future, (Unsigned)result); // what if error: return > 0 ???
