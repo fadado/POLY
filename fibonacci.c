@@ -14,9 +14,34 @@
 #include "poly/task.h"
 #include "poly/sugar.h"
 
-#include "poly/linear.h"
+#include "poly/syncop.h"
+
+////////////////////////////////////////////////////////////////////////
+// Playing with different methods of sync.
+////////////////////////////////////////////////////////////////////////
+
+#if 0
 
 static atomic_flag calculating = ATOMIC_FLAG_INIT;
+
+#define WAIT(r)    ({ TAS(&(r), RELAXED); while (TAS(&(r), ACQ_REL)); })
+#define SIGNAL(r)  CLEAR(&(r), RELEASE)
+
+#elif 0
+
+static atomic_bool calculating = false;
+
+#define WAIT(r)    while (!LOAD(&(r), ACQUIRE))
+#define SIGNAL(r)  STORE(&(r), true, RELEASE)
+
+#else
+
+static volatile bool calculating = false;
+
+#define WAIT(r)    while (!(r))
+#define SIGNAL(r)  ((r) = true)
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Run forever painting the spinner
@@ -32,8 +57,7 @@ THREAD_BEGIN (spinner)
 		thread_sleep(this.delay);
 	}
 
-	TAS(&calculating, RELAXED); // SET flag
-	while (TAS(&calculating, SEQ_CST) != FLAG_CLEAR) /*wait*/;
+	WAIT (calculating);
 
 	spin(0);
 	for (;;)  {
@@ -58,7 +82,7 @@ THREAD_BEGIN (fibonacci)
 
 	warn("ThreadID: %d", thread_id());
 
-	CLEAR(&calculating, SEQ_CST); // allow spinner to show
+	SIGNAL (calculating);
 
 	long result = slow_fib(this.n);
 	// ...long time...
@@ -88,16 +112,16 @@ int main(int argc, char* argv[argc+1])
 
 	err += spawn_thread(spinner, .delay=us2ns(usDELAY));
 
-	Task future;
-	err += spawn_task(&future, fibonacci, .n=N);
-	err += task_join(&future);
+	Task fib_N;
+	err += spawn_task(&fib_N, fibonacci, .n=N);
+	err += task_join(&fib_N);
 
 	assert(err==0);
 
-	long n = cast(task_get(&future), long);
+	long n = cast(task_get(&fib_N), long);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(task_get(&future), long);
+	n = cast(task_get(&fib_N), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;
@@ -108,6 +132,11 @@ int main(int argc, char* argv[argc+1])
 	printf("s: %lld; ms: %lld; un: %lld; ns: %lld\n", s, ms, us, ns);
 
 	show_cursor();
+
+//
+	atomic_int shared = 7;
+	MUL(&shared, 7);
+	assert(shared == 7*7);
 
 	return 0;
 }
