@@ -47,7 +47,7 @@ static volatile bool calculating = false;
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_BODY  (spinner)
+THREAD_BODY (spinner)
 	int delay; // nanoseconds
 THREAD_BEGIN (spinner)
 	warn("ThreadID: %d", thread_id());
@@ -71,7 +71,7 @@ THREAD_END
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_BODY  (fibonacci)
+THREAD_BODY (fibonacci)
 	Task* future;  // this is a task: a thread with future!
 	long  n;
 THREAD_BEGIN (fibonacci)

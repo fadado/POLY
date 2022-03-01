@@ -6,14 +6,14 @@
 ////////////////////////////////////////////////////////////////////////
 
 /*
- * THREAD_DECL (name, [extern | static])
+ * THREAD (name, [extern | static])
  */
-#define THREAD_DECL(T,...)\
+#define THREAD(T,...)\
 	struct T;\
 	__VA_ARGS__ int T(void*);
 
 /*
- * THREAD_BODY  (name)
+ * THREAD_BODY (name)
  * 	type var;
  * 	...
  * THREAD_BEGIN (name)
@@ -38,7 +38,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 /*
- * THREAD_BODY  (name)
+ * THREAD_BODY (name)
  * 	...
  * THREAD_BEGIN (name)
  * 	...
@@ -48,7 +48,7 @@
 	thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
 
 /*
- * THREAD_BODY  (name)
+ * THREAD_BODY (name)
  * 	Task* future;
  * 	...
  * THREAD_BEGIN (name)
@@ -59,7 +59,7 @@
 	task_fork((T), &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
 /*
- * THREAD_BODY  (name)
+ * THREAD_BODY (name)
  * 	Channel* input;
  * 	Channel* output;
  * 	...

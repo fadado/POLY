@@ -20,8 +20,10 @@ THREAD_BODY (generate_candidates)
 	Channel* output;
 THREAD_BEGIN (generate_candidates)
 	assert(this.input == (Channel*)0);
+
 	int n = 2;
 	channel_send(this.output, (Signed)n);
+
 	for (n=3; true; n+=2)  {
 		channel_send(this.output, (Signed)n);
 	}
@@ -36,7 +38,7 @@ THREAD_BODY (filter_multiples)
 	Channel* output;
 	int      prime;
 THREAD_BEGIN (filter_multiples)
-	inline bool divides(int n) {
+	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
 	}
 	for (;;) {
