@@ -11,10 +11,13 @@
 
 #include "poly/scalar.h"
 #include "poly/thread.h"
-#include "poly/task.h"
+#include "poly/future.h"
 #include "poly/sugar.h"
 
 #include "poly/syncop.h"
+
+THREAD_TYPE (spinner, static)
+THREAD_TYPE (fibonacci, static)
 
 ////////////////////////////////////////////////////////////////////////
 // Playing with different methods of sync.
@@ -27,7 +30,7 @@ static atomic_flag calculating = ATOMIC_FLAG_INIT;
 #define WAIT(r)    ({ TAS(&(r), RELAXED); while (TAS(&(r), ACQ_REL)); })
 #define SIGNAL(r)  CLEAR(&(r), RELEASE)
 
-#elif 0
+#elif 1
 
 static atomic_bool calculating = false;
 
@@ -72,8 +75,8 @@ THREAD_END
 ////////////////////////////////////////////////////////////////////////
 
 THREAD_BODY (fibonacci)
-	Task* future;  // this is a task: a thread with future!
-	long  n;
+	FUTURE_SLOTS // this.future
+	long n;
 THREAD_BEGIN (fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
@@ -86,7 +89,7 @@ THREAD_BEGIN (fibonacci)
 
 	long result = slow_fib(this.n);
 	// ...long time...
-	task_set(this.future, (Unsigned)result); // what if error: return > 0 ???
+	future_set(this.future, (Unsigned)result); // what if error: return > 0 ???
 THREAD_END
 
 ////////////////////////////////////////////////////////////////////////
@@ -112,20 +115,20 @@ int main(int argc, char* argv[argc+1])
 
 	err += spawn_thread(spinner, .delay=us2ns(usDELAY));
 
-	Task fib_N;
-	err += spawn_task(&fib_N, fibonacci, .n=N);
-	err += task_join(&fib_N);
+	Future fib_N;
+	err += spawn_future(&fib_N, fibonacci, .n=N);
+	err += future_join(&fib_N);
 
 	assert(err==0);
 
-	long n = cast(task_get(&fib_N), long);
+	long n = cast(future_get(&fib_N), long);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(task_get(&fib_N), long);
+	n = cast(future_get(&fib_N), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;
-	s = ns2s(ns);
+	s  = ns2s(ns);
 	ms = ns2ms(ns - s2ns(s));
 	us = ns2us(ns - s2ns(s) - ms2ns(ms));
 	ns = (ns - s2ns(s) - ms2ns(ms) - us2ns(us));

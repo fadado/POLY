@@ -6,9 +6,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 /*
- * THREAD (name, [extern | static])
+ * THREAD_TYPE (name, [extern | static])
  */
-#define THREAD(T,...)\
+#define THREAD_TYPE(T,...)\
 	struct T;\
 	__VA_ARGS__ int T(void*);
 
@@ -27,6 +27,7 @@
 #define THREAD_BEGIN(T)\
 	};\
 	int T(void* arg_) {\
+		/*assert(arg_ != (void*)0);*/\
 		struct T const this = *((struct T*)arg_);\
 		thread_detach(thread_current());
 
@@ -34,7 +35,7 @@
 	return 0; }
 
 ////////////////////////////////////////////////////////////////////////
-// Spawning threads, tasks, filters...
+// Spawning threads, futures, filters...
 ////////////////////////////////////////////////////////////////////////
 
 /*
@@ -55,8 +56,11 @@
  * 	...
  * THREAD_END
  */
-#define spawn_task(F,T,...)\
-	task_fork((T), &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
+#define spawn_future(F,T,...)\
+	future_fork((T), &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
+
+#define FUTURE_SLOTS\
+	Future* future;
 
 /*
  * THREAD_BODY (name)
@@ -71,5 +75,9 @@
 	thread_fork(T, \
 			&(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
 			&(Thread){0})
+
+#define FILTER_SLOTS\
+	Channel* input;\
+	Channel* output;
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

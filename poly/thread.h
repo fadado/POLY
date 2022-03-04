@@ -69,7 +69,7 @@ thread_sleep (Time duration)
 {
 	const time_t s  = ns2s(duration);
 	const long   ns = duration - s2ns(s);
-	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, (void*)0);
+	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, (struct timespec*)0);
 }
 
 static ALWAYS inline void

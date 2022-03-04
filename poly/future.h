@@ -1,5 +1,5 @@
-#ifndef TASK_H
-#define TASK_H
+#ifndef FUTURE_H
+#define FUTURE_H
 
 #ifndef POLY_H
 #include "POLY.h"
@@ -12,27 +12,27 @@
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-typedef struct Task {
+typedef struct Future {
 	bool    finished;// still not finished?
 	Scalar  result;  // memoized result
 	Channel mbox;    // message box
-} Task;
+} Future;
 
-static int    task_fork(int main(void*), void* argument, Task *const this);
-static Scalar task_get(Task *const this);
-static int    task_join(Task *const this);
-static int    task_set(Task *const this, Scalar x);
+static int    future_fork(int main(void*), void* argument, Future *const this);
+static Scalar future_get(Future *const this);
+static int    future_join(Future *const this);
+static int    future_set(Future *const this, Scalar x);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-/* atomic(bool) finished?
- * static inline bool finished(Task *const this) { return this->finished; }
+/* atomic(bool) finished ?
+ * static inline bool future_finished(Future *const this) { return this->finished; }
  */
 
 static inline int
-task_fork (int main(void*), void* argument, Task *const this)
+future_fork (int main(void*), void* argument, Future *const this)
 {
 	enum { syncronous=0, asyncronous=1 };
 	int err;
@@ -51,7 +51,7 @@ task_fork (int main(void*), void* argument, Task *const this)
 
 // to be called once from the client
 static inline int
-task_join (Task *const this)
+future_join (Future *const this)
 {
 	assert(!this->finished);
 	const int status = channel_receive(&this->mbox, &this->result);
@@ -62,7 +62,7 @@ task_join (Task *const this)
 
 // to be called once from the promise
 static ALWAYS inline int
-task_set (Task *const this, Scalar x)
+future_set (Future *const this, Scalar x)
 {
 	assert(!this->finished);
 	return channel_send(&this->mbox, x);
@@ -70,9 +70,9 @@ task_set (Task *const this, Scalar x)
 
 // to be called any number of times from the client
 static ALWAYS inline Scalar
-task_get (Task *const this)
+future_get (Future *const this)
 {
-	if (!this->finished) { task_join(this); }
+	if (!this->finished) { future_join(this); }
 	return this->result;
 }
 

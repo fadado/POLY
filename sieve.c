@@ -12,12 +12,16 @@
 #include "poly/passing/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
+
+THREAD_TYPE (generate_candidates, static)
+THREAD_TYPE (filter_multiples, static)
+
+////////////////////////////////////////////////////////////////////////
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
 THREAD_BODY (generate_candidates)
-	Channel* input; // not used
-	Channel* output;
+	FILTER_SLOTS // this.input, this.output
 THREAD_BEGIN (generate_candidates)
 	assert(this.input == (Channel*)0);
 
@@ -34,9 +38,8 @@ THREAD_END
 ////////////////////////////////////////////////////////////////////////
 
 THREAD_BODY (filter_multiples)
-	Channel* input;
-	Channel* output;
-	int      prime;
+	FILTER_SLOTS // this.input, this.output
+	int prime;
 THREAD_BEGIN (filter_multiples)
 	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
