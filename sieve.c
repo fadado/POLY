@@ -12,17 +12,14 @@
 #include "poly/passing/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
-
-THREAD_TYPE (generate_candidates, static)
-THREAD_TYPE (filter_multiples, static)
-
-////////////////////////////////////////////////////////////////////////
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_BODY (generate_candidates)
+THREAD_TYPE (generate_candidates, static)
 	FILTER_SLOTS // this.input, this.output
-THREAD_BEGIN (generate_candidates)
+END_TYPE
+
+THREAD_BODY (generate_candidates)
 	assert(this.input == (Channel*)0);
 
 	int n = 2;
@@ -31,16 +28,18 @@ THREAD_BEGIN (generate_candidates)
 	for (n=3; true; n+=2)  {
 		channel_send(this.output, (Signed)n);
 	}
-THREAD_END
+END_BODY
 
 ////////////////////////////////////////////////////////////////////////
 // Filter multiples of `this->prime`
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_BODY (filter_multiples)
+THREAD_TYPE (filter_multiples, static)
 	FILTER_SLOTS // this.input, this.output
 	int prime;
-THREAD_BEGIN (filter_multiples)
+END_TYPE
+
+THREAD_BODY (filter_multiples)
 	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
 	}
@@ -51,7 +50,7 @@ THREAD_BEGIN (filter_multiples)
 			channel_send(this.output, s);
 		}
 	}
-THREAD_END
+END_BODY
 
 ////////////////////////////////////////////////////////////////////////
 // Start generator and successive filters
@@ -66,8 +65,9 @@ int main(int argc, char* argv[argc+1])
 	Channel _chn_arena[n+1], *_chn_ptr=_chn_arena;
 	inline Channel* alloc(void) { return _chn_ptr++; }
 
+	enum { syncronous=0, asyncronous=1 };
 	Channel* input = alloc();
-	channel_init(input, 1);
+	channel_init(input, asyncronous);
 	spawn_filter((Channel*)0, input, generate_candidates);
 
 	for (int i=1; i <= n; ++i) {
@@ -76,7 +76,7 @@ int main(int argc, char* argv[argc+1])
 		int prime = cast(s, int);
 
 		Channel* output = alloc();
-		channel_init(output, 1);
+		channel_init(output, asyncronous);
 		spawn_filter(input, output, filter_multiples, .prime=prime);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));

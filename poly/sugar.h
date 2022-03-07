@@ -6,78 +6,85 @@
 ////////////////////////////////////////////////////////////////////////
 
 /*
- * THREAD_TYPE (name, [extern | static])
+ *  THREAD_TYPE (name [,linkage])
+ *      slots
+ *      ...
+ *  END_TYPE
  */
 #define THREAD_TYPE(T,...)\
-	struct T;\
-	__VA_ARGS__ int T(void*);
+    __VA_ARGS__ int T(void*);\
+    struct T {
+
+#define END_TYPE\
+    };
 
 /*
- * THREAD_BODY (name)
- * 	type var;
- * 	...
- * THREAD_BEGIN (name)
- * 	code
- * 	...
- * THREAD_END
+ *  THREAD_BODY (name)
+ *      code
+ *      ...
+ *  END_BODY
  */
 #define THREAD_BODY(T)\
-	struct T {
+    int T(void* arg_)\
+    {   /*assert(arg_ != (void*)0);*/\
+        struct T const this = *((struct T*)arg_);\
+        thread_detach(thread_current());
 
-#define THREAD_BEGIN(T)\
-	};\
-	int T(void* arg_) {\
-		/*assert(arg_ != (void*)0);*/\
-		struct T const this = *((struct T*)arg_);\
-		thread_detach(thread_current());
-
-#define THREAD_END\
-	return 0; }
+#define END_BODY\
+        return 0;\
+    }
 
 ////////////////////////////////////////////////////////////////////////
 // Spawning threads, futures, filters...
 ////////////////////////////////////////////////////////////////////////
 
 /*
- * THREAD_BODY (name)
- * 	...
- * THREAD_BEGIN (name)
- * 	...
- * THREAD_END
+ *  THREAD_TYPE (name)
+ *      ...
+ *  END_TYPE
+ *
+ *  THREAD_BODY (name)
+ *      ...
+ *  END_BODY
  */
 #define spawn_thread(T,...)\
-	thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
+    thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
 
 /*
- * THREAD_BODY (name)
- * 	Task* future;
- * 	...
- * THREAD_BEGIN (name)
- * 	...
- * THREAD_END
+ *  THREAD_TYPE (name)
+ *      Task* future;  // future slots
+ *      ...
+ *  END_TYPE
+ *
+ *  THREAD_BODY (name)
+ *      ...
+ *  END_BODY
  */
 #define spawn_future(F,T,...)\
-	future_fork((T), &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
+    future_fork(T,\
+        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
 #define FUTURE_SLOTS\
-	Future* future;
+    Future* future;
 
 /*
- * THREAD_BODY (name)
- * 	Channel* input;
- * 	Channel* output;
- * 	...
- * THREAD_BEGIN (name)
- * 	...
- * THREAD_END
+ *  THREAD_TYPE (name)
+ *      Channel* input;  // filter slots
+ *      Channel* output;
+ *      ...
+ *  END_TYPE
+ *
+ *  THREAD_BODY (name)
+ *      ...
+ *  END_BODY
  */
 #define spawn_filter(I,O,T,...)\
-	thread_fork(T, \
-			&(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
-			&(Thread){0})
+    thread_fork(T, \
+        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
+        &(Thread){0})
 
 #define FILTER_SLOTS\
-	Channel* input;\
-	Channel* output;
+    Channel* input;\
+    Channel* output;
 
-#endif // vim:ai:sw=4:ts=4:syntax=cpp
+#endif // vim:ai:sw=4:ts=4:et:syntax=cpp

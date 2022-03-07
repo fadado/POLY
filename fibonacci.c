@@ -16,9 +16,6 @@
 
 #include "poly/syncop.h"
 
-THREAD_TYPE (spinner, static)
-THREAD_TYPE (fibonacci, static)
-
 ////////////////////////////////////////////////////////////////////////
 // Playing with different methods of sync.
 ////////////////////////////////////////////////////////////////////////
@@ -50,9 +47,11 @@ static volatile bool calculating = false;
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_BODY (spinner)
+THREAD_TYPE (spinner, static)
 	int delay; // nanoseconds
-THREAD_BEGIN (spinner)
+END_TYPE
+
+THREAD_BODY (spinner)
 	warn("ThreadID: %d", thread_id());
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
@@ -68,16 +67,18 @@ THREAD_BEGIN (spinner)
 			spin(i);
 		}
 	}
-THREAD_END
+END_BODY
 
 ////////////////////////////////////////////////////////////////////////
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_BODY (fibonacci)
+THREAD_TYPE (fibonacci, static)
 	FUTURE_SLOTS // this.future
 	long n;
-THREAD_BEGIN (fibonacci)
+END_TYPE
+
+THREAD_BODY (fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -90,7 +91,7 @@ THREAD_BEGIN (fibonacci)
 	long result = slow_fib(this.n);
 	// ...long time...
 	future_set(this.future, (Unsigned)result); // what if error: return > 0 ???
-THREAD_END
+END_BODY
 
 ////////////////////////////////////////////////////////////////////////
 //
