@@ -28,6 +28,8 @@
     int T(void* arg_)\
     {   /*assert(arg_ != (void*)0);*/\
         struct T const this = *((struct T*)arg_);\
+        /* fetch-and-increment atomic global counter*/\
+        thread_ID_ = thread_ID_COUNT_++;\
         thread_detach(thread_current());
 
 #define END_BODY\

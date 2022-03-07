@@ -6,9 +6,6 @@
 // comment next line to disable assertions
 #define DEBUG
 
-// define thread_id() for 10 threads max.
-#define THREAD_ID_SIZE 10
-
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/future.h"

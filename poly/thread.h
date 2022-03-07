@@ -15,14 +15,15 @@
 
 typedef thrd_t Thread;
 
-static Thread thread_current(void);
-static int    thread_detach(Thread thread);
-static bool   thread_equal(Thread lhs, Thread rhs);
-static void   thread_exit(int result);
-static int    thread_fork(int main(void*), void* argument, Thread* this);
-static int    thread_join(Thread thread, int *const result);
-static int    thread_sleep(Time duration);
-static void   thread_yield(void);
+static Thread   thread_current(void);
+static int      thread_detach(Thread thread);
+static bool     thread_equal(Thread lhs, Thread rhs);
+static void     thread_exit(int result);
+static int      thread_fork(int main(void*), void* argument, Thread* this);
+static unsigned thread_id(void);
+static int      thread_join(Thread thread, int *const result);
+static int      thread_sleep(Time duration);
+static void     thread_yield(void);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -78,33 +79,15 @@ thread_exit (int result)
 	thrd_exit(result);
 }
 
-////////////////////////////////////////////////////////////////////////
-// Experimental: thread IDs from 0..
-////////////////////////////////////////////////////////////////////////
+// atomic global counter (provide unique IDs)
+static _Atomic       unsigned thread_ID_COUNT_ = 1; // next valid ID
+// see thread (re)inicialization using fetch-and-increment at poly/sugar.h
+static _Thread_local unsigned thread_ID_ = 0; // reserved to main
 
-#ifdef THREAD_ID_SIZE
-
-static_assert(THREAD_ID_SIZE > 0);
-
-static atomic(unsigned) thread_id_count_ = {0};
-static Thread           thread_id_vector_[THREAD_ID_SIZE] = {0};
-
-static unsigned thread_id(void)
+static ALWAYS inline unsigned
+thread_id (void)
 {
-	Thread current  = thread_current();
-	const int count = thread_id_count_;
-
-	for (register unsigned i=0; i < count; ++i) {
-		if (thread_equal(thread_id_vector_[i], current)) {
-			return i;
-		}
-	}
-	register unsigned const i = thread_id_count_++;
-	if (i >= THREAD_ID_SIZE) panic("looser");
-	thread_id_vector_[i] = current;
-	return i;
+	return thread_ID_;
 }
-
-#endif // THREAD_ID_SIZE
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
