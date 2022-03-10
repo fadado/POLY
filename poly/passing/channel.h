@@ -227,8 +227,8 @@ channel_send (Channel *const this, Scalar message)
 	if (this->flags & CHANNEL_BLOCKING) {
 		assert(this->capacity == 1);
 		// protocol
-		//    thread a: wait(0)-A-notify(1)
-		//    thread b: notify(0)-wait(1)-B
+		//    thread a: check(0)-A-notify(1)
+		//    thread b: notify(0)-check(1)-B
 		catch (notice_check(this->rendezvous+0));
 		this->value = message;
 		catch (notice_notify(this->rendezvous+1));
@@ -265,8 +265,8 @@ channel_receive (Channel *const this, Scalar* message)
 	if (this->flags & CHANNEL_BLOCKING) {
 		assert(this->capacity == 1);
 		// protocol
-		//    thread a: wait(0)-A-notify(1)
-		//    thread b: notify(0)-wait(1)-B
+		//    thread a: check(0)-A-notify(1)
+		//    thread b: notify(0)-check(1)-B
 		catch (notice_notify(this->rendezvous+0));
 		catch (notice_check(this->rendezvous+1));
 		if (message) *message = this->value;

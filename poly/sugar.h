@@ -54,7 +54,8 @@
 
 /*
  *  THREAD_TYPE (name)
- *      Task* future;  // future slots
+ *      Task* future;
+ *      slots
  *      ...
  *  END_TYPE
  *
@@ -62,17 +63,15 @@
  *      ...
  *  END_BODY
  */
-#define spawn_future(F,T,...)\
+#define spawn_future(T,F,...)\
     future_fork(T,\
         &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
-#define FUTURE_SLOTS\
-    Future* future;
-
 /*
  *  THREAD_TYPE (name)
- *      Channel* input;  // filter slots
+ *      Channel* input;  // valid also for Port type
  *      Channel* output;
+ *      slots
  *      ...
  *  END_TYPE
  *
@@ -80,13 +79,9 @@
  *      ...
  *  END_BODY
  */
-#define spawn_filter(I,O,T,...)\
+#define connect(T,I,O,...)\
     thread_fork(T, \
         &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
         &(Thread){0})
-
-#define FILTER_SLOTS\
-    Channel* input;\
-    Channel* output;
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp

@@ -71,8 +71,8 @@ END_BODY
 ////////////////////////////////////////////////////////////////////////
 
 THREAD_TYPE (fibonacci, static)
-	FUTURE_SLOTS // this.future
-	long n;
+    Future* future;
+	long    n;
 END_TYPE
 
 THREAD_BODY (fibonacci)
@@ -114,7 +114,7 @@ int main(int argc, char* argv[argc+1])
 	err += spawn_thread(spinner, .delay=us2ns(usDELAY));
 
 	Future fib_N;
-	err += spawn_future(&fib_N, fibonacci, .n=N);
+	err += spawn_future(fibonacci, &fib_N, .n=N);
 	err += future_join(&fib_N);
 
 	assert(err==0);
