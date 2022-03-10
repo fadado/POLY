@@ -6,7 +6,7 @@
 #endif
 #include "scalar.h"
 #include "thread.h"
-#include "passing/channel.h"
+#include "passing/port.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Interface
@@ -15,7 +15,7 @@
 typedef struct Future {
 	bool    finished;// still not finished?
 	Scalar  result;  // memoized result
-	Channel mbox;    // message box
+	Port    mbox;    // message box
 } Future;
 
 static int    future_fork(int main(void*), void* argument, Future *const this);
@@ -34,19 +34,18 @@ static int    future_set(Future *const this, Scalar x);
 static inline int
 future_fork (int main(void*), void* argument, Future *const this)
 {
-	enum { syncronous=0, asyncronous=1 };
 	int err;
 
 	this->finished = false;
 	this->result = Unsigned(0xFabada);
-	if ((err=channel_init(&this->mbox, asyncronous)) == STATUS_SUCCESS) {
-		if ((err=thread_fork(main, argument, &(Thread){0})) == STATUS_SUCCESS) {
-			/*skip*/;
-		} else {
-			channel_destroy(&this->mbox);
-		}
+	if ((err=port_init(&this->mbox)) != STATUS_SUCCESS) {
+		return err;
 	}
-	return err;
+	if ((err=thread_fork(main, argument, &(Thread){0})) != STATUS_SUCCESS) {
+		port_destroy(&this->mbox);
+		return err;
+	}
+	return STATUS_SUCCESS;
 }
 
 // to be called once from the client
@@ -54,9 +53,9 @@ static inline int
 future_join (Future *const this)
 {
 	assert(!this->finished);
-	const int status = channel_receive(&this->mbox, &this->result);
+	const int status = port_receive(&this->mbox, &this->result);
 	this->finished = true;
-	channel_destroy(&this->mbox);
+	port_destroy(&this->mbox);
 	return status;
 }
 
@@ -65,7 +64,7 @@ static ALWAYS inline int
 future_set (Future *const this, Scalar x)
 {
 	assert(!this->finished);
-	return channel_send(&this->mbox, x);
+	return port_send(&this->mbox, x);
 }
 
 // to be called any number of times from the client

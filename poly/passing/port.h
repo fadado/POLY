@@ -53,6 +53,8 @@ port_init (Port *const this)
 {
 	int err;
 
+	this->pending = 0;
+
 	if ((err=(lock_init(&this->entry))) != STATUS_SUCCESS) {
 		return err;
 	}
@@ -65,7 +67,6 @@ port_init (Port *const this)
 		lock_destroy(&this->entry);
 		return err;
 	}
-
 	return STATUS_SUCCESS;
 }
 
