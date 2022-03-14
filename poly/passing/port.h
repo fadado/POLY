@@ -8,6 +8,9 @@
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 
+#define board_ack notice_check
+#define board_syn notice_notify
+
 ////////////////////////////////////////////////////////////////////////
 // Type Port of one scalar
 // Interface
@@ -17,7 +20,7 @@ typedef struct Port {
 	unsigned pending;
 	Scalar   value;
 	Lock     entry;
-	Notice   rendezvous[2];
+	Notice   board[2];
 } Port;
 
 static void port_destroy(Port *const this);
@@ -58,12 +61,12 @@ port_init (Port *const this)
 	if ((err=(lock_init(&this->entry))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=(notice_init(this->rendezvous+0, &this->entry))) != STATUS_SUCCESS) {
+	if ((err=(notice_init(&this->board[0], &this->entry))) != STATUS_SUCCESS) {
 		lock_destroy(&this->entry);
 		return err;
 	}
-	if ((err=(notice_init(this->rendezvous+1, &this->entry))) != STATUS_SUCCESS) {
-		notice_destroy(this->rendezvous+0);
+	if ((err=(notice_init(&this->board[1], &this->entry))) != STATUS_SUCCESS) {
+		notice_destroy(&this->board[0]);
 		lock_destroy(&this->entry);
 		return err;
 	}
@@ -75,8 +78,8 @@ port_destroy (Port *const this)
 {
 	assert(_port_empty(this));
 
-	notice_destroy(this->rendezvous+1);
-	notice_destroy(this->rendezvous+0);
+	notice_destroy(&this->board[1]);
+	notice_destroy(&this->board[0]);
 	lock_destroy(&this->entry);
 }
 
@@ -96,7 +99,7 @@ port_destroy (Port *const this)
 static inline int
 port_send (Port *const this, Scalar message)
 {
-#   define catch(X) if ((err=(X)) != STATUS_SUCCESS) goto onerror
+#define catch(X) if ((err=(X)) != STATUS_SUCCESS) goto onerror
 	int err;
 	ENTER_PORT_MONITOR
 
@@ -104,9 +107,9 @@ port_send (Port *const this, Scalar message)
 	//    thread a: check(0)-A-notify(1)
 	//    thread b: notify(0)-check(1)-B
 	//
-	catch (notice_check(this->rendezvous+0));
+	catch (board_ack(&this->board[0]));
 	this->value = message;
-	catch (notice_notify(this->rendezvous+1));
+	catch (board_syn(&this->board[1]));
 
 	++this->pending;
 
@@ -114,7 +117,7 @@ port_send (Port *const this, Scalar message)
 
 	return STATUS_SUCCESS;
 onerror:
-#   undef catch
+#undef catch
 	lock_release(&this->entry);
 	return err;
 }
@@ -122,7 +125,7 @@ onerror:
 static inline int
 port_receive (Port *const this, Scalar* message)
 {
-#   define catch(X) if ((err=(X)) != STATUS_SUCCESS) goto onerror
+#define catch(X) if ((err=(X)) != STATUS_SUCCESS) goto onerror
 	int err;
 	ENTER_PORT_MONITOR
 
@@ -130,8 +133,8 @@ port_receive (Port *const this, Scalar* message)
 	//    thread a: check(0)-A-notify(1)
 	//    thread b: notify(0)-check(1)-B
 	//
-	catch (notice_notify(this->rendezvous+0));
-	catch (notice_check(this->rendezvous+1));
+	catch (board_syn(&this->board[0]));
+	catch (board_ack(&this->board[1]));
 	if (message) *message = this->value;
 
 	--this->pending;
@@ -140,7 +143,7 @@ port_receive (Port *const this, Scalar* message)
 
 	return STATUS_SUCCESS;
 onerror:
-#   undef catch
+#undef catch
 	lock_release(&this->entry);
 	return err;
 }
