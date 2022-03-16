@@ -90,7 +90,7 @@ rwlock_acquire (RWLock *const this)
 	ENTER_RWLOCK_MONITOR
 
 	if (this->counter != RWLOCK_IDLE) {
-		const int err = notice_check(&this->writers);
+		const int err = notice_enquire(&this->writers);
 		CHECK_RWLOCK_MONITOR (err)
 		assert(this->counter == RWLOCK_IDLE);
 	}
