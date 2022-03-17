@@ -13,7 +13,7 @@
 
 typedef struct RWLock {
 	signed counter; // -1: writing; 0: idle; >0: # of active readers
-	Lock   entry;
+	Lock   monitor;
 	Notice readers;
 	Notice writers;
 } RWLock;
@@ -37,16 +37,16 @@ rwlock_init (RWLock *const this)
 	this->counter = RWLOCK_IDLE;
 
 	int err;
-	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
+	if ((err=lock_init(&this->monitor)) == STATUS_SUCCESS) {
 		if ((err=notice_init(&this->readers, lock)) == STATUS_SUCCESS) {
 			if ((err=notice_init(&this->writers, lock)) == STATUS_SUCCESS) {
 				/*skip*/;
 			} else {
 				notice_destroy(&this->readers);
-				lock_destroy(&this->entry);
+				lock_destroy(&this->monitor);
 			}
 		} else {
-			lock_destroy(&this->entry);
+			lock_destroy(&this->monitor);
 		}
 	}
 	return err;
@@ -59,7 +59,7 @@ rwlock_destroy (RWLock *const this)
 
 	notice_destroy(&this->readers);
 	notice_destroy(&this->writers);
-	lock_destroy(&this->entry);
+	lock_destroy(&this->monitor);
 }
 
 //
@@ -67,17 +67,17 @@ rwlock_destroy (RWLock *const this)
 //
 #define ENTER_RWLOCK_MONITOR\
 	int err_;\
-	if ((err_=lock_acquire(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_RWLOCK_MONITOR\
-	if ((err_=lock_release(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_release(&this->monitor))!=STATUS_SUCCESS)\
 	return err_;\
 	else return STATUS_SUCCESS;
 
 #define CHECK_RWLOCK_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
-		lock_release(&this->entry);\
+		lock_release(&this->monitor);\
 		return (E);\
 	}
 

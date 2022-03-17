@@ -17,7 +17,7 @@
 typedef struct Port {
 	unsigned pending;
 	Scalar   value;
-	Lock     entry;
+	Lock     monitor;
 	Notice   board[2];
 } Port;
 
@@ -29,9 +29,6 @@ static int  port_send(Port *const this, Scalar message);
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
-
-// Same error management strategy in all this module
-#define catch(X) if ((err=(X)) != STATUS_SUCCESS) goto onerror
 
 //
 // Predicates
@@ -59,11 +56,11 @@ port_init (Port *const this)
 
 	this->pending = 0;
 
-	if ((err=(lock_init(&this->entry))) != STATUS_SUCCESS) {
+	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=(board_init(this->board, &this->entry))) != STATUS_SUCCESS) {
-		lock_destroy(&this->entry);
+	if ((err=(board_init(this->board, 2, &this->monitor))) != STATUS_SUCCESS) {
+		lock_destroy(&this->monitor);
 		return err;
 	}
 	return STATUS_SUCCESS;
@@ -74,20 +71,26 @@ port_destroy (Port *const this)
 {
 	assert(_port_empty(this));
 
-	board_destroy(this->board);
-	lock_destroy(&this->entry);
+	board_destroy(this->board, 2);
+	lock_destroy(&this->monitor);
 }
 
 //
 // Monitor helpers
 //
 #define ENTER_PORT_MONITOR\
-	if ((err=lock_acquire(&this->entry))!=STATUS_SUCCESS) {\
+	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS) {\
 		return err;\
 	}
 
 #define LEAVE_PORT_MONITOR\
-	if ((err=lock_release(&this->entry))!=STATUS_SUCCESS) {\
+	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS) {\
+		return err;\
+	}
+
+#define catch(X)\
+	if ((err=(X)) != STATUS_SUCCESS) {\
+		lock_release(&this->monitor);\
 		return err;\
 	}
 
@@ -97,22 +100,13 @@ port_send (Port *const this, Scalar message)
 	int err;
 	ENTER_PORT_MONITOR
 
-	// protocol
-	//    thread a: enquire(0)-A-notify(1)
-	//    thread b: notify(0)-enquire(1)-B
-	//
-	catch (board_enquire(this->board, 0));
-	this->value = message;
-	catch (board_notify(this->board, 1));
-
+	void thunk(void) { this->value = message; }
+	catch (board_send(this->board, thunk));
 	++this->pending;
 
 	LEAVE_PORT_MONITOR
 
 	return STATUS_SUCCESS;
-onerror:
-	lock_release(&this->entry);
-	return err;
 }
 
 static inline int
@@ -121,22 +115,13 @@ port_receive (Port *const this, Scalar* message)
 	int err;
 	ENTER_PORT_MONITOR
 
-	// protocol
-	//    thread a: enquire(0)-A-notify(1)
-	//    thread b: notify(0)-enquire(1)-B
-	//
-	catch (board_notify(this->board, 0));
-	catch (board_enquire(this->board, 1));
+	catch (board_receive(this->board));
 	if (message) *message = this->value;
-
 	--this->pending;
 
 	LEAVE_PORT_MONITOR
 
 	return STATUS_SUCCESS;
-onerror:
-	lock_release(&this->entry);
-	return err;
 }
 
 #undef catch

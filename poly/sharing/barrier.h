@@ -14,7 +14,7 @@
 typedef struct Barrier {
 	unsigned capacity; // # of threads to wait before opening the barrier
 	unsigned places;   // # of threads still expected before opening
-	Lock     entry;
+	Lock     monitor;
 	Notice   move_on;
 } Barrier;
 
@@ -45,11 +45,11 @@ barrier_init (Barrier *const this, int capacity)
 	this->places = this->capacity = capacity;
 
 	int err;
-	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=notice_init(&this->move_on, &this->entry)) == STATUS_SUCCESS) {
+	if ((err=lock_init(&this->monitor)) == STATUS_SUCCESS) {
+		if ((err=notice_init(&this->move_on, &this->monitor)) == STATUS_SUCCESS) {
 			/*skip*/;
 		} else {
-			lock_destroy(&this->entry);
+			lock_destroy(&this->monitor);
 		}
 	}
 	return err;
@@ -61,7 +61,7 @@ barrier_destroy (Barrier *const this)
 	assert(this->places == 0);
 
 	notice_destroy(&this->move_on);
-	lock_destroy(&this->entry);
+	lock_destroy(&this->monitor);
 }
 
 //
@@ -69,16 +69,16 @@ barrier_destroy (Barrier *const this)
 //
 #define ENTER_BARRIER_MONITOR\
 	int err_;\
-	if ((err_=lock_acquire(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_BARRIER_MONITOR\
-	if ((err_=lock_release(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_release(&this->monitor))!=STATUS_SUCCESS)\
 	return err_;\
 
 #define CHECK_BARRIER_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
-		lock_release(&this->entry);\
+		lock_release(&this->monitor);\
 		return (E);\
 	}
 

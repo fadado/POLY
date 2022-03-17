@@ -12,69 +12,85 @@
 // Interface
 ////////////////////////////////////////////////////////////////////////
 
-static int  board_accept(Notice board[2], void(*thunk)(void));
-static int  board_call(Notice board[2], void(*thunk)(void));
-static int  board_enquire(Notice board[2], unsigned i);
-static int  board_init(Notice board[2], union Lock lock);
+static int  board_init(Notice board[], unsigned n, union Lock lock);
+static void board_destroy(Notice board[], unsigned n);
+
+static int  board_notify(Notice board[], unsigned i);
+static int  board_enquire(Notice board[], unsigned i);
+
 static int  board_meet(Notice board[2], unsigned i);
-static int  board_notify(Notice board[2], unsigned i);
+
+static int  board_send(Notice board[2], void(thunk)(void));
 static int  board_receive(Notice board[2]);
-static int  board_send(Notice board[2], void(*thunk)(void));
-static void board_destroy(Notice board[2]);
+
+static int  board_call(Notice board[3], void(thunk)(void));
+static int  board_accept(Notice board[3], void(thunk)(void));
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
 // Same error management strategy in all this module
-#define catch(X) if ((err=(X)) != STATUS_SUCCESS) return err
+#define catch(X)\
+	if ((err=(X)) != STATUS_SUCCESS)\
+		return err
 
 static int
-board_init (Notice board[2], union Lock lock)
+board_init (Notice board[], unsigned n, union Lock lock)
 {
-	int err;
-	if ((err=(notice_init(&board[0], lock.mutex))) != STATUS_SUCCESS) {
-		return err;
-	}
-	if ((err=(notice_init(&board[1], lock.mutex))) != STATUS_SUCCESS) {
-		notice_destroy(&board[0]);
-		return err;
+	assert(n > 0);
+	for (unsigned i = 0; i < n; ++i) {
+		const int err = notice_init(&board[i], lock.mutex);
+		if (err != STATUS_SUCCESS) {
+			if (i > 0) {
+				board_destroy(board, i);
+			}
+			return err;
+		}
 	}
 	return STATUS_SUCCESS;
 }
 
 static void
-board_destroy (Notice board[2])
+board_destroy (Notice board[], unsigned n)
 {
-	notice_destroy(&board[1]);
-	notice_destroy(&board[0]);
+	assert(n > 0);
+	unsigned i = n;
+	do {
+		--i;
+		notice_destroy(&board[i]);
+	} while (i != 0);
 }
 
 static ALWAYS inline int
-board_enquire (Notice board[2], unsigned i)
+board_enquire (Notice board[], unsigned i)
 {
 	return notice_enquire(&board[i]);
 }
 
 static ALWAYS inline int
-board_notify (Notice board[2], unsigned i)
+board_notify (Notice board[], unsigned i)
 {
 	return notice_notify(&board[i]);
 }
 
-// Thread A | Thread B
-// ---------+---------
-// meet(0)  |  meet(1)
+//
+// operations on 2 elements board
+//
+
 static ALWAYS inline int
 board_meet (Notice board[2], unsigned i)
 {
+	// Thread A | Thread B
+	// ---------+---------
+	// meet(0)  |  meet(1)
+	assert(i < 2);
 	int err;
 	catch (board_notify(board, i));
 	catch (board_enquire(board, !i));
 	return STATUS_SUCCESS;
 }
 
-//
 static ALWAYS inline int
 board_receive (Notice board[2])
 {
@@ -82,7 +98,7 @@ board_receive (Notice board[2])
 }
 
 static ALWAYS inline int
-board_send (Notice board[2], void(*thunk)(void))
+board_send (Notice board[2], void(thunk)(void))
 {
 	int err;
 	catch (board_enquire(board, 0));
@@ -91,8 +107,12 @@ board_send (Notice board[2], void(*thunk)(void))
 	return STATUS_SUCCESS;
 }
 
+//
+// operations on 3 elements board
+//
+
 static ALWAYS inline int
-board_call (Notice board[2], void(*thunk)(void))
+board_call (Notice board[3], void(thunk)(void))
 {
 	int err;
 	catch (board_enquire(board, 0));
@@ -103,7 +123,7 @@ board_call (Notice board[2], void(*thunk)(void))
 }
 
 static ALWAYS inline int
-board_accept (Notice board[2], void(*thunk)(void))
+board_accept (Notice board[3], void(thunk)(void))
 {
 	int err;
 	catch (board_notify(board, 0));

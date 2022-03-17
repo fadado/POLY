@@ -13,7 +13,7 @@
 
 typedef struct Semaphore {
 	signed counter; // <0: abs(#) of blocked threads; 0: idle; >0: available resources
-	Lock   entry;
+	Lock   monitor;
 	Notice queue;
 } Semaphore;
 
@@ -64,11 +64,11 @@ semaphore_init (Semaphore *const this, unsigned count)
 	this->counter = count;
 
 	int err;
-	if ((err=lock_init(&this->entry)) == STATUS_SUCCESS) {
-		if ((err=notice_init(&this->queue, &this->entry)) == STATUS_SUCCESS) {
+	if ((err=lock_init(&this->monitor)) == STATUS_SUCCESS) {
+		if ((err=notice_init(&this->queue, &this->monitor)) == STATUS_SUCCESS) {
 			/*skip*/;
 		} else {
-			lock_destroy(&this->entry);
+			lock_destroy(&this->monitor);
 		}
 	}
 	return err;
@@ -80,7 +80,7 @@ semaphore_destroy (Semaphore *const this)
 	assert(this->counter == 0 );
 
 	notice_destroy(&this->queue);
-	lock_destroy(&this->entry);
+	lock_destroy(&this->monitor);
 }
 
 //
@@ -88,17 +88,17 @@ semaphore_destroy (Semaphore *const this)
 //
 #define ENTER_SEMAPHORE_MONITOR\
 	int err_;\
-	if ((err_=lock_acquire(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
 	return err_;
 
 #define LEAVE_SEMAPHORE_MONITOR\
-	if ((err_=lock_release(&this->entry))!=STATUS_SUCCESS)\
+	if ((err_=lock_release(&this->monitor))!=STATUS_SUCCESS)\
 	return err_;\
 	else return STATUS_SUCCESS;
 
 #define CHECK_SEMAPHORE_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
-		lock_release(&this->entry);\
+		lock_release(&this->monitor);\
 		return (E);\
 	}
 

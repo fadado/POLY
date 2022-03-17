@@ -13,8 +13,8 @@
 typedef struct Notice {
 	unsigned permits; // # of threads allowed to leave the queue
 	unsigned waiting; // # of threads waiting in the queue
-	mtx_t*   mutex;   // monitor lock
-	cnd_t    queue;   // monitor condition
+	mtx_t*   mutex;
+	cnd_t    queue;
 } Notice;
 
 static int  notice_broadcast(Notice *const this);
