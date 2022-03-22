@@ -22,10 +22,10 @@
 // Error management
 ////////////////////////////////////////////////////////////////////////
 
-// message to stderr
+// output to stderr
 #define warn(...) error(0, 0, __VA_ARGS__)
 
-// die with a message
+// die with an output text
 #define panic(FMT,...)\
 	error_at_line(~0,EPERM,__FILE__,__LINE__,FMT __VA_OPT__(,)__VA_ARGS__)
 

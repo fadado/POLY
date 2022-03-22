@@ -96,7 +96,8 @@ enum {
                         atomic_compare_exchange_weak_explicit,_4_ignored,\
                         atomic_compare_exchange_weak)(__VA_ARGS__)
 
-/***********************************************************************
+/* CAS usage protocol:
+ *
     static _Atomic(A) shared = ...
     ...
 
@@ -105,7 +106,8 @@ enum {
         C y = ϕ(x);
     } while (!CASW(&shared, &x, y));
 
-or:
+or, less efficient because `volatile` goes directly to the main memory,
+ignoring caches:
 
     volatile C x = LOAD(&shared);
     while (!CASW(&shared, &x, ϕ(x)));
@@ -114,23 +116,27 @@ or:
 // C atomic_fetch_ϕ(volatile A *shared, M operand);
 // C atomic_fetch_ϕ_explicit(volatile A *shared, M operand, memory_order order);
 //
-// { v := *shared; *shared := ϕ(v); v }
+// { v := *shared; *shared := v + operand; v }
 #define ADD(...)    M_2_3(__VA_ARGS__,\
                         atomic_fetch_add_explicit,\
                         atomic_fetch_add)(__VA_ARGS__)
 
+// { v := *shared; *shared := v - operand; v }
 #define SUB(...)    M_2_3(__VA_ARGS__,\
                         atomic_fetch_sub_explicit,\
                         atomic_fetch_sub)(__VA_ARGS__)
 
+// { v := *shared; *shared := v | operand; v }
 #define OR(...)     M_2_3(__VA_ARGS__,\
                         atomic_fetch_or_explicit,\
                         atomic_fetch_or)(__VA_ARGS__)
 
+// { v := *shared; *shared := v ^ operand; v }
 #define XOR(...)    M_2_3(__VA_ARGS__,\
                         atomic_fetch_xor_explicit,\
                         atomic_fetch_xor)(__VA_ARGS__)
 
+// { v := *shared; *shared := v & operand; v }
 #define AND(...)    M_2_3(__VA_ARGS__,\
                         atomic_fetch_and_explicit,\
                         atomic_fetch_and)(__VA_ARGS__)
@@ -139,18 +145,34 @@ or:
 // Extensions
 ////////////////////////////////////////////////////////////////////////
 
-// C atomic_fetch_and_increment(volatile A *shared);
-// C atomic_fetch_and_increment_explicit(volatile A *shared, memory_order order);
-//
-// { v := *shared; *shared := v+1; v }
+// Fetch And Increment
+// { v := *shared; *shared := v + 1; v }
 #define FAI(shared,...)  ADD((shared), 1 __VA_OPT__(,)__VA_ARGS__)
 
-// TODO: memory model?
-#define IMP(R,OP...) ({ typeof(*(R)) e = *(R); while (!CASW((R), &e, !e || (OP))); e; })
+// Fetch And Decrement
+// { v := *shared; *shared := v - 1; v }
+#define FAD(shared,...)  SUB((shared), 1 __VA_OPT__(,)__VA_ARGS__)
 
-#define MUL(R,OP...) ({ typeof(*(R)) e = *(R); while (!CASW((R), &e, e * (OP))); e; })
-#define DIV(R,OP...) ({ typeof(*(R)) e = *(R); while (!CASW((R), &e, e / (OP))); e; })
-#define MOD(R,OP...) ({ typeof(*(R)) e = *(R); while (!CASW((R), &e, e % (OP))); e; })
+// { v := *shared; *shared := v * operand; v }
+#define MUL(SHARED,OPERAND,...) ({\
+    typeof(*(SHARED)) v = *(SHARED);\
+    while (!CASW((SHARED), &v, v * (OPERAND) __VA_OPT__(,)__VA_ARGS__));\
+    v;\
+})
+
+// { v := *shared; *shared := v / operand; v }
+#define DIV(SHARED,OPERAND,...) ({\
+    typeof(*(SHARED)) v = *(SHARED);\
+    while (!CASW((SHARED), &v, v / (OPERAND) __VA_OPT__(,)__VA_ARGS__));\
+    v;\
+})
+
+// { v := *shared; *shared := v % operand; v }
+#define MOD(SHARED,OPERAND,...) ({\
+    typeof(*(SHARED)) v = *(SHARED);\
+    while (!CASW((SHARED), &v, v % (OPERAND) __VA_OPT__(,)__VA_ARGS__));\
+    v;\
+})
 
 ////////////////////////////////////////////////////////////////////////
 // Fences

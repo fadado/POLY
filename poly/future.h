@@ -15,7 +15,7 @@
 typedef struct Future {
 	bool    finished;// still not finished?
 	Scalar  result;  // memoized result
-	Port    mbox;    // message box
+	Port    port;    // syncronous communication port
 } Future;
 
 static int    future_fork(int main(void*), void* argument, Future *const this);
@@ -38,11 +38,11 @@ future_fork (int main(void*), void* argument, Future *const this)
 
 	this->finished = false;
 	this->result = Unsigned(0xFabada);
-	if ((err=port_init(&this->mbox)) != STATUS_SUCCESS) {
+	if ((err=port_init(&this->port)) != STATUS_SUCCESS) {
 		return err;
 	}
 	if ((err=thread_fork(main, argument, &(Thread){0})) != STATUS_SUCCESS) {
-		port_destroy(&this->mbox);
+		port_destroy(&this->port);
 		return err;
 	}
 	return STATUS_SUCCESS;
@@ -53,9 +53,9 @@ static inline int
 future_join (Future *const this)
 {
 	assert(!this->finished);
-	const int status = port_receive(&this->mbox, &this->result);
+	const int status = port_receive(&this->port, &this->result);
 	this->finished = true;
-	port_destroy(&this->mbox);
+	port_destroy(&this->port);
 	return status;
 }
 
@@ -64,7 +64,7 @@ static ALWAYS inline int
 future_set (Future *const this, Scalar x)
 {
 	assert(!this->finished);
-	return port_send(&this->mbox, x);
+	return port_send(&this->port, x);
 }
 
 // to be called any number of times from the client

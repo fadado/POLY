@@ -42,8 +42,8 @@ static void channel_close(Channel *const this);
 static void channel_destroy(Channel *const this);
 static bool channel_drained(Channel const*const this);
 static int  channel_init(Channel *const this, unsigned capacity);
-static int  channel_receive(Channel *const this, Scalar* message);
-static int  channel_send(Channel *const this, Scalar message);
+static int  channel_receive(Channel *const this, Scalar* request);
+static int  channel_send(Channel *const this, Scalar scalar);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -204,7 +204,7 @@ channel_drained (Channel const*const this)
 	}
 
 static inline int
-channel_send (Channel *const this, Scalar message)
+channel_send (Channel *const this, Scalar scalar)
 {
 	if (this->flags & CHANNEL_CLOSED) {
 		panic("channel_send cannot use a closed channel");
@@ -215,14 +215,16 @@ channel_send (Channel *const this, Scalar message)
 
 	if (this->flags & CHANNEL_BLOCKING) {
 		assert(this->capacity == 1);
-		void thunk(void) { this->value = message; }
+		void thunk(void) {
+			this->value = scalar;
+		}
 		catch (board_send(this->board, thunk));
 	} else if (this->capacity == 1) {
 		assert(_channel_empty(this));
-		this->value = message;
+		this->value = scalar;
 	} else {
 		assert(this->capacity > 1);
-		this->buffer[this->front] = message;
+		this->buffer[this->front] = scalar;
 		this->front = (this->front+1) % this->capacity;
 	}
 	++this->occupation;
@@ -237,10 +239,10 @@ onerror:
 }
 
 static inline int
-channel_receive (Channel *const this, Scalar* message)
+channel_receive (Channel *const this, Scalar* request)
 {
 	if (this->flags & CHANNEL_DRAINED) {
-		if (message) *message = Unsigned(0x0);
+		if (request) *request = Unsigned(0x0);
 		return STATUS_SUCCESS;
 	}
 
@@ -250,15 +252,15 @@ channel_receive (Channel *const this, Scalar* message)
 	if (this->flags & CHANNEL_BLOCKING) {
 		assert(this->capacity == 1);
 		catch (board_receive(this->board));
-		if (message) *message = this->value;
+		if (request) *request = this->value;
 	} else if (this->capacity == 1) {
 		assert(_channel_full(this));
-		if (message) *message = this->value;
-	} else if (message) {
+		if (request) *request = this->value;
+	} else if (request) {
 		assert(this->capacity > 1);
 		register int back = this->front - this->occupation;
 		back = (back >= 0) ? back : back+this->capacity;
-		*message = this->buffer[back];
+		*request = this->buffer[back];
 	} // else ignore
 	--this->occupation;
 	ASSERT_CHANNEL_INVARIANT

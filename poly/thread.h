@@ -81,7 +81,7 @@ thread_exit (int result)
 
 // atomic global counter (provide unique IDs)
 static _Atomic       unsigned thread_ID_COUNT_ = 1; // next valid ID
-// see thread (re)inicialization using fetch-and-increment at poly/sugar.h
+// see update example at poly/sugar.h
 static _Thread_local unsigned thread_ID_ = 0; // reserved to main
 
 static ALWAYS inline unsigned

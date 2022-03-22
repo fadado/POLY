@@ -21,22 +21,22 @@
 
 static atomic_flag calculating = ATOMIC_FLAG_INIT;
 
-#define WAIT(r)    ({ TAS(&(r), RELAXED); while (TAS(&(r), ACQ_REL)); })
-#define SIGNAL(r)  CLEAR(&(r), RELEASE)
+#define WAIT(R)    ({ TAS(&(R), RELAXED); while (TAS(&(R), ACQ_REL)); })
+#define SIGNAL(R)  CLEAR(&(R), RELEASE)
 
-#elif 1
+#elif 0
 
 static atomic_bool calculating = false;
 
-#define WAIT(r)    while (!LOAD(&(r), ACQUIRE))
-#define SIGNAL(r)  STORE(&(r), true, RELEASE)
+#define WAIT(R)    while (!LOAD(&(R), ACQUIRE))
+#define SIGNAL(R)  STORE(&(R), true, RELEASE)
 
 #else
 
 static volatile bool calculating = false;
 
-#define WAIT(r)    while (!(r))
-#define SIGNAL(r)  ((r) = true)
+#define WAIT(R)    while (!(R))
+#define SIGNAL(R)  ((R) = true)
 
 #endif
 
@@ -44,11 +44,11 @@ static volatile bool calculating = false;
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (spinner, static)
+TASK_TYPE (spinner, static)
 	int delay; // nanoseconds
 END_TYPE
 
-THREAD_BODY (spinner)
+TASK_BODY (spinner)
 	warn("ThreadID: %d", thread_id());
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
@@ -70,12 +70,12 @@ END_BODY
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (fibonacci, static)
+TASK_TYPE (fibonacci, static)
     Future* future;
 	long    n;
 END_TYPE
 
-THREAD_BODY (fibonacci)
+TASK_BODY (fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -111,10 +111,10 @@ int main(int argc, char* argv[argc+1])
 
 	warn("ThreadID: %d", thread_id());
 
-	err += spawn_thread(spinner, .delay=us2ns(usDELAY));
+	err += task(spinner, .delay=us2ns(usDELAY));
 
 	Future fib_N;
-	err += spawn_future(fibonacci, &fib_N, .n=N);
+	err += future(fibonacci, &fib_N, .n=N);
 	err += future_join(&fib_N);
 
 	assert(err==0);

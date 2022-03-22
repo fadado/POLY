@@ -23,8 +23,8 @@ typedef struct Port {
 
 static void port_destroy(Port *const this);
 static int  port_init(Port *const this);
-static int  port_receive(Port *const this, Scalar* message);
-static int  port_send(Port *const this, Scalar message);
+static int  port_receive(Port *const this, Scalar* request);
+static int  port_send(Port *const this, Scalar scalar);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -95,12 +95,14 @@ port_destroy (Port *const this)
 	}
 
 static inline int
-port_send (Port *const this, Scalar message)
+port_send (Port *const this, Scalar scalar)
 {
 	int err;
 	ENTER_PORT_MONITOR
 
-	void thunk(void) { this->value = message; }
+	void thunk(void) {
+		this->value = scalar;
+	}
 	catch (board_send(this->board, thunk));
 	++this->pending;
 
@@ -110,13 +112,13 @@ port_send (Port *const this, Scalar message)
 }
 
 static inline int
-port_receive (Port *const this, Scalar* message)
+port_receive (Port *const this, Scalar* request)
 {
 	int err;
 	ENTER_PORT_MONITOR
 
 	catch (board_receive(this->board));
-	if (message) *message = this->value;
+	if (request) *request = this->value;
 	--this->pending;
 
 	LEAVE_PORT_MONITOR

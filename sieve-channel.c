@@ -15,12 +15,12 @@
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (generate_candidates, static)
+TASK_TYPE (generate_candidates, static)
 	Channel* input;
 	Channel* output;
 END_TYPE
 
-THREAD_BODY (generate_candidates)
+TASK_BODY (generate_candidates)
 	assert(this.input == (Channel*)0);
 
 	int n = 2;
@@ -35,13 +35,13 @@ END_BODY
 // Filter multiples of `this->prime`
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (filter_multiples, static)
+TASK_TYPE (filter_multiples, static)
 	Channel* input;
 	Channel* output;
 	int      prime;
 END_TYPE
 
-THREAD_BODY (filter_multiples)
+TASK_BODY (filter_multiples)
 	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
 	}
@@ -60,6 +60,8 @@ END_BODY
 
 int main(int argc, char* argv[argc+1])
 {
+	int err = 0;
+
 	enum { NPRIMES=100 };
 	int n = (argc == 1) ? NPRIMES : atoi(argv[1]);
 	if (n <= 0) n = NPRIMES; // ignore bad parameter
@@ -70,7 +72,8 @@ int main(int argc, char* argv[argc+1])
 	enum { syncronous=0, asyncronous=1 };
 	Channel* input = alloc();
 	channel_init(input, asyncronous);
-	connect(generate_candidates, (Channel*)0, input);
+	err = filter(generate_candidates, (Channel*)0, input);
+	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {
 		Scalar s;
@@ -79,7 +82,7 @@ int main(int argc, char* argv[argc+1])
 
 		Channel* output = alloc();
 		channel_init(output, asyncronous);
-		connect(filter_multiples, input, output, .prime=prime);
+		filter(filter_multiples, input, output, .prime=prime);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));
 

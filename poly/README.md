@@ -5,5 +5,8 @@ Contents:
 + POLY.h
 + scalar.h
 + thread.h
-+ task.h
++ future.h
 + sugar.h
++ syncop.h
+
+
