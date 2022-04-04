@@ -49,7 +49,7 @@ TASK_TYPE (spinner, static)
 END_TYPE
 
 TASK_BODY (spinner)
-	warn("ThreadID: %d", thread_id());
+	warn("TaskID: %d", task_id());
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
@@ -81,7 +81,7 @@ TASK_BODY (fibonacci)
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	warn("ThreadID: %d", thread_id());
+	warn("TaskID: %d", task_id());
 
 	SIGNAL (calculating);
 
@@ -103,13 +103,14 @@ END_BODY
 
 int main(int argc, char* argv[argc+1])
 {
-	Time s,ms,us,ns, t = now();
 	int err = 0;
+
 	enum { N=46, usDELAY=500}; // fib(46)=1836311903
+	Time s,ms,us,ns, t = now();
 
 	hide_cursor();
 
-	warn("ThreadID: %d", thread_id());
+	warn("TaskID: %d", task_id());
 
 	err += task(spinner, .delay=us2ns(usDELAY));
 
@@ -117,7 +118,7 @@ int main(int argc, char* argv[argc+1])
 	err += future(fibonacci, &fib_N, .n=N);
 	err += future_join(&fib_N);
 
-	assert(err==0);
+	assert(err == 0);
 
 	long n = cast(future_get(&fib_N), long);
 	assert(n == 1836311903ul);

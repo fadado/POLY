@@ -20,7 +20,6 @@ static int      thread_detach(Thread thread);
 static bool     thread_equal(Thread lhs, Thread rhs);
 static void     thread_exit(int result);
 static int      thread_fork(int main(void*), void* argument, Thread* this);
-static unsigned thread_id(void);
 static int      thread_join(Thread thread, int *const result);
 static int      thread_sleep(Time duration);
 static void     thread_yield(void);
@@ -77,17 +76,6 @@ static ALWAYS inline void
 thread_exit (int result)
 {
 	thrd_exit(result);
-}
-
-// atomic global counter (provide unique IDs)
-static _Atomic       unsigned thread_ID_COUNT_ = 1; // next valid ID
-// see update example at poly/sugar.h
-static _Thread_local unsigned thread_ID_ = 0; // reserved to main
-
-static ALWAYS inline unsigned
-thread_id (void)
-{
-	return thread_ID_;
 }
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

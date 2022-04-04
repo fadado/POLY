@@ -29,12 +29,23 @@
     {   /*assert(arg_ != (void*)0);*/\
         struct T const this = *((struct T*)arg_);\
         /* fetch-and-increment atomic global counter*/\
-        thread_ID_ = thread_ID_COUNT_++;\
+        task_ID_ = task_ID_COUNT_++;\
         thread_detach(thread_current());
 
 #define END_BODY\
         return 0;\
     }
+
+// atomic global counter (provide unique IDs)
+static _Atomic       unsigned task_ID_COUNT_ = 1;
+// task ID: 0, 1, ...
+static _Thread_local unsigned task_ID_ = 0; // 0 reserved to main
+
+static ALWAYS inline unsigned
+task_id (void)
+{
+	return task_ID_;
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Spawning threads, futures, filters...
