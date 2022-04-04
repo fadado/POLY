@@ -1,5 +1,5 @@
-#ifndef SUGAR_H
-#define SUGAR_H
+#ifndef TASK_H
+#define TASK_H
 
 ////////////////////////////////////////////////////////////////////////
 // Declaring and defining tasks
@@ -91,7 +91,7 @@ task_id (void)
  *      ...
  *  END_BODY
  */
-#define future(T,F,...)\
+#define promise(T,F,...)\
     future_fork(T,\
         &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 

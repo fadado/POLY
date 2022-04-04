@@ -9,7 +9,7 @@
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/future.h"
-#include "poly/sugar.h"
+#include "poly/task.h"
 
 #include "poly/syncop.h"
 
@@ -44,11 +44,11 @@ static volatile bool calculating = false;
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (spinner, static)
+TASK_TYPE (Spinner, static)
 	int delay; // nanoseconds
 END_TYPE
 
-TASK_BODY (spinner)
+TASK_BODY (Spinner)
 	warn("TaskID: %d", task_id());
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
@@ -70,12 +70,12 @@ END_BODY
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (fibonacci, static)
+TASK_TYPE (Fibonacci, static)
     Future* future;
 	long    n;
 END_TYPE
 
-TASK_BODY (fibonacci)
+TASK_BODY (Fibonacci)
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
@@ -112,10 +112,10 @@ int main(int argc, char* argv[argc+1])
 
 	warn("TaskID: %d", task_id());
 
-	err += task(spinner, .delay=us2ns(usDELAY));
+	err += task(Spinner, .delay=us2ns(usDELAY));
 
 	Future fib_N;
-	err += future(fibonacci, &fib_N, .n=N);
+	err += promise(Fibonacci, &fib_N, .n=N);
 	err += future_join(&fib_N);
 
 	assert(err == 0);
