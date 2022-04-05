@@ -72,7 +72,7 @@ int main(int argc, char* argv[argc+1])
 	enum { syncronous=0, asyncronous=1 };
 	Channel* input = alloc();
 	channel_init(input, asyncronous);
-	err = filter(GenerateCandidates, (Channel*)0, input);
+	err = RUN_filter(GenerateCandidates, (Channel*)0, input);
 	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {
@@ -82,7 +82,7 @@ int main(int argc, char* argv[argc+1])
 
 		Channel* output = alloc();
 		channel_init(output, asyncronous);
-		err = filter(FilterMultiples, input, output, .prime=prime);
+		err = RUN_filter(FilterMultiples, input, output, .prime=prime);
 		assert(err == 0);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));

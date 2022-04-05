@@ -48,7 +48,7 @@ task_id (void)
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Spawning threads, futures, filters...
+// Running threads, futures, filters...
 ////////////////////////////////////////////////////////////////////////
 
 /*
@@ -60,7 +60,7 @@ task_id (void)
  *      ...
  *  END_BODY
  */
-#define task(T,...)\
+#define RUN_task(T,...)\
     thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
 
 /*
@@ -75,7 +75,7 @@ task_id (void)
  *      ...
  *  END_BODY
  */
-#define filter(T,I,O,...)\
+#define RUN_filter(T,I,O,...)\
     thread_fork(T, \
         &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
         &(Thread){0})
@@ -91,7 +91,7 @@ task_id (void)
  *      ...
  *  END_BODY
  */
-#define promise(T,F,...)\
+#define RUN_promise(T,F,...)\
     future_fork(T,\
         &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 

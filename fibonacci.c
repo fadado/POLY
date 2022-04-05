@@ -112,10 +112,10 @@ int main(int argc, char* argv[argc+1])
 
 	warn("TaskID: %d", task_id());
 
-	err += task(Spinner, .delay=us2ns(usDELAY));
+	err += RUN_task(Spinner, .delay=us2ns(usDELAY));
 
 	Future fib_N;
-	err += promise(Fibonacci, &fib_N, .n=N);
+	err += RUN_promise(Fibonacci, &fib_N, .n=N);
 	err += future_join(&fib_N);
 
 	assert(err == 0);
