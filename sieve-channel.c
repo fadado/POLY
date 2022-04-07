@@ -1,6 +1,8 @@
 // Sieve with one thread for each prime
 // gcc -Wall -O2 -lpthread sieve.c
 
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -21,7 +23,7 @@ TASK_TYPE (GenerateCandidates, static)
 END_TYPE
 
 TASK_BODY (GenerateCandidates)
-	assert(this.input == (Channel*)0);
+	assert(this.input == NULL);
 
 	int n = 2;
 	channel_send(this.output, (Signed)n);
@@ -69,10 +71,10 @@ int main(int argc, char* argv[argc+1])
 	Channel _chn_arena[n+1], *_chn_ptr=_chn_arena;
 	inline Channel* alloc(void) { return _chn_ptr++; }
 
-	enum { syncronous=0, asyncronous=1 };
+	enum { syncronous=0, asyncronous=7 };
 	Channel* input = alloc();
 	channel_init(input, asyncronous);
-	err = RUN_filter(GenerateCandidates, (Channel*)0, input);
+	err = RUN_filter(GenerateCandidates, NULL, input);
 	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {

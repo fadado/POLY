@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <error.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <threads.h> // include <time.h>
 
 ////////////////////////////////////////////////////////////////////////

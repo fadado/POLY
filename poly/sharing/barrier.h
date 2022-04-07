@@ -37,7 +37,7 @@ _barrier_empty (Barrier const*const this)
 }
 */
 
-static inline int
+static int
 barrier_init (Barrier *const this, int capacity)
 {
 	assert(capacity > 1);
@@ -55,7 +55,7 @@ barrier_init (Barrier *const this, int capacity)
 	return err;
 }
 
-static inline void
+static void
 barrier_destroy (Barrier *const this)
 {
 	assert(this->places == 0);

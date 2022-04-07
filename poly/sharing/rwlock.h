@@ -31,7 +31,7 @@ static int  rwlock_release(RWLock *const this);
 
 enum { RWLOCK_IDLE=0, RWLOCK_WRITING=-1 };
 
-static inline int
+static int
 rwlock_init (RWLock *const this)
 {
 	this->counter = RWLOCK_IDLE;
@@ -52,7 +52,7 @@ rwlock_init (RWLock *const this)
 	return err;
 }
 
-static inline void
+static void
 rwlock_destroy (RWLock *const this)
 {
 	assert(this->counter == RWLOCK_IDLE);

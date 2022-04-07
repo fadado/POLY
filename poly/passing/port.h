@@ -66,7 +66,7 @@ port_init (Port *const this)
 	return STATUS_SUCCESS;
 }
 
-static inline void
+static void
 port_destroy (Port *const this)
 {
 	assert(_port_empty(this));

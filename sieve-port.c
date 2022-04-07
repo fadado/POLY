@@ -1,6 +1,7 @@
 // Sieve with one thread for each prime
 // gcc -Wall -O2 -lpthread sieve.c
 
+#pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
 #include <stdio.h>
@@ -23,7 +24,7 @@ TASK_TYPE (GenerateCandidates, static)
 END_TYPE
 
 TASK_BODY (GenerateCandidates)
-	assert(this.input == (Port*)0);
+	assert(this.input == NULL);
 
 	int n = 2;
 	port_send(this.output, (Signed)n);
@@ -73,7 +74,7 @@ int main(int argc, char* argv[argc+1])
 
 	Port* input = alloc();
 	port_init(input);
-	err = RUN_filter(GenerateCandidates, (Port*)0, input);
+	err = RUN_filter(GenerateCandidates, NULL, input);
 	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {

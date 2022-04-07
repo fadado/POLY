@@ -22,14 +22,14 @@ static int  semaphore_init(Semaphore *const this, unsigned count);
 static int  semaphore_P(Semaphore *const this);
 static int  semaphore_V(Semaphore *const this);
 
-#define            semaphore_down(s) semaphore_P(s)
-#define            semaphore_wait(s) semaphore_P(s)
-#define            semaphore_acquire(s) semaphore_P(s)
+#define     semaphore_down(s) semaphore_P(s)
+#define     semaphore_wait(s) semaphore_P(s)
+#define     semaphore_acquire(s) semaphore_P(s)
 
-#define            semaphore_up(s) semaphore_V(s)
-#define            semaphore_post(s) semaphore_V(s)
-#define            semaphore_signal(s) semaphore_V(s)
-#define            semaphore_release(s) semaphore_V(s)
+#define     semaphore_up(s) semaphore_V(s)
+#define     semaphore_post(s) semaphore_V(s)
+#define     semaphore_signal(s) semaphore_V(s)
+#define     semaphore_release(s) semaphore_V(s)
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -58,7 +58,7 @@ _semaphore_idle (Semaphore *const this)
 }
 */
 
-static inline int
+static int
 semaphore_init (Semaphore *const this, unsigned count)
 {
 	this->counter = count;
@@ -74,7 +74,7 @@ semaphore_init (Semaphore *const this, unsigned count)
 	return err;
 }
 
-static inline void
+static void
 semaphore_destroy (Semaphore *const this)
 {
 	assert(this->counter == 0 );

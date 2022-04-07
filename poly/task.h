@@ -26,7 +26,7 @@
  */
 #define TASK_BODY(T)\
     int T (void* arg_)\
-    {   /*assert(arg_ != (void*)0);*/\
+    {   /*assert(arg_ != NULL);*/\
         struct T const this = *((struct T*)arg_);\
         /* fetch-and-increment atomic global counter*/\
         task_ID_ = task_ID_COUNT_++;\

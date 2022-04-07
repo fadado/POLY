@@ -1,12 +1,11 @@
 #ifndef CHANNEL_H
 #define CHANNEL_H
 
-#include <stdlib.h> // calloc
-
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
 #include "../scalar.h"
+#include "../array/fifo.h"
 #include "../monitor/lock.h"
 #include "../monitor/condition.h"
 #include "../monitor/notice.h"
@@ -21,10 +20,9 @@ typedef struct Channel {
 	atomic(unsigned) flags;
 	unsigned capacity;
 	unsigned occupation;
-	unsigned front;
 	union {
-		Scalar* buffer; // for capacity > 1
-		Scalar  value;  // for capacity == 1
+		FIFO   queue; // for capacity > 1
+		Scalar value; // for capacity == 1
 	};
 	Lock monitor; // RecursiveLock?
 	union {
@@ -51,20 +49,15 @@ static int  channel_send(Channel *const this, Scalar scalar);
 
 // Constants for flags
 enum channel_flag {
-	CHANNEL_BUFFERED  = (1<<0),
+	CHANNEL_SHARED    = (1<<0),
 	CHANNEL_BLOCKING  = (1<<1),
 	CHANNEL_CLOSED    = (1<<2),
 	CHANNEL_DRAINED   = (1<<3),
+	CHANNEL_BUFFERED  = (1<<4),
 };
 
 #ifdef DEBUG
-#	define ASSERT_CHANNEL_INVARIANT\
-		assert(0 <= this->occupation && this->occupation <= this->capacity);\
-		if (this->capacity > 1) {\
-			assert(0 <= this->front && this->front <  this->capacity);\
-			assert(this->buffer != (Scalar*)0);\
-		}\
-		assert(!(_channel_empty(this) && _channel_full(this)));
+#	define ASSERT_CHANNEL_INVARIANT
 #else
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
@@ -80,19 +73,22 @@ enum channel_flag {
 static ALWAYS inline bool
 _channel_empty (Channel const*const this)
 {
-	return this->occupation == 0;
+	return (this->flags & CHANNEL_BUFFERED)
+		? fifo_empty(&this->queue)
+		: this->occupation == 0;
 }
 
 static ALWAYS inline bool
 _channel_full (Channel const*const this)
 {
-	return this->occupation == this->capacity;
+	return (this->flags & CHANNEL_BUFFERED)
+		? fifo_full(&this->queue)
+		: this->occupation == 1;
 }
 
 //
 // Channel life
 //
-
 static int
 channel_init (Channel *const this, unsigned capacity)
 {
@@ -105,60 +101,64 @@ channel_init (Channel *const this, unsigned capacity)
 
 	switch (this->capacity) {
 		case 0:
+			this->flags |= CHANNEL_BLOCKING;
 			err = board_init(this->board, 2, &this->monitor);
 			if (err != STATUS_SUCCESS) {
 				lock_destroy(&this->monitor);
 				return err;
 			}
 			this->capacity = 1;
-			this->flags |= CHANNEL_BLOCKING;
 			break;
 		default: // > 1
-			this->front = 0;
-			this->buffer = calloc(this->capacity, sizeof(Scalar));
-			if (!this->buffer) {
+			this->flags |= CHANNEL_BUFFERED;
+			err = fifo_init(&this->queue, capacity);
+			if (err != STATUS_SUCCESS) {
 				lock_destroy(&this->monitor);
 				return err;
 			}
 			fallthrough;
 		case 1:
+			this->flags |= CHANNEL_SHARED;
 			err = condition_init(&this->non_empty);
 			if (err != STATUS_SUCCESS) {
-				if (this->capacity > 1) { free(this->buffer); }
+				if (this->flags & CHANNEL_BUFFERED) {
+					fifo_destroy(&this->queue);
+				}
 				lock_destroy(&this->monitor);
 				return err;
 			}
 			err = condition_init(&this->non_full);
 			if (err != STATUS_SUCCESS) {
 				condition_destroy(&this->non_empty);
-				if (this->capacity > 1) { free(this->buffer); }
+				if (this->flags & CHANNEL_BUFFERED) {
+					fifo_destroy(&this->queue);
+				}
 				lock_destroy(&this->monitor);
 				return err;
 			}
-			this->flags |= CHANNEL_BUFFERED;
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
-
 	return STATUS_SUCCESS;
 }
 
-static inline void
+static void
 channel_destroy (Channel *const this)
 {
+	// ???
 	assert(_channel_empty(this));
 
-	if (this->flags & CHANNEL_BUFFERED) {
+	if (this->flags & CHANNEL_BLOCKING) {
+		board_destroy(this->board, 2);
+	} else {
+		assert(this->flags & CHANNEL_SHARED);
 		condition_destroy(&this->non_full);
 		condition_destroy(&this->non_empty);
-	} else if (this->flags & CHANNEL_BLOCKING) {
-		board_destroy(this->board, 2);
+		if (this->flags & CHANNEL_BUFFERED) {
+			fifo_destroy(&this->queue);
+		}
 	}
 	lock_destroy(&this->monitor);
-	if (this->capacity > 1) {
-		free(this->buffer);
-		this->buffer = (Scalar*)0;
-	}
 }
 
 static inline void
@@ -203,6 +203,9 @@ channel_drained (Channel const*const this)
 		return err;\
 	}
 
+//
+// Monitor entries
+//
 static inline int
 channel_send (Channel *const this, Scalar scalar)
 {
@@ -214,24 +217,19 @@ channel_send (Channel *const this, Scalar scalar)
 	ENTER_CHANNEL_MONITOR (_channel_full, this->non_full)
 
 	if (this->flags & CHANNEL_BLOCKING) {
-		assert(this->capacity == 1);
 		void thunk(void) {
 			this->value = scalar;
 		}
 		catch (board_send(this->board, thunk));
-	} else if (this->capacity == 1) {
-		assert(_channel_empty(this));
-		this->value = scalar;
+	} else if (this->flags & CHANNEL_BUFFERED) {
+		fifo_put(&this->queue, scalar);
 	} else {
-		assert(this->capacity > 1);
-		this->buffer[this->front] = scalar;
-		this->front = (this->front+1) % this->capacity;
+		this->value = scalar;
 	}
 	++this->occupation;
 	ASSERT_CHANNEL_INVARIANT
 
 	LEAVE_CHANNEL_MONITOR (this->non_empty)
-
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
@@ -250,18 +248,19 @@ channel_receive (Channel *const this, Scalar* request)
 	ENTER_CHANNEL_MONITOR (_channel_empty, this->non_empty)
 
 	if (this->flags & CHANNEL_BLOCKING) {
-		assert(this->capacity == 1);
 		catch (board_receive(this->board));
-		if (request) *request = this->value;
-	} else if (this->capacity == 1) {
-		assert(_channel_full(this));
-		if (request) *request = this->value;
-	} else if (request) {
-		assert(this->capacity > 1);
-		register int back = this->front - this->occupation;
-		back = (back >= 0) ? back : back+this->capacity;
-		*request = this->buffer[back];
-	} // else ignore
+		if (request) {
+			*request = this->value;
+		}
+	} else if (this->flags & CHANNEL_BUFFERED) {
+		if (request) {
+			*request = fifo_get(&this->queue);
+		}
+	} else {
+		if (request) {
+			*request = this->value;
+		}
+	}
 	--this->occupation;
 	ASSERT_CHANNEL_INVARIANT
 
@@ -270,7 +269,6 @@ channel_receive (Channel *const this, Scalar* request)
 	}
 
 	LEAVE_CHANNEL_MONITOR (this->non_full)
-
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);

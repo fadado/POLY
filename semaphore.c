@@ -16,7 +16,7 @@ enum { N=10, M=10000 };
 
 int thread_test(void* arg)
 {
-	assert(arg == (void*)0);
+	assert(arg == NULL);
 #ifdef DEBUG
 	//warn("Enter %s", __func__);
 #endif
@@ -44,11 +44,11 @@ static void test_lock(void)
 
 	Thread t[N];
 	for (int i=0; i < N; ++i) {
-		int e = thread_fork(thread_test, (void*)0, &t[i]);
+		int e = thread_fork(thread_test, NULL, &t[i]);
 		assert(e == STATUS_SUCCESS);
 	}
 	for (int i=0; i < N; ++i) {
-		int e = thread_join(t[i], (int*)0);
+		int e = thread_join(t[i], NULL);
 		assert(e == STATUS_SUCCESS);
 	}
 	assert(test_lock_counter == N*M);

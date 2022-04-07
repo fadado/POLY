@@ -49,7 +49,7 @@ notice_destroy (Notice *const this)
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
 
-	this->mutex = (mtx_t*)0;
+	this->mutex = NULL;
 	cnd_destroy(&this->queue);
 }
 
