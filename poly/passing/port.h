@@ -15,8 +15,8 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Port {
-	unsigned pending;
 	Scalar   value;
+	unsigned occupation; // 0 or 1
 	Lock     monitor;
 	Notice   board[2];
 } Port;
@@ -30,19 +30,26 @@ static int  port_send(Port *const this, Scalar scalar);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
+#ifdef DEBUG
+#	define ASSERT_PORT_INVARIANT\
+		assert(_port_empty(this) != _port_full(this));
+#else
+#	define ASSERT_PORT_INVARIANT
+#endif
+
 //
 // Predicates
 //
 static ALWAYS inline bool
 _port_empty (Port const*const this)
 {
-	return this->pending == 0;
+	return this->occupation == 0;
 }
 
 static ALWAYS inline bool
 _port_full (Port const*const this)
 {
-	return this->pending == 1;
+	return this->occupation == 1;
 }
 
 //
@@ -54,7 +61,7 @@ port_init (Port *const this)
 {
 	int err;
 
-	this->pending = 0;
+	this->occupation = 0;
 
 	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
 		return err;
@@ -63,14 +70,15 @@ port_init (Port *const this)
 		lock_destroy(&this->monitor);
 		return err;
 	}
+	ASSERT_PORT_INVARIANT
+
 	return STATUS_SUCCESS;
 }
 
 static void
 port_destroy (Port *const this)
 {
-	assert(_port_empty(this));
-
+	assert(_port_empty(this)); // TODO: require emptyness???
 	board_destroy(this->board, 2);
 	lock_destroy(&this->monitor);
 }
@@ -104,10 +112,10 @@ port_send (Port *const this, Scalar scalar)
 		this->value = scalar;
 	}
 	catch (board_send(this->board, thunk));
-	++this->pending;
+	++this->occupation;
+	ASSERT_PORT_INVARIANT
 
 	LEAVE_PORT_MONITOR
-
 	return STATUS_SUCCESS;
 }
 
@@ -118,15 +126,18 @@ port_receive (Port *const this, Scalar* request)
 	ENTER_PORT_MONITOR
 
 	catch (board_receive(this->board));
-	if (request) *request = this->value;
-	--this->pending;
+	if (request) {
+		*request = this->value;
+	}
+	--this->occupation;
+	ASSERT_PORT_INVARIANT
 
 	LEAVE_PORT_MONITOR
-
 	return STATUS_SUCCESS;
 }
 
 #undef catch
+#undef ASSERT_PORT_INVARIANT
 #undef ENTER_PORT_MONITOR
 #undef LEAVE_PORT_MONITOR
 

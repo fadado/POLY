@@ -17,23 +17,17 @@ typedef struct Notice {
 	cnd_t    queue;
 } Notice;
 
+static bool notice_empty (Notice const*const this);
 static int  notice_broadcast(Notice *const this);
 static int  notice_enquire(Notice *const this);
-static void notice_destroy(Notice *const this);
 static int  notice_init(Notice *const this, union Lock lock);
 static int  notice_notify(Notice *const this);
-static bool notice_empty (Notice const*const this);
 static int  notice_wait(Notice *const this);
+static void notice_destroy(Notice *const this);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
-
-static ALWAYS inline bool
-notice_empty (Notice const*const this)
-{
-	return this->waiting == 0;
-}
 
 static inline int
 notice_init (Notice *const this, union Lock lock)
@@ -51,6 +45,12 @@ notice_destroy (Notice *const this)
 
 	this->mutex = NULL;
 	cnd_destroy(&this->queue);
+}
+
+static ALWAYS inline bool
+notice_empty (Notice const*const this)
+{
+	return this->waiting == 0;
 }
 
 static inline int

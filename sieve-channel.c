@@ -71,7 +71,7 @@ int main(int argc, char* argv[argc+1])
 	Channel _chn_arena[n+1], *_chn_ptr=_chn_arena;
 	inline Channel* alloc(void) { return _chn_ptr++; }
 
-	enum { syncronous=0, asyncronous=7 };
+	enum { syncronous=0, asyncronous=1 };
 	Channel* input = alloc();
 	channel_init(input, asyncronous);
 	err = RUN_filter(GenerateCandidates, NULL, input);
