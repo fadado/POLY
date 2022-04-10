@@ -79,24 +79,24 @@ barrier_destroy (Barrier *const this)
 //Monitor helpers
 //
 #define ENTER_BARRIER_MONITOR\
-	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
-	return err;
-
-#define LEAVE_BARRIER_MONITOR\
-	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS)\
-	return err;\
-
-#define CHECK_BARRIER_MONITOR(E)\
-	if ((E)!=STATUS_SUCCESS) {\
-		lock_release(&this->monitor);\
-		return (E);\
+	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
+		return err;\
 	}
 
-// Error management strategy for this module
-#define catch(X)\
-	if ((err=(X)) != STATUS_SUCCESS)\
-		goto onerror
+#define LEAVE_BARRIER_MONITOR\
+	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
+		return err;\
+	}
 
+/* How to detect each "cycle":
+ *
+ * switch (barrier_wait(&b)) {
+ *     case BARRIER_FULL:   cycle completed
+ *     case STATUS_SUCCESS: take one place
+ *     default:             error
+ * }
+ *
+ */
 static inline int
 barrier_wait (Barrier *const this)
 {

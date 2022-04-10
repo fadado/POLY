@@ -45,12 +45,12 @@ _semaphore_value (Semaphore *const this)
 
 // Number of blocked threads in the queue
 static ALWAYS inline int
-_semaphore_length (Semaphore *const this)
+_semaphore_waiting (Semaphore *const this)
 {
 	return (this->counter < 0) ? -this->counter : 0;
 }
 
-// Idle state ("red" semaphore)? value==0 and length==0
+// Idle state ("red" semaphore)? value==0 and waiting==0
 static ALWAYS inline bool
 _semaphore_idle (Semaphore *const this)
 {
@@ -87,19 +87,13 @@ semaphore_destroy (Semaphore *const this)
 //Monitor helpers
 //
 #define ENTER_SEMAPHORE_MONITOR\
-	int err_;\
-	if ((err_=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
-	return err_;
+	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
+		return err;\
+	}
 
 #define LEAVE_SEMAPHORE_MONITOR\
-	if ((err_=lock_release(&this->monitor))!=STATUS_SUCCESS)\
-	return err_;\
-	else return STATUS_SUCCESS;
-
-#define CHECK_SEMAPHORE_MONITOR(E)\
-	if ((E)!=STATUS_SUCCESS) {\
-		lock_release(&this->monitor);\
-		return (E);\
+	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
+		return err;\
 	}
 
 /*
@@ -111,16 +105,20 @@ having used a unit of the resource.
 static inline int
 semaphore_P (Semaphore *const this)
 {
+	int err;
 	ENTER_SEMAPHORE_MONITOR
 
 	--this->counter;
-	register int length = this->counter < 0 ? -this->counter : 0;
-	if (length > 0) {
-		const int err = notice_wait(&this->queue);
-		CHECK_SEMAPHORE_MONITOR (err)
+	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
+	if (waiting > 0) {
+		catch (notice_wait(&this->queue));
 	}
 
 	LEAVE_SEMAPHORE_MONITOR
+	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 /*
@@ -132,20 +130,23 @@ to the ready queue.
 static inline int
 semaphore_V (Semaphore *const this)
 {
+	int err;
 	ENTER_SEMAPHORE_MONITOR
 
-	unsigned length = this->counter < 0 ? -this->counter : 0;
+	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
 	++this->counter;
-	if (length > 0) {
-		const int err = notice_notify(&this->queue);
-		CHECK_SEMAPHORE_MONITOR (err)
+	if (waiting > 0) {
+		catch (notice_notify(&this->queue));
 	}
 
 	LEAVE_SEMAPHORE_MONITOR
+	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 #undef ENTER_SEMAPHORE_MONITOR
 #undef LEAVE_SEMAPHORE_MONITOR
-#undef CHECK_SEMAPHORE_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

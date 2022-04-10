@@ -8,7 +8,7 @@
 #define DEBUG
 #include "poly/scalar.h"
 #include "poly/thread.h"
-#include "poly/sharing/semaphore.h"
+#include "poly/sync/semaphore.h"
 
 static Semaphore test_lock_mutex;
 static Signed test_lock_counter;
@@ -53,6 +53,8 @@ static void test_lock(void)
 	}
 	assert(test_lock_counter == N*M);
 	warn("COUNT: %lld\n", test_lock_counter);
+
+	//semaphore_destroy(&test_lock_mutex);
 }
 
 int main(int argc, char* argv[argc+1])

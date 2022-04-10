@@ -30,11 +30,6 @@ static int  board_accept(Notice board[3], void(thunk)(void));
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-// Same error management strategy in all this module
-#define catch(X)\
-	if ((err=(X)) != STATUS_SUCCESS)\
-		return err
-
 static int
 board_init (Notice board[], unsigned n, union Lock lock)
 {
@@ -84,11 +79,16 @@ board_meet (Notice board[2], unsigned i)
 	// Thread A | Thread B
 	// ---------+---------
 	// meet(0)  |  meet(1)
+
 	assert(i < 2);
 	int err;
+
 	catch (board_notify(board, i));
 	catch (board_enquire(board, !i));
+
 	return STATUS_SUCCESS;
+onerror:
+	return err;
 }
 
 static ALWAYS inline int
@@ -101,10 +101,14 @@ static ALWAYS inline int
 board_send (Notice board[2], void(thunk)(void))
 {
 	int err;
+
 	catch (board_enquire(board, 0));
 	thunk();
 	catch (board_notify(board, 1));
+
 	return STATUS_SUCCESS;
+onerror:
+	return err;
 }
 
 //
@@ -115,24 +119,30 @@ static ALWAYS inline int
 board_call (Notice board[3], void(thunk)(void))
 {
 	int err;
+
 	catch (board_enquire(board, 0));
 	thunk();
 	catch (board_notify(board, 1));
 	catch (board_enquire(board, 2));
+
 	return STATUS_SUCCESS;
+onerror:
+	return err;
 }
 
 static ALWAYS inline int
 board_accept (Notice board[3], void(thunk)(void))
 {
 	int err;
+
 	catch (board_notify(board, 0));
 	catch (board_enquire(board, 1));
 	thunk();
 	catch (board_notify(board, 2));
-	return STATUS_SUCCESS;
-}
 
-#undef catch
+	return STATUS_SUCCESS;
+onerror:
+	return err;
+}
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

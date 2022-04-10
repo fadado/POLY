@@ -11,7 +11,7 @@
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/task.h"
-#include "poly/passing/channel.h"
+#include "poly/pass/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Generate 2,3,5,7,9...

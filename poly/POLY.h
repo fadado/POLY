@@ -39,6 +39,12 @@ enum {
 	STATUS_TIMEDOUT = thrd_timedout,
 };
 
+// error management strategy (assume `int err;` defined)
+#define catch(X)\
+	if ((err=(X)) != STATUS_SUCCESS) {\
+		goto onerror;\
+	}
+
 ////////////////////////////////////////////////////////////////////////
 // Other facilities
 ////////////////////////////////////////////////////////////////////////
@@ -56,20 +62,20 @@ enum {
 #define atomic(T)   _Atomic(T)
 
 ////////////////////////////////////////////////////////////////////////
-// Time measured in nanoseconds
+// Clock time measured in nanoseconds
 ////////////////////////////////////////////////////////////////////////
 
-typedef unsigned long long Time;
+typedef unsigned long long Clock;
 
-#define s2ns(T)     (Time)((T)*1000000000ull)
-#define ms2ns(T)    (Time)((T)*1000000ull)
-#define us2ns(T)    (Time)((T)*1000ull)
-#define ns2s(T)     (Time)((T)/1000000000ull)
-#define ns2ms(T)    (Time)((T)/1000000ull)
-#define ns2us(T)    (Time)((T)/1000ull)
+#define s2ns(T)     (Clock)((T)*1000000000ull)
+#define ms2ns(T)    (Clock)((T)*1000000ull)
+#define us2ns(T)    (Clock)((T)*1000ull)
+#define ns2s(T)     (Clock)((T)/1000000000ull)
+#define ns2ms(T)    (Clock)((T)/1000000ull)
+#define ns2us(T)    (Clock)((T)/1000ull)
 
 // TIME_UTC based absolute calendar time point
-static inline Time
+static inline Clock
 now (void)
 {
 	struct timespec ts;

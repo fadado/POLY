@@ -63,11 +63,6 @@ enum channel_flag {
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
 
-// Error management strategy for this module
-#define catch(X)\
-	if ((err=(X)) != STATUS_SUCCESS)\
-		goto onerror
-
 //
 // Private predicates
 //
@@ -262,7 +257,6 @@ onerror:
 	return err;
 }
 
-#undef catch
 #undef ASSERT_CHANNEL_INVARIANT
 #undef ENTER_CHANNEL_MONITOR
 #undef LEAVE_CHANNEL_MONITOR

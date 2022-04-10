@@ -6,7 +6,7 @@
 #endif
 #include "scalar.h"
 #include "thread.h"
-#include "passing/port.h"
+#include "pass/port.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Interface

@@ -31,7 +31,7 @@ static void lock_destroy(union Lock this);
 static int  lock_init(union Lock this, unsigned mask);
 static int  lock_release(union Lock this);
 static int  lock_try(union Lock this);
-static int  lock_try_for(union Lock this, Time duration);
+static int  lock_try_for(union Lock this, Clock duration);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -76,9 +76,9 @@ lock_try (union Lock this)
 }
 
 static inline int
-lock_try_for (union Lock this, Time duration)
+lock_try_for (union Lock this, Clock duration)
 {
-	const Time   t  = now() + duration;
+	const Clock  t  = now() + duration;
 	const time_t s  = ns2s(t);
 	const long   ns = t - s2ns(s);
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});

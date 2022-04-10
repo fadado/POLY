@@ -8,7 +8,7 @@
 #define DEBUG
 #include "poly/thread.h"
 #include "poly/scalar.h"
-#include "poly/passing/channel.h"
+#include "poly/pass/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test
@@ -23,7 +23,6 @@
 static int task_producer(void* arg)
 {
 	int err;
-#	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) return err
 
 #ifdef DEBUG
 	warn("Enter %s", __func__);
@@ -42,7 +41,8 @@ static int task_producer(void* arg)
 	warn("Exit %s", __func__);
 #endif
 	return STATUS_SUCCESS;
-#	undef catch
+onerror:
+	return err;
 }
 
 /*
@@ -51,7 +51,6 @@ static int task_producer(void* arg)
 static int task_consumer(void* arg)
 {
 	int err;
-#	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) return err
 
 #ifdef DEBUG
 	warn("Enter %s", __func__);
@@ -71,7 +70,8 @@ static int task_consumer(void* arg)
 	warn("Exit %s", __func__);
 #endif
 	return STATUS_SUCCESS;
-#	undef catch
+onerror:
+	return err;
 }
 
 /*
@@ -80,7 +80,6 @@ static int task_consumer(void* arg)
 int main(int argc, char* argv[argc+1])
 {
 	int err, status;
-#	define catch(X)	if ((err=(X))!=STATUS_SUCCESS) goto onerror
 
 	Channel channel;
 	catch (channel_init(&channel, N));
@@ -97,7 +96,6 @@ int main(int argc, char* argv[argc+1])
 
 	return EXIT_SUCCESS;
 onerror:
-#	undef catch
 	static const char* ename[] = {
 		[STATUS_SUCCESS] = "thrd_success",
 		[STATUS_NOMEM] = "thrd_nomem",

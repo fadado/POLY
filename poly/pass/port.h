@@ -96,12 +96,6 @@ port_destroy (Port *const this)
 		return err;\
 	}
 
-#define catch(X)\
-	if ((err=(X)) != STATUS_SUCCESS) {\
-		lock_release(&this->monitor);\
-		return err;\
-	}
-
 static inline int
 port_send (Port *const this, Scalar scalar)
 {
@@ -117,6 +111,9 @@ port_send (Port *const this, Scalar scalar)
 
 	LEAVE_PORT_MONITOR
 	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 static inline int
@@ -134,9 +131,11 @@ port_receive (Port *const this, Scalar* request)
 
 	LEAVE_PORT_MONITOR
 	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
-#undef catch
 #undef ASSERT_PORT_INVARIANT
 #undef ENTER_PORT_MONITOR
 #undef LEAVE_PORT_MONITOR

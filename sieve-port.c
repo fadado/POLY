@@ -12,7 +12,7 @@
 #include "poly/scalar.h"
 #include "poly/thread.h"
 #include "poly/task.h"
-#include "poly/passing/port.h"
+#include "poly/pass/port.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Generate 2,3,5,7,9...

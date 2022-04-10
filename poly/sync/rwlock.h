@@ -66,19 +66,13 @@ rwlock_destroy (RWLock *const this)
 //Monitor helpers
 //
 #define ENTER_RWLOCK_MONITOR\
-	int err_;\
-	if ((err_=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
-	return err_;
+	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
+		return err;\
+	}
 
 #define LEAVE_RWLOCK_MONITOR\
-	if ((err_=lock_release(&this->monitor))!=STATUS_SUCCESS)\
-	return err_;\
-	else return STATUS_SUCCESS;
-
-#define CHECK_RWLOCK_MONITOR(E)\
-	if ((E)!=STATUS_SUCCESS) {\
-		lock_release(&this->monitor);\
-		return (E);\
+	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
+		return err;\
 	}
 
 //
@@ -87,33 +81,40 @@ rwlock_destroy (RWLock *const this)
 static inline int
 rwlock_acquire (RWLock *const this)
 {
+	int err;
 	ENTER_RWLOCK_MONITOR
 
 	if (this->counter != RWLOCK_IDLE) {
-		const int err = notice_enquire(&this->writers);
-		CHECK_RWLOCK_MONITOR (err)
+		catch (notice_enquire(&this->writers));
 		assert(this->counter == RWLOCK_IDLE);
 	}
 	this->counter = RWLOCK_WRITING;
 
 	LEAVE_RWLOCK_MONITOR
+	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 static inline int
 rwlock_release (RWLock *const this)
 {
+	int err;
 	ENTER_RWLOCK_MONITOR
 
 	this->counter = RWLOCK_IDLE;
 	if (!notice_empty(&this->writers)) {
-		const int err = notice_notify(&this->writers);
-		CHECK_RWLOCK_MONITOR (err)
+		catch (notice_notify(&this->writers));
 	} else if (!notice_empty(&this->readers)) {
-		const int err = notice_broadcast(&this->readers);
-		CHECK_RWLOCK_MONITOR (err)
+		catch (notice_broadcast(&this->readers));
 	}
 
 	LEAVE_RWLOCK_MONITOR
+	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 //
@@ -122,34 +123,41 @@ rwlock_release (RWLock *const this)
 static inline int
 rwlock_enter (RWLock *const this)
 {
+	int err;
 	ENTER_RWLOCK_MONITOR
 
 	while (this->counter == RWLOCK_WRITING) {
-		const int err = notice_wait(&this->readers);
-		CHECK_RWLOCK_MONITOR (err)
+		catch (notice_wait(&this->readers));
 	}
 	++this->counter;
 
 	LEAVE_RWLOCK_MONITOR
+	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 static inline int
 rwlock_leave (RWLock *const this)
 {
+	int err;
 	ENTER_RWLOCK_MONITOR
 
 	if (--this->counter == RWLOCK_IDLE) {
 		if (!notice_empty(&this->writers)) {
-			const int err = notice_notify(&this->writers);
-			CHECK_RWLOCK_MONITOR (err)
+			catch (notice_notify(&this->writers));
 		}
 	}
 
 	LEAVE_RWLOCK_MONITOR
+	return STATUS_SUCCESS;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
 #undef ENTER_RWLOCK_MONITOR
 #undef LEAVE_RWLOCK_MONITOR
-#undef CHECK_RWLOCK_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

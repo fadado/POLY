@@ -2,19 +2,29 @@
 
 Concurrent programming on top of C11 threads.
 
-Contents:
-
-    + poly/POLY.h
-    + poly/scalar.h
-    + poly/thread.h
-    + poly/task.h
-    + poly/sugar.h
-    + poly/monitor/lock.h
-    + poly/monitor/condition.h
-    + poly/monitor/notice.h
-    + poly/passing/channel.h
-    + poly/sharing/rwlock.h
-    + poly/sharing/barrier.h
-    + poly/sharing/semaphore.h
+```
+poly
+├── array
+│   └── fifo.h
+├── monitor
+│   ├── board.h
+│   ├── condition.h
+│   ├── lock.h
+│   └── notice.h
+├── pass
+│   ├── channel.h
+│   └── port.h
+├── sync
+│   ├── barrier.h
+│   ├── rwlock.h
+│   └── semaphore.h
+├── POLY.h
+├── future.h
+├── scalar.h
+├── syncop.h
+├── task.h
+└── thread.h
+```
 
 ![Tara Goddess](assets/tara.jpg)
+

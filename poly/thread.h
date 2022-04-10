@@ -1,10 +1,6 @@
 #ifndef THREAD_H
 #define THREAD_H
 
-/* Module parameters:
- *     THREAD_ID_SIZE
- */
-
 #ifndef POLY_H
 #include "POLY.h"
 #endif
@@ -21,7 +17,7 @@ static bool     thread_equal(Thread lhs, Thread rhs);
 static void     thread_exit(int result);
 static int      thread_fork(int main(void*), void* argument, Thread* this);
 static int      thread_join(Thread thread, int *const result);
-static int      thread_sleep(Time duration);
+static int      thread_sleep(Clock duration);
 static void     thread_yield(void);
 
 ////////////////////////////////////////////////////////////////////////
@@ -65,7 +61,7 @@ thread_yield (void)
 }
 
 static ALWAYS inline int
-thread_sleep (Time duration)
+thread_sleep (Clock duration)
 {
 	const time_t s  = ns2s(duration);
 	const long   ns = duration - s2ns(s);

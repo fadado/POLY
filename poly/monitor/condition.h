@@ -17,7 +17,7 @@ static void condition_destroy(Condition *const this);
 static int  condition_init(Condition *const this);
 static int  condition_notify(Condition *const this);
 static int  condition_wait(Condition *const this, union Lock lock);
-static int  condition_wait_for(Condition *const this, union Lock lock, Time duration);
+static int  condition_wait_for(Condition *const this, union Lock lock, Clock duration);
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
@@ -54,9 +54,9 @@ condition_broadcast (Condition *const this)
 }
 
 static inline int
-condition_wait_for (Condition *const this, union Lock lock, Time duration)
+condition_wait_for (Condition *const this, union Lock lock, Clock duration)
 {
-	const Time   t  = now() + duration;
+	const Clock  t  = now() + duration;
 	const time_t s  = ns2s(t);
 	const long   ns = t - s2ns(s);
 	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
