@@ -63,7 +63,7 @@ enum channel_flag {
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
 
-// Same error management strategy on all this module
+// Error management strategy for this module
 #define catch(X)\
 	if ((err=(X)) != STATUS_SUCCESS)\
 		goto onerror
@@ -142,11 +142,11 @@ channel_destroy (Channel *const this)
 		board_destroy(this->board, 2);
 	} else {
 		assert(CHANNEL_SHARED & this->flags);
+		condition_destroy(&this->non_full);
+		condition_destroy(&this->non_empty);
 		if (CHANNEL_BUFFERED & this->flags) {
 			fifo_destroy(&this->queue);
 		}
-		condition_destroy(&this->non_full);
-		condition_destroy(&this->non_empty);
 	}
 	lock_destroy(&this->monitor);
 }

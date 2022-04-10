@@ -12,10 +12,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	unsigned capacity; // # of threads to wait before opening the barrier
-	unsigned places;   // # of threads still expected before opening
-	Lock     monitor;
-	Notice   move_on;
+	signed capacity; // # of threads to wait before opening the barrier
+	signed places;   // # of threads still expected before opening
+	Lock   monitor;
+	Notice move_on;
 } Barrier;
 
 static int  barrier_init(Barrier *const this);
@@ -27,6 +27,15 @@ enum { BARRIER_FULL = -1 };
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
+
+#ifdef DEBUG
+#	define ASSERT_BARRIER_INVARIANT\
+		assert(this->capacity >= 0);\
+		assert(this->places >= 0);\
+		assert(this->places <= this->capacity);
+#else
+#	define ASSERT_BARRIER_INVARIANT
+#endif
 
 /*
 //
@@ -52,6 +61,8 @@ barrier_init (Barrier *const this, int capacity)
 			lock_destroy(&this->monitor);
 		}
 	}
+	ASSERT_BARRIER_INVARIANT
+
 	return err;
 }
 
@@ -68,13 +79,12 @@ barrier_destroy (Barrier *const this)
 //Monitor helpers
 //
 #define ENTER_BARRIER_MONITOR\
-	int err_;\
-	if ((err_=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
-	return err_;
+	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS)\
+	return err;
 
 #define LEAVE_BARRIER_MONITOR\
-	if ((err_=lock_release(&this->monitor))!=STATUS_SUCCESS)\
-	return err_;\
+	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS)\
+	return err;\
 
 #define CHECK_BARRIER_MONITOR(E)\
 	if ((E)!=STATUS_SUCCESS) {\
@@ -82,28 +92,38 @@ barrier_destroy (Barrier *const this)
 		return (E);\
 	}
 
+// Error management strategy for this module
+#define catch(X)\
+	if ((err=(X)) != STATUS_SUCCESS)\
+		goto onerror
+
 static inline int
 barrier_wait (Barrier *const this)
 {
 	int status = STATUS_SUCCESS;
+
+	int err;
 	ENTER_BARRIER_MONITOR
 
 	if (--this->places == 0) {
 		this->places = this->capacity;
-		status  = BARRIER_FULL;
-		const int err = notice_broadcast(&this->move_on);
-		CHECK_BARRIER_MONITOR (err)
+		status = BARRIER_FULL;
+		catch (notice_broadcast(&this->move_on));
 	} else {
-		int const err = notice_wait(&this->move_on);
-		CHECK_BARRIER_MONITOR (err)
+		catch (notice_wait(&this->move_on));
 	}
+	ASSERT_BARRIER_INVARIANT
 
 	LEAVE_BARRIER_MONITOR
 	return status;
+onerror:
+	lock_release(&this->monitor);
+	return err;
 }
 
+#undef catch
+#undef ASSERT_BARRIER_INVARIANT
 #undef ENTER_BARRIER_MONITOR
 #undef LEAVE_BARRIER_MONITOR
-#undef CHECK_BARRIER_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
