@@ -4,9 +4,9 @@
 #ifndef POLY_H
 #include "POLY.h"
 #endif
+#include "../thread.h"
 #include "scalar.h"
-#include "thread.h"
-#include "pass/port.h"
+#include "port.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Interface
@@ -22,6 +22,21 @@ static int    future_fork(int main(void*), void* argument, Future *const this);
 static Scalar future_get(Future *const this);
 static int    future_join(Future *const this);
 static int    future_set(Future *const this, Scalar x);
+
+/*
+ *  TASK_TYPE (name)
+ *      Task* future;
+ *      slots
+ *      ...
+ *  END_TYPE
+ *
+ *  TASK_BODY (name)
+ *      ...
+ *  END_BODY
+ */
+#define RUN_promise(T,F,...)\
+    future_fork(T,\
+        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation

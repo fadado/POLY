@@ -4,8 +4,6 @@ Concurrent programming on top of C11 threads.
 
 ```
 poly
-├── array
-│   └── fifo.h
 ├── monitor
 │   ├── board.h
 │   ├── condition.h
@@ -13,15 +11,16 @@ poly
 │   └── notice.h
 ├── pass
 │   ├── channel.h
-│   └── port.h
+│   ├── future.h
+│   ├── port.h
+│   └── scalar.h
 ├── sync
 │   ├── barrier.h
+│   ├── handshake.h
 │   ├── rwlock.h
 │   └── semaphore.h
+├── atomics.h
 ├── POLY.h
-├── future.h
-├── scalar.h
-├── syncop.h
 ├── task.h
 └── thread.h
 ```

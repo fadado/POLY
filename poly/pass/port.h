@@ -4,10 +4,10 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
-#include "../scalar.h"
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"
+#include "scalar.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Type Port of one scalar
@@ -25,6 +25,25 @@ static void port_destroy(Port *const this);
 static int  port_init(Port *const this);
 static int  port_receive(Port *const this, Scalar* request);
 static int  port_send(Port *const this, Scalar scalar);
+
+/*
+ *  TASK_TYPE (name)
+ *      Port* input;
+ *      Port* output;
+ *      slots
+ *      ...
+ *  END_TYPE
+ *
+ *  TASK_BODY (name)
+ *      ...
+ *  END_BODY
+ */
+#ifndef RUN_filter
+#define RUN_filter(T,I,O,...)\
+    thread_fork(T, \
+        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
+        &(Thread){0})
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation

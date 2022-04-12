@@ -4,7 +4,7 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
-#include "../scalar.h"
+#include "scalar.h"
 
 //#include <stdlib.h>
 extern void  free(void*);

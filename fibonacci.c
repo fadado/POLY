@@ -6,12 +6,12 @@
 // comment next line to disable assertions
 #define DEBUG
 
-#include "poly/scalar.h"
 #include "poly/thread.h"
-#include "poly/future.h"
 #include "poly/task.h"
+#include "poly/atomics.h"
+#include "poly/pass/scalar.h"
+#include "poly/pass/future.h"
 
-#include "poly/syncop.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Playing with different methods of sync.

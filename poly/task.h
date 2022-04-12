@@ -2,7 +2,7 @@
 #define TASK_H
 
 ////////////////////////////////////////////////////////////////////////
-// Declaring and defining tasks
+// Task: a execution context + activation record
 ////////////////////////////////////////////////////////////////////////
 
 /*
@@ -41,10 +41,6 @@
 static _Atomic       unsigned task_ID_COUNT_ = 1;
 static _Thread_local unsigned TASK_ID = 0; // 0 reserved to main
 
-////////////////////////////////////////////////////////////////////////
-// Running threads, futures, filters...
-////////////////////////////////////////////////////////////////////////
-
 /*
  *  TASK_TYPE (name)
  *      ...
@@ -56,37 +52,5 @@ static _Thread_local unsigned TASK_ID = 0; // 0 reserved to main
  */
 #define RUN_task(T,...)\
     thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
-
-/*
- *  TASK_TYPE (name)
- *      Channel* input;  // valid also for Port type
- *      Channel* output;
- *      slots
- *      ...
- *  END_TYPE
- *
- *  TASK_BODY (name)
- *      ...
- *  END_BODY
- */
-#define RUN_filter(T,I,O,...)\
-    thread_fork(T, \
-        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
-        &(Thread){0})
-
-/*
- *  TASK_TYPE (name)
- *      Task* future;
- *      slots
- *      ...
- *  END_TYPE
- *
- *  TASK_BODY (name)
- *      ...
- *  END_BODY
- */
-#define RUN_promise(T,F,...)\
-    future_fork(T,\
-        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp
