@@ -37,7 +37,17 @@ enum {
 	STATUS_ERROR    = thrd_error,
 	STATUS_NOMEM    = thrd_nomem,
 	STATUS_TIMEDOUT = thrd_timedout,
+	// define non standard constants after this point
+	STATUS_NEXT     = thrd_success + thrd_busy + thrd_error
+		              + thrd_nomem + thrd_timedout,
 };
+
+// verify if negative status are used
+static_assert(STATUS_SUCCESS >= 0);
+static_assert(STATUS_BUSY >= 0);
+static_assert(STATUS_ERROR >= 0);
+static_assert(STATUS_NOMEM >= 0);
+static_assert(STATUS_TIMEDOUT >= 0);
 
 // error management strategy (assume `int err;` defined)
 #define catch(X)\
@@ -52,14 +62,14 @@ enum {
 // force inlining for functions
 #define ALWAYS      __attribute__((always_inline))
 
-// handy trick: see `scalar.h` and `lock.h` for examples
-#define TRANSPARENT __attribute__((__transparent_union__))
-
 // disable warnings on `case:...no break...fallthrough;case:` 
 #define fallthrough __attribute__((fallthrough))
 
 // sequential consistency
 #define atomic(T)   _Atomic(T)
+
+// private trick: see `scalar.h` and `lock.h` for examples
+#define POLY_TRANSPARENT __attribute__((__transparent_union__))
 
 ////////////////////////////////////////////////////////////////////////
 // Clock time measured in nanoseconds

@@ -19,7 +19,7 @@ static_assert(sizeof(Double) == sizeof(Unsigned));
 static_assert(sizeof(Double) == sizeof(Pointer));
 static_assert(sizeof(Double) == 8);
 
-typedef union TRANSPARENT Scalar {
+typedef union POLY_TRANSPARENT Scalar {
 	Signed   i;
 	Unsigned u;
 	Double   d;

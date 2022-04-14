@@ -12,10 +12,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct RWLock {
-	signed counter; // -1: writing; 0: idle; >0: # of active readers
 	Lock   monitor;
 	Notice readers;
 	Notice writers;
+	signed counter; // -1: writing; 0: idle; >0: # of active readers
 } RWLock;
 
 static int  rwlock_acquire(RWLock *const this);
@@ -37,19 +37,20 @@ rwlock_init (RWLock *const this)
 	this->counter = RWLOCK_IDLE;
 
 	int err;
-	if ((err=lock_init(&this->monitor)) == STATUS_SUCCESS) {
-		if ((err=notice_init(&this->readers, lock)) == STATUS_SUCCESS) {
-			if ((err=notice_init(&this->writers, lock)) == STATUS_SUCCESS) {
-				/*skip*/;
-			} else {
-				notice_destroy(&this->readers);
-				lock_destroy(&this->monitor);
-			}
-		} else {
-			lock_destroy(&this->monitor);
-		}
+	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
+		return err;
 	}
-	return err;
+	if ((err=notice_init(&this->readers, &this->monitor)) != STATUS_SUCCESS) {
+		lock_destroy(&this->monitor);
+		return err;
+	}
+	if ((err=notice_init(&this->writers, &this->monitor)) != STATUS_SUCCESS) {
+		notice_destroy(&this->readers);
+		lock_destroy(&this->monitor);
+		return err;
+	}
+
+	return STATUS_SUCCESS;
 }
 
 static void
@@ -65,12 +66,12 @@ rwlock_destroy (RWLock *const this)
 //
 //Monitor helpers
 //
-#define ENTER_RWLOCK_MONITOR\
+#define ENTER_MONITOR\
 	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
 		return err;\
 	}
 
-#define LEAVE_RWLOCK_MONITOR\
+#define LEAVE_MONITOR\
 	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
 		return err;\
 	}
@@ -82,7 +83,7 @@ static inline int
 rwlock_acquire (RWLock *const this)
 {
 	int err;
-	ENTER_RWLOCK_MONITOR
+	ENTER_MONITOR
 
 	if (this->counter != RWLOCK_IDLE) {
 		catch (notice_enquire(&this->writers));
@@ -90,7 +91,7 @@ rwlock_acquire (RWLock *const this)
 	}
 	this->counter = RWLOCK_WRITING;
 
-	LEAVE_RWLOCK_MONITOR
+	LEAVE_MONITOR
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
@@ -101,7 +102,7 @@ static inline int
 rwlock_release (RWLock *const this)
 {
 	int err;
-	ENTER_RWLOCK_MONITOR
+	ENTER_MONITOR
 
 	this->counter = RWLOCK_IDLE;
 	if (!notice_empty(&this->writers)) {
@@ -110,7 +111,7 @@ rwlock_release (RWLock *const this)
 		catch (notice_broadcast(&this->readers));
 	}
 
-	LEAVE_RWLOCK_MONITOR
+	LEAVE_MONITOR
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
@@ -124,14 +125,14 @@ static inline int
 rwlock_enter (RWLock *const this)
 {
 	int err;
-	ENTER_RWLOCK_MONITOR
+	ENTER_MONITOR
 
 	while (this->counter == RWLOCK_WRITING) {
 		catch (notice_wait(&this->readers));
 	}
 	++this->counter;
 
-	LEAVE_RWLOCK_MONITOR
+	LEAVE_MONITOR
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
@@ -142,7 +143,7 @@ static inline int
 rwlock_leave (RWLock *const this)
 {
 	int err;
-	ENTER_RWLOCK_MONITOR
+	ENTER_MONITOR
 
 	if (--this->counter == RWLOCK_IDLE) {
 		if (!notice_empty(&this->writers)) {
@@ -150,14 +151,14 @@ rwlock_leave (RWLock *const this)
 		}
 	}
 
-	LEAVE_RWLOCK_MONITOR
+	LEAVE_MONITOR
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
 	return err;
 }
 
-#undef ENTER_RWLOCK_MONITOR
-#undef LEAVE_RWLOCK_MONITOR
+#undef ENTER_MONITOR
+#undef LEAVE_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

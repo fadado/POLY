@@ -18,7 +18,7 @@ typedef struct { mtx_t mutex; } TimedRecursiveLock;
 typedef PlainLock               Lock;
 typedef TimedRecursiveLock      RecursiveTimedLock;
 
-union TRANSPARENT Lock {
+union POLY_TRANSPARENT Lock {
 	mtx_t* mutex;
 	PlainLock* _1;
 	TimedLock* _2;

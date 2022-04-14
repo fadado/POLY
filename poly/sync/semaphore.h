@@ -12,9 +12,11 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	signed counter; // <0: abs(#) of blocked threads; 0: idle; >0: available resources
 	Lock   monitor;
 	Notice queue;
+	signed counter; // <0: abs(#) of blocked threads;
+					//  0: idle;
+					// >0: available resources
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
@@ -64,14 +66,14 @@ semaphore_init (Semaphore *const this, unsigned count)
 	this->counter = count;
 
 	int err;
-	if ((err=lock_init(&this->monitor)) == STATUS_SUCCESS) {
-		if ((err=notice_init(&this->queue, &this->monitor)) == STATUS_SUCCESS) {
-			/*skip*/;
-		} else {
-			lock_destroy(&this->monitor);
-		}
+	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
+		return err;
 	}
-	return err;
+	if ((err=notice_init(&this->queue, &this->monitor)) != STATUS_SUCCESS) {
+		lock_destroy(&this->monitor);
+		return err;
+	}
+	return STATUS_SUCCESS;
 }
 
 static void
@@ -86,12 +88,12 @@ semaphore_destroy (Semaphore *const this)
 //
 //Monitor helpers
 //
-#define ENTER_SEMAPHORE_MONITOR\
+#define ENTER_MONITOR\
 	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
 		return err;\
 	}
 
-#define LEAVE_SEMAPHORE_MONITOR\
+#define LEAVE_MONITOR\
 	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
 		return err;\
 	}
@@ -106,7 +108,7 @@ static inline int
 semaphore_P (Semaphore *const this)
 {
 	int err;
-	ENTER_SEMAPHORE_MONITOR
+	ENTER_MONITOR
 
 	--this->counter;
 	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
@@ -114,7 +116,7 @@ semaphore_P (Semaphore *const this)
 		catch (notice_wait(&this->queue));
 	}
 
-	LEAVE_SEMAPHORE_MONITOR
+	LEAVE_MONITOR
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
@@ -131,7 +133,7 @@ static inline int
 semaphore_V (Semaphore *const this)
 {
 	int err;
-	ENTER_SEMAPHORE_MONITOR
+	ENTER_MONITOR
 
 	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
 	++this->counter;
@@ -139,14 +141,14 @@ semaphore_V (Semaphore *const this)
 		catch (notice_notify(&this->queue));
 	}
 
-	LEAVE_SEMAPHORE_MONITOR
+	LEAVE_MONITOR
 	return STATUS_SUCCESS;
 onerror:
 	lock_release(&this->monitor);
 	return err;
 }
 
-#undef ENTER_SEMAPHORE_MONITOR
-#undef LEAVE_SEMAPHORE_MONITOR
+#undef ENTER_MONITOR
+#undef LEAVE_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

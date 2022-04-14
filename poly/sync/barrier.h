@@ -12,13 +12,13 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	signed capacity; // # of threads to wait before opening the barrier
-	signed places;   // # of threads still expected before opening
 	Lock   monitor;
 	Notice move_on;
+	signed capacity; // # of threads to wait before opening the barrier
+	signed places;   // # of threads still expected before opening
 } Barrier;
 
-static int  barrier_init(Barrier *const this);
+static int  barrier_init(Barrier *const this, int capacity);
 static void barrier_destroy(Barrier *const this);
 static int  barrier_wait(Barrier *const this);
 
@@ -54,16 +54,16 @@ barrier_init (Barrier *const this, int capacity)
 	this->places = this->capacity = capacity;
 
 	int err;
-	if ((err=lock_init(&this->monitor)) == STATUS_SUCCESS) {
-		if ((err=notice_init(&this->move_on, &this->monitor)) == STATUS_SUCCESS) {
-			/*skip*/;
-		} else {
-			lock_destroy(&this->monitor);
-		}
+	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
+		return err;
+	}
+	if ((err=notice_init(&this->move_on, &this->monitor)) != STATUS_SUCCESS) {
+		lock_destroy(&this->monitor);
+		return err;
 	}
 	ASSERT_BARRIER_INVARIANT
 
-	return err;
+	return STATUS_SUCCESS;
 }
 
 static void
@@ -78,12 +78,12 @@ barrier_destroy (Barrier *const this)
 //
 //Monitor helpers
 //
-#define ENTER_BARRIER_MONITOR\
+#define ENTER_MONITOR\
 	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
 		return err;\
 	}
 
-#define LEAVE_BARRIER_MONITOR\
+#define LEAVE_MONITOR\
 	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
 		return err;\
 	}
@@ -103,7 +103,7 @@ barrier_wait (Barrier *const this)
 	int status = STATUS_SUCCESS;
 
 	int err;
-	ENTER_BARRIER_MONITOR
+	ENTER_MONITOR
 
 	if (--this->places == 0) {
 		this->places = this->capacity;
@@ -114,16 +114,15 @@ barrier_wait (Barrier *const this)
 	}
 	ASSERT_BARRIER_INVARIANT
 
-	LEAVE_BARRIER_MONITOR
+	LEAVE_MONITOR
 	return status;
 onerror:
 	lock_release(&this->monitor);
 	return err;
 }
 
-#undef catch
 #undef ASSERT_BARRIER_INVARIANT
-#undef ENTER_BARRIER_MONITOR
-#undef LEAVE_BARRIER_MONITOR
+#undef ENTER_MONITOR
+#undef LEAVE_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
