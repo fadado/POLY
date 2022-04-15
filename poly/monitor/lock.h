@@ -84,4 +84,12 @@ lock_try_for (union Lock this, Clock duration)
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
 
+////////////////////////////////////////////////////////////////////////
+// Monitor macros
+////////////////////////////////////////////////////////////////////////
+
+#ifndef MONITOR_H
+#include "MONITOR.h"
+#endif
+
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

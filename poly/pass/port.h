@@ -15,10 +15,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Port {
+	Lock     syncronized;
+	Notice   board[2];
 	Scalar   value;
 	unsigned occupation; // 0 or 1
-	Lock     monitor;
-	Notice   board[2];
 } Port;
 
 static void port_destroy(Port *const this);
@@ -82,11 +82,11 @@ port_init (Port *const this)
 
 	this->occupation = 0;
 
-	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
+	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=(board_init(this->board, 2, &this->monitor))) != STATUS_SUCCESS) {
-		lock_destroy(&this->monitor);
+	if ((err=(board_init(this->board, 2, &this->syncronized))) != STATUS_SUCCESS) {
+		lock_destroy(&this->syncronized);
 		return err;
 	}
 	ASSERT_PORT_INVARIANT
@@ -99,27 +99,14 @@ port_destroy (Port *const this)
 {
 	assert(_port_empty(this)); // TODO: require emptyness???
 	board_destroy(this->board, 2);
-	lock_destroy(&this->monitor);
+	lock_destroy(&this->syncronized);
 }
-
-//
-// Monitor helpers
-//
-#define ENTER_PORT_MONITOR\
-	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS) {\
-		return err;\
-	}
-
-#define LEAVE_PORT_MONITOR\
-	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS) {\
-		return err;\
-	}
 
 static inline int
 port_send (Port *const this, Scalar scalar)
 {
 	int err;
-	ENTER_PORT_MONITOR
+	enter_monitor(this);
 
 	void thunk(void) {
 		this->value = scalar;
@@ -128,10 +115,10 @@ port_send (Port *const this, Scalar scalar)
 	++this->occupation;
 	ASSERT_PORT_INVARIANT
 
-	LEAVE_PORT_MONITOR
+	leave_monitor(this);
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
 
@@ -139,7 +126,7 @@ static inline int
 port_receive (Port *const this, Scalar* request)
 {
 	int err;
-	ENTER_PORT_MONITOR
+	enter_monitor(this);
 
 	catch (board_receive(this->board));
 	if (request) {
@@ -148,15 +135,13 @@ port_receive (Port *const this, Scalar* request)
 	--this->occupation;
 	ASSERT_PORT_INVARIANT
 
-	LEAVE_PORT_MONITOR
+	leave_monitor(this);
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
 
 #undef ASSERT_PORT_INVARIANT
-#undef ENTER_PORT_MONITOR
-#undef LEAVE_PORT_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

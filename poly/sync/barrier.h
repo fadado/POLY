@@ -12,7 +12,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	Lock   monitor;
+	Lock   syncronized;
 	Notice move_on;
 	signed capacity; // # of threads to wait before opening the barrier
 	signed places;   // # of threads still expected before opening
@@ -54,11 +54,11 @@ barrier_init (Barrier *const this, int capacity)
 	this->places = this->capacity = capacity;
 
 	int err;
-	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
+	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=notice_init(&this->move_on, &this->monitor)) != STATUS_SUCCESS) {
-		lock_destroy(&this->monitor);
+	if ((err=notice_init(&this->move_on, &this->syncronized)) != STATUS_SUCCESS) {
+		lock_destroy(&this->syncronized);
 		return err;
 	}
 	ASSERT_BARRIER_INVARIANT
@@ -72,21 +72,8 @@ barrier_destroy (Barrier *const this)
 	assert(this->places == 0);
 
 	notice_destroy(&this->move_on);
-	lock_destroy(&this->monitor);
+	lock_destroy(&this->syncronized);
 }
-
-//
-//Monitor helpers
-//
-#define ENTER_MONITOR\
-	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
-		return err;\
-	}
-
-#define LEAVE_MONITOR\
-	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
-		return err;\
-	}
 
 /* How to detect each "cycle":
  *
@@ -103,7 +90,7 @@ barrier_wait (Barrier *const this)
 	int status = STATUS_SUCCESS;
 
 	int err;
-	ENTER_MONITOR
+	enter_monitor(this);
 
 	if (--this->places == 0) {
 		this->places = this->capacity;
@@ -114,15 +101,13 @@ barrier_wait (Barrier *const this)
 	}
 	ASSERT_BARRIER_INVARIANT
 
-	LEAVE_MONITOR
+	leave_monitor(this);
 	return status;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
 
 #undef ASSERT_BARRIER_INVARIANT
-#undef ENTER_MONITOR
-#undef LEAVE_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

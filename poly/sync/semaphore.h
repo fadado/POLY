@@ -12,11 +12,11 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	Lock   monitor;
+	Lock   syncronized;
 	Notice queue;
 	signed counter; // <0: abs(#) of blocked threads;
-					//  0: idle;
-					// >0: available resources
+                    //  0: idle;
+                    // >0: available resources
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
@@ -66,11 +66,11 @@ semaphore_init (Semaphore *const this, unsigned count)
 	this->counter = count;
 
 	int err;
-	if ((err=(lock_init(&this->monitor))) != STATUS_SUCCESS) {
+	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=notice_init(&this->queue, &this->monitor)) != STATUS_SUCCESS) {
-		lock_destroy(&this->monitor);
+	if ((err=notice_init(&this->queue, &this->syncronized)) != STATUS_SUCCESS) {
+		lock_destroy(&this->syncronized);
 		return err;
 	}
 	return STATUS_SUCCESS;
@@ -82,21 +82,8 @@ semaphore_destroy (Semaphore *const this)
 	assert(this->counter == 0 );
 
 	notice_destroy(&this->queue);
-	lock_destroy(&this->monitor);
+	lock_destroy(&this->syncronized);
 }
-
-//
-//Monitor helpers
-//
-#define ENTER_MONITOR\
-	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS){\
-		return err;\
-	}
-
-#define LEAVE_MONITOR\
-	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS){\
-		return err;\
-	}
 
 /*
 Decrements the value of semaphore variable by 1. If the new value of 
@@ -108,7 +95,7 @@ static inline int
 semaphore_P (Semaphore *const this)
 {
 	int err;
-	ENTER_MONITOR
+	enter_monitor(this);
 
 	--this->counter;
 	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
@@ -116,10 +103,10 @@ semaphore_P (Semaphore *const this)
 		catch (notice_wait(&this->queue));
 	}
 
-	LEAVE_MONITOR
+	leave_monitor(this);
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
 
@@ -133,7 +120,7 @@ static inline int
 semaphore_V (Semaphore *const this)
 {
 	int err;
-	ENTER_MONITOR
+	enter_monitor(this);
 
 	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
 	++this->counter;
@@ -141,14 +128,11 @@ semaphore_V (Semaphore *const this)
 		catch (notice_notify(&this->queue));
 	}
 
-	LEAVE_MONITOR
+	leave_monitor(this);
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
-
-#undef ENTER_MONITOR
-#undef LEAVE_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

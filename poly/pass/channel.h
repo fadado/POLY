@@ -17,14 +17,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
-	atomic(unsigned) flags;
-	unsigned capacity;
-	unsigned occupation;
-	union {
-		FIFO   queue; // for capacity >  1
-		Scalar value; // for capacity <= 1
-	};
-	Lock monitor; // TODO: use RecursiveLock?
+	Lock syncronized; // TODO: use RecursiveLock?
 	union {
 		// blocking channel
 		Notice board[2];
@@ -33,6 +26,13 @@ typedef struct Channel {
 			Condition non_empty;
 			Condition non_full;
 		};
+	};
+	atomic(unsigned) flags;
+	unsigned capacity;
+	unsigned occupation;
+	union {
+		FIFO   queue; // for capacity >  1
+		Scalar value; // for capacity <= 1
 	};
 } Channel;
 
@@ -107,13 +107,13 @@ channel_init (Channel *const this, unsigned capacity)
 
 	this->occupation = this->flags = 0;
 	this->capacity = capacity;
-	err = lock_init(&this->monitor);
+	err = lock_init(&this->syncronized);
 	if (err != STATUS_SUCCESS) { return err; }
 
 	switch (this->capacity) {
 		case 0:
 			this->flags |= CHANNEL_BLOCKING;
-			catch (board_init(this->board, 2, &this->monitor));
+			catch (board_init(this->board, 2, &this->syncronized));
 			this->capacity = 1;
 			break;
 		default: // > 1
@@ -143,7 +143,7 @@ channel_init (Channel *const this, unsigned capacity)
 
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	lock_release(&this->syncronized);
 	return err;
 }
 
@@ -162,18 +162,18 @@ channel_destroy (Channel *const this)
 			fifo_destroy(&this->queue);
 		}
 	}
-	lock_destroy(&this->monitor);
+	lock_destroy(&this->syncronized);
 }
 
 static inline void
 channel_close (Channel *const this)
 {
 	this->flags |= CHANNEL_CLOSED;
-	//?lock_acquire(&this->monitor);
+	//?lock_acquire(&this->syncronized);
 	if (this->occupation == 0) {
 		this->flags |= CHANNEL_DRAINED;
 	}
-	//?lock_release(&this->monitor);
+	//?lock_release(&this->syncronized);
 }
 
 static ALWAYS inline bool
@@ -181,31 +181,6 @@ channel_drained (Channel const*const this)
 {
 	return (CHANNEL_DRAINED & this->flags);
 }
-
-//
-// Monitor helpers
-//
-#define ENTER_CHANNEL_MONITOR(PREDICATE,CONDITION)\
-	if ((err=lock_acquire(&this->monitor))!=STATUS_SUCCESS) {\
-		return err;\
-	}\
-	if (CHANNEL_SHARED & this->flags) {\
-		while (PREDICATE(this)) {\
-			if ((err=condition_wait(&CONDITION, &this->monitor))!=STATUS_SUCCESS) {\
-				goto onerror;\
-			}\
-		}\
-	}
-
-#define LEAVE_CHANNEL_MONITOR(CONDITION)\
-	if (CHANNEL_SHARED & this->flags) {\
-		if ((err=condition_notify(&CONDITION))!=STATUS_SUCCESS) {\
-			goto onerror;\
-		}\
-	}\
-	if ((err=lock_release(&this->monitor))!=STATUS_SUCCESS) {\
-		return err;\
-	}
 
 //
 // Monitor entries
@@ -218,7 +193,11 @@ channel_send (Channel *const this, Scalar scalar)
 	}
 
 	int err;
-	ENTER_CHANNEL_MONITOR (_channel_full, this->non_full)
+	enter_monitor(this);
+
+	while (_channel_full(this)) {
+		catch (condition_wait(&this->non_full, &this->syncronized));
+	}
 
 	if (CHANNEL_BLOCKING & this->flags) {
 		void thunk(void) {
@@ -233,10 +212,12 @@ channel_send (Channel *const this, Scalar scalar)
 	++this->occupation;
 	ASSERT_CHANNEL_INVARIANT
 
-	LEAVE_CHANNEL_MONITOR (this->non_empty)
+	catch (condition_notify(&this->non_empty));
+
+	leave_monitor(this);
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
 
@@ -252,7 +233,11 @@ channel_receive (Channel *const this, Scalar *const request)
 	}
 
 	int err;
-	ENTER_CHANNEL_MONITOR (_channel_empty, this->non_empty)
+	enter_monitor(this);
+
+	while (_channel_empty(this)) {
+		catch (condition_wait(&this->non_empty, &this->syncronized));
+	}
 
 	if (CHANNEL_BLOCKING & this->flags) {
 		catch (board_receive(this->board));
@@ -265,19 +250,19 @@ channel_receive (Channel *const this, Scalar *const request)
 	--this->occupation;
 	ASSERT_CHANNEL_INVARIANT
 
+	catch (condition_notify(&this->non_full));
+
 	if ((CHANNEL_CLOSED & this->flags) && this->occupation == 0) {
 		this->flags |= CHANNEL_DRAINED;
 	}
 
-	LEAVE_CHANNEL_MONITOR (this->non_full)
+	leave_monitor(this);
 	return STATUS_SUCCESS;
 onerror:
-	lock_release(&this->monitor);
+	break_monitor(this);
 	return err;
 }
 
 #undef ASSERT_CHANNEL_INVARIANT
-#undef ENTER_CHANNEL_MONITOR
-#undef LEAVE_CHANNEL_MONITOR
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
