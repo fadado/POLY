@@ -15,9 +15,6 @@
 static int  board_init(Notice board[], unsigned n, union Lock lock);
 static void board_destroy(Notice board[], unsigned n);
 
-static int  board_notify(Notice board[], unsigned i);
-static int  board_enquire(Notice board[], unsigned i);
-
 static int  board_meet(Notice board[2], unsigned i);
 
 static int  board_send(Notice board[2], void(thunk)(void));
@@ -57,18 +54,6 @@ board_destroy (Notice board[], unsigned n)
 	} while (i != 0);
 }
 
-static ALWAYS inline int
-board_enquire (Notice board[], unsigned i)
-{
-	return notice_enquire(&board[i]);
-}
-
-static ALWAYS inline int
-board_notify (Notice board[], unsigned i)
-{
-	return notice_notify(&board[i]);
-}
-
 //
 // operations on 2 elements board
 //
@@ -83,8 +68,22 @@ board_meet (Notice board[2], unsigned i)
 	assert(i < 2);
 	int err;
 
-	catch (board_notify(board, i));
-	catch (board_enquire(board, !i));
+	catch (notice_notify(&board[i]));
+	catch (notice_enquire(&board[!i]));
+
+	return STATUS_SUCCESS;
+onerror:
+	return err;
+}
+
+static ALWAYS inline int
+board_send (Notice board[2], void(thunk)(void))
+{
+	int err;
+
+	catch (notice_enquire(&board[0]));
+	thunk();
+	catch (notice_notify(&board[1]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -94,17 +93,10 @@ onerror:
 static ALWAYS inline int
 board_receive (Notice board[2])
 {
-	return board_meet(board, 0);
-}
-
-static ALWAYS inline int
-board_send (Notice board[2], void(thunk)(void))
-{
 	int err;
 
-	catch (board_enquire(board, 0));
-	thunk();
-	catch (board_notify(board, 1));
+	catch (notice_notify(&board[0]));
+	catch (notice_enquire(&board[1]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -120,10 +112,10 @@ board_call (Notice board[3], void(thunk)(void))
 {
 	int err;
 
-	catch (board_enquire(board, 0));
+	catch (notice_enquire(&board[0]));
 	thunk();
-	catch (board_notify(board, 1));
-	catch (board_enquire(board, 2));
+	catch (notice_notify(&board[1]));
+	catch (notice_enquire(&board[2]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -135,10 +127,10 @@ board_accept (Notice board[3], void(thunk)(void))
 {
 	int err;
 
-	catch (board_notify(board, 0));
-	catch (board_enquire(board, 1));
+	catch (notice_notify(&board[0]));
+	catch (notice_enquire(&board[1]));
 	thunk();
-	catch (board_notify(board, 2));
+	catch (notice_notify(&board[2]));
 
 	return STATUS_SUCCESS;
 onerror:

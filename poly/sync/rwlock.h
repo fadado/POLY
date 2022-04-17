@@ -92,9 +92,9 @@ rwlock_release (RWLock *const this)
 	enter_monitor(this);
 
 	this->counter = RWLOCK_IDLE;
-	if (!notice_empty(&this->writers)) {
+	if (notice_ready(&this->writers)) {
 		catch (notice_notify(&this->writers));
-	} else if (!notice_empty(&this->readers)) {
+	} else if (notice_ready(&this->readers)) {
 		catch (notice_broadcast(&this->readers));
 	}
 
@@ -133,7 +133,7 @@ rwlock_leave (RWLock *const this)
 	enter_monitor(this);
 
 	if (--this->counter == RWLOCK_IDLE) {
-		if (!notice_empty(&this->writers)) {
+		if (notice_ready(&this->writers)) {
 			catch (notice_notify(&this->writers));
 		}
 	}

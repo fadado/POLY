@@ -18,12 +18,12 @@ typedef struct Port {
 	Lock     syncronized;
 	Notice   board[2];
 	Scalar   value;
-	unsigned occupation; // 0 or 1
 } Port;
 
 static void port_destroy(Port *const this);
 static int  port_init(Port *const this);
 static int  port_receive(Port *const this, Scalar* request);
+static bool port_ready(Port const*const this);
 static int  port_send(Port *const this, Scalar scalar);
 
 /*
@@ -50,8 +50,7 @@ static int  port_send(Port *const this, Scalar scalar);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_PORT_INVARIANT\
-		assert(_port_empty(this) != _port_full(this));
+#	define ASSERT_PORT_INVARIANT
 #else
 #	define ASSERT_PORT_INVARIANT
 #endif
@@ -60,15 +59,9 @@ static int  port_send(Port *const this, Scalar scalar);
 // Predicates
 //
 static ALWAYS inline bool
-_port_empty (Port const*const this)
+port_ready (Port const*const this)
 {
-	return this->occupation == 0;
-}
-
-static ALWAYS inline bool
-_port_full (Port const*const this)
-{
-	return this->occupation == 1;
+	return notice_ready(&this->board[0]);
 }
 
 //
@@ -79,8 +72,6 @@ static int
 port_init (Port *const this)
 {
 	int err;
-
-	this->occupation = 0;
 
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
@@ -97,7 +88,6 @@ port_init (Port *const this)
 static void
 port_destroy (Port *const this)
 {
-	assert(_port_empty(this)); // TODO: require emptyness???
 	board_destroy(this->board, 2);
 	lock_destroy(&this->syncronized);
 }
@@ -112,7 +102,6 @@ port_send (Port *const this, Scalar scalar)
 		this->value = scalar;
 	}
 	catch (board_send(this->board, thunk));
-	++this->occupation;
 	ASSERT_PORT_INVARIANT
 
 	leave_monitor(this);
@@ -132,7 +121,6 @@ port_receive (Port *const this, Scalar* request)
 	if (request) {
 		*request = this->value;
 	}
-	--this->occupation;
 	ASSERT_PORT_INVARIANT
 
 	leave_monitor(this);
