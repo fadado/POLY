@@ -22,7 +22,7 @@ typedef struct Port {
 
 static void port_destroy(Port *const this);
 static int  port_init(Port *const this);
-static int  port_receive(Port *const this, Scalar* request);
+static int  port_receive(Port *const this, Scalar* scalar);
 static bool port_ready(Port const*const this);
 static int  port_send(Port *const this, Scalar scalar);
 
@@ -112,14 +112,14 @@ onerror:
 }
 
 static inline int
-port_receive (Port *const this, Scalar* request)
+port_receive (Port *const this, Scalar* scalar)
 {
 	int err;
 	enter_monitor(this);
 
 	catch (board_receive(this->board));
-	if (request) {
-		*request = this->value;
+	if (scalar != NULL) {
+		*scalar = this->value;
 	}
 	ASSERT_PORT_INVARIANT
 
