@@ -8,16 +8,15 @@
 #include "../monitor/condition.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"
-#include "scalar.h"
+#include "../scalar.h"
 #include "_fifo.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Channel (of scalars)
-// Interface
+// Channel interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Channel {
-	Lock syncronized; // TODO: use RecursiveLock?
+	Lock syncronized;
 	union {
 		// blocking channel
 		Notice board[2];
@@ -63,7 +62,7 @@ static int  channel_send(Channel *const this, Scalar scalar);
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Channel implementation
 ////////////////////////////////////////////////////////////////////////
 
 // Constants for flags
@@ -82,9 +81,6 @@ enum channel_flag {
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
 
-//
-// Private predicates
-//
 static ALWAYS inline bool
 _channel_empty (Channel const*const this)
 {
@@ -97,9 +93,6 @@ _channel_full (Channel const*const this)
 	return (this->occupation == this->capacity);
 }
 
-//
-// Channel life
-//
 static int
 channel_init (Channel *const this, unsigned capacity)
 {
@@ -150,7 +143,7 @@ onerror:
 static void
 channel_destroy (Channel *const this)
 {
-	assert(_channel_empty(this)); // TODO: require emptyness???
+	assert(_channel_empty(this));
 
 	if (CHANNEL_BLOCKING & this->flags) {
 		board_destroy(this->board, 2);
@@ -169,11 +162,9 @@ static inline void
 channel_close (Channel *const this)
 {
 	this->flags |= CHANNEL_CLOSED;
-	//?lock_acquire(&this->syncronized);
 	if (this->occupation == 0) {
 		this->flags |= CHANNEL_DRAINED;
 	}
-	//?lock_release(&this->syncronized);
 }
 
 static ALWAYS inline bool
@@ -182,9 +173,6 @@ channel_drained (Channel const*const this)
 	return (CHANNEL_DRAINED & this->flags);
 }
 
-//
-// Monitor entries
-//
 static inline int
 channel_send (Channel *const this, Scalar scalar)
 {

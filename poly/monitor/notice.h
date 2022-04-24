@@ -6,15 +6,19 @@
 #endif
 #include "lock.h"
 
+/*
+ * An enhanced replacement for C11 type `cnd_t`.
+ */
+
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// Notice interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Notice {
-	signed permits; // # of threads allowed to leave the queue
-	signed waiting; // # of threads waiting in the queue
-	mtx_t* mutex;
-	cnd_t  queue;
+	mtx_t*	mutex;
+	cnd_t 	queue;
+	signed	permits; // # of threads allowed to leave the queue
+	signed	waiting; // # of threads waiting in the queue
 } Notice;
 
 static int  notice_broadcast(Notice *const this);
@@ -26,7 +30,7 @@ static bool notice_ready(Notice const*const this);
 static int  notice_wait(Notice *const this);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Notice implementation
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG

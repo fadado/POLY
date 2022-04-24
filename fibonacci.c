@@ -9,7 +9,7 @@
 #include "poly/thread.h"
 #include "poly/task.h"
 #include "poly/atomics.h"
-#include "poly/pass/scalar.h"
+#include "poly/scalar.h"
 #include "poly/pass/future.h"
 
 

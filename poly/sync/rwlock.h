@@ -8,14 +8,14 @@
 #include "../monitor/notice.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// RWLock interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct RWLock {
-	Lock   syncronized;
-	Notice readers;
-	Notice writers;
-	signed counter; // -1: writing; 0: idle; >0: # of active readers
+	Lock    syncronized;
+	Notice  readers;
+	Notice  writers;
+	signed  counter; // -1: writing; 0: idle; >0: # of active readers
 } RWLock;
 
 static int  rwlock_acquire(RWLock *const this);
@@ -26,8 +26,15 @@ static int  rwlock_leave(RWLock *const this);
 static int  rwlock_release(RWLock *const this);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// RWLock implementation
 ////////////////////////////////////////////////////////////////////////
+
+/*  RWLock rw;
+ *
+ *  catch (rwlock_init(&rw));
+ *  ...
+ *  rwlock_destroy(&rw);
+ */
 
 enum { RWLOCK_IDLE=0, RWLOCK_WRITING=-1 };
 
@@ -63,9 +70,12 @@ rwlock_destroy (RWLock *const this)
 	lock_destroy(&this->syncronized);
 }
 
-//
-// Writer 
-//
+/*
+ * catch (rwlock_acquire(&rw)) | catch (rwlock_enter(&rw)) | catch (rwlock_enter(&rw))
+ * ...                         | ...                       | ...
+ * catch (rwlock_release(&rw)) | catch (rwlock_leave(&rw)) | catch (rwlock_leave(&rw)) 
+ */
+
 static inline int
 rwlock_acquire (RWLock *const this)
 {
@@ -105,9 +115,6 @@ onerror:
 	return err;
 }
 
-//
-// Readers
-//
 static inline int
 rwlock_enter (RWLock *const this)
 {

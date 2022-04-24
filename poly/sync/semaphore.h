@@ -12,11 +12,11 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Semaphore {
-	Lock   syncronized;
-	Notice queue;
-	signed counter; // <0: abs(#) of blocked threads;
-                    //  0: idle;
-                    // >0: available resources
+	Lock    syncronized;
+	Notice  queue;
+	signed  counter;    // <0: abs(#) of blocked threads;
+                        //  0: idle;
+                        // >0: value (available resources)
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
@@ -29,7 +29,6 @@ static int  semaphore_V(Semaphore *const this);
 #define     semaphore_acquire(s) semaphore_P(s)
 
 #define     semaphore_up(s) semaphore_V(s)
-#define     semaphore_post(s) semaphore_V(s)
 #define     semaphore_signal(s) semaphore_V(s)
 #define     semaphore_release(s) semaphore_V(s)
 
@@ -37,28 +36,16 @@ static int  semaphore_V(Semaphore *const this);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-/*
-// Number of available resources
-static ALWAYS inline int
-_semaphore_value (Semaphore *const this)
-{
-	return (this->counter > 0) ? this->counter : 0;
-}
-
-// Number of blocked threads in the queue
-static ALWAYS inline int
-_semaphore_waiting (Semaphore *const this)
-{
-	return (this->counter < 0) ? -this->counter : 0;
-}
-
-// Idle state ("red" semaphore)? value==0 and waiting==0
-static ALWAYS inline bool
-_semaphore_idle (Semaphore *const this)
-{
-	return this->counter == 0;
-}
-*/
+/*  Semaphore mutex;
+ *  Semaphore signal;
+ *  Semaphore allocator;
+ *
+ *  catch (semaphore_init(&mutex, 1));
+ *  catch (semaphore_init(&signal, 0));
+ *  catch (semaphore_init(&allocator, N));
+ *  ...
+ *  semaphore_destroy(&s);
+ */
 
 static int
 semaphore_init (Semaphore *const this, unsigned count)
@@ -86,11 +73,13 @@ semaphore_destroy (Semaphore *const this)
 }
 
 /*
-Decrements the value of semaphore variable by 1. If the new value of 
-this->counter is negative, the process executing wait is blocked (i.e.,
-added to the semaphore's queue). Otherwise, the process continues execution,
-having used a unit of the resource.
-*/
+ * catch (semaphore_acquire(&mutex))
+ * ...
+ * catch (semaphore_release(&mutex))
+ *
+ * catch (semaphore_wait(&signal)) | catch (semaphore_signal(&signal))
+ */
+
 static inline int
 semaphore_P (Semaphore *const this)
 {
@@ -110,12 +99,6 @@ onerror:
 	return err;
 }
 
-/*
-Increments the value of semaphore variable by 1. After the increment, if the
-value is negative or zero (meaning there are processes waiting for a
-resource), it transfers a blocked process from the semaphore's waiting queue
-to the ready queue.
-*/
 static inline int
 semaphore_V (Semaphore *const this)
 {

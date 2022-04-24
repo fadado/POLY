@@ -7,18 +7,17 @@
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"
-#include "scalar.h"
+#include "../scalar.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Entry
-// Interface
+// Entry interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Entry {
-	Lock     syncronized;
-	Notice   board[3];
-	Scalar   request;
-	Scalar   response;
+	Lock    syncronized;
+	Notice  board[3];
+	Scalar  request;
+	Scalar  response;
 } Entry;
 
 static int  entry_accept(Entry *const this, void(accept)(void));
@@ -28,7 +27,7 @@ static int  entry_init(Entry *const this);
 static bool entry_ready(Entry const*const this);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Entry implementation
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
@@ -37,18 +36,11 @@ static bool entry_ready(Entry const*const this);
 #	define ASSERT_ENTRY_INVARIANT
 #endif
 
-//
-// Predicates
-//
 static ALWAYS inline bool
 entry_ready (Entry const*const this)
 {
 	return notice_ready(&this->board[0]);
 }
-
-//
-// Entry life
-//
 
 static int
 entry_init (Entry *const this)
@@ -111,6 +103,47 @@ onerror:
 	break_monitor(this);
 	return err;
 }
+
+////////////////////////////////////////////////////////////////////////
+// Server tasks experiments
+////////////////////////////////////////////////////////////////////////
+
+/*
+ *  TASK_TYPE (Server)
+ *      Entry* entry1;
+ *      Entry* entry2;
+ *      ...
+ *  END_TYPE
+ *
+ *  Scalar s=x, r;
+ *  call (&entry, s, &r);
+ *
+ *  #define call(e,s,r) catch (entry_call((e), (s), (r)))
+ *  #define loop        for (;;)
+ *  #define select      int _open=0; int _selec=0;
+ *  #define when(g,e)   if ((g) && ++_open && entry_ready(e) && ++_selec)
+ *  #define terminate   if (!_open) panic("ops") elif (!_selec) break else continue
+ *  #define or
+ *
+ *  loop {
+ *      select {
+ *          when (guard, this.entry) {
+ *              void accept(void) {
+ *                  ...
+ *                  this.entry->response = f(this.entry->request);
+ *                  ...
+ *              }
+ *              catch (entry_accept(this.entry, accept));
+ *          }
+ *      or
+ *          when ...
+ *      or
+ *          when ...
+ *      or
+ *          terminate;
+ *      }
+ *  }
+ */
 
 #undef ASSERT_ENTRY_INVARIANT
 

@@ -8,14 +8,14 @@
 #include "../monitor/notice.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// Barrier interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Barrier {
-	Lock   syncronized;
-	Notice move_on;
-	signed capacity; // # of threads to wait before opening the barrier
-	signed places;   // # of threads still expected before opening
+	Lock    syncronized;
+	Notice  move_on;
+	signed  capacity; // # of threads to wait before opening the barrier
+	signed  places;   // # of threads still expected before opening
 } Barrier;
 
 static int  barrier_init(Barrier *const this, int capacity);
@@ -25,7 +25,7 @@ static int  barrier_wait(Barrier *const this);
 enum { BARRIER_FULL = -1 };
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Barrier implementation
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
@@ -37,14 +37,19 @@ enum { BARRIER_FULL = -1 };
 #	define ASSERT_BARRIER_INVARIANT
 #endif
 
-/*
-//
 static ALWAYS inline int
 _barrier_empty (Barrier const*const this)
 {
 	return this->places == this->capacity;
 }
-*/
+
+/*  Barrier b;
+ *
+ *  int N = # of thread to wait before opening the barrier
+ *  catch (barrier_init(&b, N));
+ *  ...
+ *  barrier_destroy(&b);
+ */
 
 static int
 barrier_init (Barrier *const this, int capacity)
@@ -69,18 +74,21 @@ barrier_init (Barrier *const this, int capacity)
 static void
 barrier_destroy (Barrier *const this)
 {
-	assert(this->places == 0);
+	assert(_barrier_empty(this));
 
 	notice_destroy(&this->move_on);
 	lock_destroy(&this->syncronized);
 }
 
-/* How to detect each "cycle":
+/*
+ * catch (barrier_wait(&b)) | catch (barrier_wait(&b)) | N threads 
  *
- * switch (barrier_wait(&b)) {
+ * How to detect end of cycle:
+ *
+ * switch (err = barrier_wait(&b)) {
+ *     default:             goto onerror
  *     case BARRIER_FULL:   cycle completed
- *     case STATUS_SUCCESS: take one place
- *     default:             error
+ *     case STATUS_SUCCESS: one place assigned
  * }
  *
  */
@@ -92,12 +100,12 @@ barrier_wait (Barrier *const this)
 	int err;
 	enter_monitor(this);
 
-	if (--this->places == 0) {
-		this->places = this->capacity;
-		status = BARRIER_FULL;
-		catch (notice_broadcast(&this->move_on));
-	} else {
+	if (--this->places != 0) {
 		catch (notice_wait(&this->move_on));
+	} else {
+		status = BARRIER_FULL;
+		this->places = this->capacity;
+		catch (notice_broadcast(&this->move_on));
 	}
 	ASSERT_BARRIER_INVARIANT
 

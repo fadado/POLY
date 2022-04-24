@@ -7,9 +7,13 @@
 #include "lock.h"
 #include "notice.h"
 
+/*
+ * Boards are arrays of Notice to help in the implementation of rendezvous
+ * protocols.
+ */
+
 ////////////////////////////////////////////////////////////////////////
-// Type Board of 2 or 3 Notice
-// Interface
+// Board interface
 ////////////////////////////////////////////////////////////////////////
 
 static int  board_init(Notice board[], unsigned n, union Lock lock);
@@ -24,7 +28,7 @@ static int  board_call(Notice board[3], void(thunk)(void));
 static int  board_accept(Notice board[3], void(thunk)(void));
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Board implementation
 ////////////////////////////////////////////////////////////////////////
 
 static int
@@ -54,9 +58,9 @@ board_destroy (Notice board[], unsigned n)
 	} while (i != 0);
 }
 
-//
-// operations on 2 elements board
-//
+/*
+ * Operations on 2 elements board.
+ */
 
 static ALWAYS inline int
 board_meet (Notice board[2], unsigned i)
@@ -103,9 +107,9 @@ onerror:
 	return err;
 }
 
-//
-// operations on 3 elements board
-//
+/*
+ * Operations on 3 elements board.
+ */
 
 static ALWAYS inline int
 board_call (Notice board[3], void(thunk)(void))

@@ -10,19 +10,19 @@
 #define DEBUG
 #include "poly/thread.h"
 #include "poly/task.h"
-#include "poly/pass/scalar.h"
+#include "poly/scalar.h"
 #include "poly/pass/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (GenerateCandidates, static)
+TASK_TYPE (Candidates, static)
 	Channel* input;
 	Channel* output;
 END_TYPE
 
-TASK_BODY (GenerateCandidates)
+TASK_BODY (Candidates)
 	assert(this.input == NULL);
 
 	int n = 2;
@@ -37,13 +37,13 @@ END_BODY
 // Filter multiples of `this->prime`
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (FilterMultiples, static)
+TASK_TYPE (Sieve, static)
 	Channel* input;
 	Channel* output;
 	int      prime;
 END_TYPE
 
-TASK_BODY (FilterMultiples)
+TASK_BODY (Sieve)
 	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
 	}
@@ -74,7 +74,7 @@ int main(int argc, char* argv[argc+1])
 	enum { syncronous=0, asyncronous=1 };
 	Channel* input = alloc();
 	channel_init(input, asyncronous);
-	err = RUN_filter(GenerateCandidates, NULL, input);
+	err = RUN_filter(Candidates, NULL, input);
 	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {
@@ -84,7 +84,7 @@ int main(int argc, char* argv[argc+1])
 
 		Channel* output = alloc();
 		channel_init(output, asyncronous);
-		err = RUN_filter(FilterMultiples, input, output, .prime=prime);
+		err = RUN_filter(Sieve, input, output, .prime=prime);
 		assert(err == 0);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));

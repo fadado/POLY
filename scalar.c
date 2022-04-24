@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #define DEBUG
-#include "poly/pass/scalar.h"
+#include "poly/scalar.h"
 
 int main(int argc, char* argv[argc+1])
 {

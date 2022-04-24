@@ -5,8 +5,12 @@
 #include "POLY.h"
 #endif
 
+/*
+ * A thin façade renaming on top of C11 type `thrd_t`.
+ */
+
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// Thread interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef thrd_t Thread;
@@ -21,7 +25,7 @@ static int      thread_sleep(Clock duration);
 static void     thread_yield(void);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Thread implementation
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int
@@ -63,6 +67,7 @@ thread_yield (void)
 static ALWAYS inline int
 thread_sleep (Clock duration)
 {
+	// Split `duration` nanoseconds to make an `struct timespec`
 	const time_t s  = ns2s(duration);
 	const long   ns = duration - s2ns(s);
 	return thrd_sleep(&(struct timespec){.tv_sec=s, .tv_nsec=ns}, NULL);

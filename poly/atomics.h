@@ -1,5 +1,5 @@
 #ifdef __STDC_NO_ATOMICS__
-#error I need <stdatomic.h>. Sorry.
+#error I need <stdatomic.h>. Sorry :-(
 #endif
 #ifndef SYNCOP_H
 #define SYNCOP_H
@@ -98,20 +98,20 @@ enum {
 
 /* CAS usage protocol:
  *
-    static _Atomic(A) shared = ...
-    ...
-
-    C x = LOAD(&shared);
-    do {
-        C y = ϕ(x);
-    } while (!CASW(&shared, &x, y));
-
-or, less efficient because `volatile` goes directly to the main memory,
-ignoring caches:
-
-    volatile C x = LOAD(&shared);
-    while (!CASW(&shared, &x, ϕ(x)));
-***********************************************************************/
+ *  static _Atomic(A) shared = ...
+ *  ...
+ *
+ *  C x = LOAD(&shared);
+ *  do {
+ *      C y = ϕ(x);
+ *  } while (!CASW(&shared, &x, y));
+ *
+ * or, less efficient because `volatile` goes directly to the main memory,
+ * ignoring caches:
+ *
+ *  volatile C x = LOAD(&shared);
+ *  while (!CASW(&shared, &x, ϕ(x)));
+ */
 
 // C atomic_fetch_ϕ(volatile A *shared, M operand);
 // C atomic_fetch_ϕ_explicit(volatile A *shared, M operand, memory_order order);

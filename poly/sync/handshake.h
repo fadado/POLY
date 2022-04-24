@@ -9,13 +9,13 @@
 #include "../monitor/board.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// Handshake interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Handshake {
-	Lock     syncronized;
-	Notice   board[2];
-	unsigned who;
+	Lock      syncronized;
+	Notice    board[2];
+	unsigned  who; // alternates between 0 and 1
 } Handshake;
 
 static int  handshake_init(Handshake *const this);
@@ -23,7 +23,7 @@ static void handshake_destroy(Handshake *const this);
 static int  handshake_wait(Handshake *const this);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Handshake implementation
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
@@ -32,6 +32,13 @@ static int  handshake_wait(Handshake *const this);
 #else
 #	define ASSERT_HANDSHAKE_INVARIANT
 #endif
+
+/*  Handshake h;
+ *
+ *  catch (handshake_init(&b));
+ *  ...
+ *  handshake_destroy(&b);
+ */
 
 static int
 handshake_init (Handshake *const this)
@@ -57,6 +64,10 @@ handshake_destroy (Handshake *const this)
 	board_destroy(this->board, 2);
 	lock_destroy(&this->syncronized);
 }
+
+/*
+ * catch (handshake_wait(&b)) | catch (handshake_wait(&b))
+ */
 
 static inline int
 handshake_wait (Handshake *const this)

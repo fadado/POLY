@@ -2,7 +2,7 @@
 #define TASK_H
 
 ////////////////////////////////////////////////////////////////////////
-// Task: a execution context + activation record
+// Task: execution context + activation record
 ////////////////////////////////////////////////////////////////////////
 
 /*
@@ -11,9 +11,9 @@
  *      ...
  *  END_TYPE
  */
-#define TASK_TYPE(T,...)\
-    __VA_ARGS__ int T(void*);\
-    struct T {
+#define TASK_TYPE(NAME,...)\
+    __VA_ARGS__ int NAME(void*);\
+    struct NAME {
 
 #define END_TYPE\
     };
@@ -24,10 +24,10 @@
  *      ...
  *  END_BODY
  */
-#define TASK_BODY(T)\
-    int T (void* arg_)\
+#define TASK_BODY(NAME)\
+    int NAME (void* arg_)\
     {   /*assert(arg_ != NULL);*/\
-        struct T const this = *((struct T*)arg_);\
+        struct NAME const this = *((struct NAME*)arg_);\
         /* fetch-and-increment atomic global counter*/\
         TASK_ID = task_ID_COUNT_++;\
         thread_detach(thread_current());
@@ -36,21 +36,13 @@
         return 0;\
     }
 
-// atomic global counter (provide unique IDs)
 // TASK_ID: 0, 1, ...
-static _Atomic       unsigned task_ID_COUNT_ = 1;
 static _Thread_local unsigned TASK_ID = 0; // 0 reserved to main
+// private atomic global counter (provide unique IDs)
+static _Atomic unsigned task_ID_COUNT_ = 1;
 
-/*
- *  TASK_TYPE (name)
- *      ...
- *  END_TYPE
- *
- *  TASK_BODY (name)
- *      ...
- *  END_BODY
- */
-#define RUN_task(T,...)\
-    thread_fork(T, &(struct T){__VA_ARGS__}, &(Thread){0})
+// Run a task, given the name and slots
+#define RUN_task(NAME,...)\
+    thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp

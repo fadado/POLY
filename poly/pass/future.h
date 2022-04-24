@@ -5,17 +5,17 @@
 #include "POLY.h"
 #endif
 #include "../thread.h"
-#include "scalar.h"
+#include "../scalar.h"
 #include "port.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// Future interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Future {
-	bool    finished;// still not finished?
-	Scalar  result;  // memoized result
-	Port    port;    // syncronous communication port
+	bool    finished; // still not finished?
+	Scalar  result;   // memoized result
+	Port    port;     // syncronous communication port
 } Future;
 
 static int    future_fork(int main(void*), void* argument, Future *const this);
@@ -39,7 +39,7 @@ static int    future_set(Future *const this, Scalar x);
         &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, (F))
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Future implementation
 ////////////////////////////////////////////////////////////////////////
 
 /* atomic(bool) finished ?

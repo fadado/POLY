@@ -2,14 +2,13 @@
 #define MONITOR_H
 
 ////////////////////////////////////////////////////////////////////////
-//Monitor helpers
+// Monitor helpers
 ////////////////////////////////////////////////////////////////////////
 
 /*
  * Assume:
  *     + auto int err;
- *     + lock named `syncronized`.
- *     + label onerror:
+ *     + `syncronized` is the lock
  */
 
 #define enter_monitor(OBJ) do {\

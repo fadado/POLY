@@ -4,10 +4,7 @@
 #ifndef POLY_H
 #define POLY_H
 
-/* Module parameters:
- *     DEBUG
- */
-
+// Enable assertion if defined
 #ifndef DEBUG
 #define NDEBUG
 #endif
@@ -84,7 +81,7 @@ typedef unsigned long long Clock;
 #define ns2ms(T)    (Clock)((T)/1000000ull)
 #define ns2us(T)    (Clock)((T)/1000ull)
 
-// TIME_UTC based absolute calendar time point
+// TIME_UTC based absolute calendar time point in nanoseconds
 static inline Clock
 now (void)
 {

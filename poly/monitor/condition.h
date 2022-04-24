@@ -6,8 +6,12 @@
 #endif
 #include "lock.h"
 
+/*
+ * A thin façade renaming on top of C11 type `cnd_t`.
+ */
+
 ////////////////////////////////////////////////////////////////////////
-// Interface
+// Condition interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef cnd_t Condition;
@@ -20,7 +24,7 @@ static int  condition_wait(Condition *const this, union Lock lock);
 static int  condition_wait_for(Condition *const this, union Lock lock, Clock duration);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Condition implementation
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int
@@ -56,7 +60,7 @@ condition_broadcast (Condition *const this)
 static inline int
 condition_wait_for (Condition *const this, union Lock lock, Clock duration)
 {
-	const Clock  t  = now() + duration;
+	const Clock  t  = now() + duration; // Clock ticks are nanoseconds
 	const time_t s  = ns2s(t);
 	const long   ns = t - s2ns(s);
 	return cnd_timedwait(this, lock.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});

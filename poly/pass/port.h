@@ -7,17 +7,16 @@
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"
-#include "scalar.h"
+#include "../scalar.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Type Port of one scalar
-// Interface
+// Port interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Port {
-	Lock     syncronized;
-	Notice   board[2];
-	Scalar   value;
+	Lock    syncronized;
+	Notice  board[2];
+	Scalar  value;
 } Port;
 
 static void port_destroy(Port *const this);
@@ -46,7 +45,7 @@ static int  port_send(Port *const this, Scalar scalar);
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// Port implementation
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
@@ -54,19 +53,6 @@ static int  port_send(Port *const this, Scalar scalar);
 #else
 #	define ASSERT_PORT_INVARIANT
 #endif
-
-//
-// Predicates
-//
-static ALWAYS inline bool
-port_ready (Port const*const this)
-{
-	return notice_ready(&this->board[0]);
-}
-
-//
-// Port life
-//
 
 static int
 port_init (Port *const this)
@@ -90,6 +76,12 @@ port_destroy (Port *const this)
 {
 	board_destroy(this->board, 2);
 	lock_destroy(&this->syncronized);
+}
+
+static ALWAYS inline bool
+port_ready (Port const*const this)
+{
+	return notice_ready(&this->board[0]);
 }
 
 static inline int

@@ -4,21 +4,21 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
-#include "scalar.h"
+#include "../scalar.h"
 
 //#include <stdlib.h>
 extern void  free(void*);
 extern void* calloc(size_t, size_t);
 
 ////////////////////////////////////////////////////////////////////////
-// Type FIFO buffer of Scalars
+// FIFO interface (buffer of Scalars)
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct FIFO {
-	Scalar*  buffer;
-	unsigned size;
-	unsigned count;
-	unsigned front;
+	Scalar*   buffer;
+	unsigned  size;
+	unsigned  count;
+	unsigned  front;
 } FIFO;
 
 static int    fifo_init(FIFO *const this, unsigned size);
@@ -29,7 +29,7 @@ static void   fifo_put(FIFO *const this, Scalar scalar);
 static Scalar fifo_get(FIFO *const this);
 
 ////////////////////////////////////////////////////////////////////////
-// Implementation
+// FIFO implementation
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
