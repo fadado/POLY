@@ -87,7 +87,7 @@ TASK_BODY (Fibonacci)
 
 	long result = slow_fib(this.n);
 	// ...long time...
-	future_set(this.future, (Unsigned)result); // what if error: return > 0 ???
+	future_send(this.future, (Unsigned)result); // what if error: return > 0 ???
 END_BODY
 
 ////////////////////////////////////////////////////////////////////////
@@ -120,10 +120,10 @@ int main(int argc, char* argv[argc+1])
 
 	assert(err == 0);
 
-	long n = cast(future_get(&fib_N), long);
+	long n = cast(future_receive(&fib_N), long);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(future_get(&fib_N), long);
+	n = cast(future_receive(&fib_N), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;

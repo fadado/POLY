@@ -19,9 +19,9 @@ typedef struct Future {
 } Future;
 
 static int    future_fork(int main(void*), void* argument, Future *const this);
-static Scalar future_get(Future *const this);
 static int    future_join(Future *const this);
-static int    future_set(Future *const this, Scalar x);
+static Scalar future_receive(Future *const this);
+static int    future_send(Future *const this, Scalar x);
 
 /*
  *  TASK_TYPE (name)
@@ -76,7 +76,7 @@ future_join (Future *const this)
 
 // to be called once from the promise
 static ALWAYS inline int
-future_set (Future *const this, Scalar x)
+future_send (Future *const this, Scalar x)
 {
 	assert(!this->finished);
 	return port_send(&this->port, x);
@@ -84,7 +84,7 @@ future_set (Future *const this, Scalar x)
 
 // to be called any number of times from the client
 static ALWAYS inline Scalar
-future_get (Future *const this)
+future_receive (Future *const this)
 {
 	if (!this->finished) { future_join(this); }
 	return this->result;
