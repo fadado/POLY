@@ -71,7 +71,7 @@ END_BODY
 ////////////////////////////////////////////////////////////////////////
 
 TASK_TYPE (Fibonacci, static)
-    Future* future;
+	Future* future;
 	long    n;
 END_TYPE
 
@@ -114,16 +114,17 @@ int main(int argc, char* argv[argc+1])
 
 	err += RUN_task(Spinner, .delay=us2ns(usDELAY));
 
-	Future fib_N;
-	err += RUN_promise(Fibonacci, &fib_N, .n=N);
-	err += future_join(&fib_N);
+	Future inbox;
+	err += RUN_promise(Fibonacci, &inbox, .n=N);
+	// ... time
+	err += future_join(&inbox);
 
 	assert(err == 0);
 
-	long n = cast(future_receive(&fib_N), long);
+	long n = cast(future_receive(&inbox), long);
 	assert(n == 1836311903ul);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(future_receive(&fib_N), long);
+	n = cast(future_receive(&inbox), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;
