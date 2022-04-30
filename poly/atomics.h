@@ -21,12 +21,12 @@
 
 // memory_order mo = ...;
 enum {
-    RELAXED = memory_order_relaxed,
-    CONSUME = memory_order_consume,
-    ACQUIRE = memory_order_acquire,
-    RELEASE = memory_order_release,
-    ACQ_REL = memory_order_acq_rel,
-    SEQ_CST = memory_order_seq_cst
+	RELAXED = memory_order_relaxed,
+	CONSUME = memory_order_consume,
+	ACQUIRE = memory_order_acquire,
+	RELEASE = memory_order_release,
+	ACQ_REL = memory_order_acq_rel,
+	SEQ_CST = memory_order_seq_cst
 };
 
 ////////////////////////////////////////////////////////////////////////

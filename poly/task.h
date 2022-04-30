@@ -12,11 +12,11 @@
  *  END_TYPE
  */
 #define TASK_TYPE(NAME,...)\
-    __VA_ARGS__ int NAME(void*);\
-    struct NAME {
+	__VA_ARGS__ int NAME(void*);\
+	struct NAME {
 
 #define END_TYPE\
-    };
+	};
 
 /*
  *  TASK_BODY (name)
@@ -25,16 +25,17 @@
  *  END_BODY
  */
 #define TASK_BODY(NAME)\
-    int NAME (void* arg_)\
-    {   /*assert(arg_ != NULL);*/\
-        struct NAME const this = *((struct NAME*)arg_);\
-        /* fetch-and-increment atomic global counter*/\
-        TASK_ID = task_ID_COUNT_++;\
-        thread_detach(thread_current());
+	int NAME (void* arg_)\
+	{\
+		/*assert(arg_ != NULL);*/\
+		struct NAME const this = *((struct NAME*)arg_);\
+		/* fetch-and-increment atomic global counter*/\
+		TASK_ID = task_ID_COUNT_++;\
+		thread_detach(thread_current());
 
 #define END_BODY\
-        return 0;\
-    }
+		return 0;\
+	}
 
 // TASK_ID: 0, 1, ...
 static _Thread_local unsigned TASK_ID = 0; // 0 reserved to main
@@ -43,6 +44,6 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
 
 // Run a task, given the name and slots
 #define RUN_task(NAME,...)\
-    thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
+	thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp

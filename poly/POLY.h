@@ -4,7 +4,7 @@
 #ifndef POLY_H
 #define POLY_H
 
-// Enable assertion if defined
+// Assertions are enabled if defined
 #ifndef DEBUG
 #define NDEBUG
 #endif
@@ -14,7 +14,7 @@
 #include <error.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <threads.h> // include <time.h>
+#include <threads.h> // also includes <time.h>
 
 ////////////////////////////////////////////////////////////////////////
 // Error management
@@ -35,8 +35,7 @@ enum {
 	STATUS_NOMEM    = thrd_nomem,
 	STATUS_TIMEDOUT = thrd_timedout,
 	// define non standard constants after this point
-	STATUS_NEXT     = thrd_success + thrd_busy + thrd_error
-		              + thrd_nomem + thrd_timedout,
+	STATUS_NEXT     = thrd_success + thrd_busy + thrd_error + thrd_nomem + thrd_timedout,
 };
 
 // verify if negative status are used

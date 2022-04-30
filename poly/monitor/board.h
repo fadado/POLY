@@ -8,7 +8,7 @@
 #include "notice.h"
 
 /*
- * Boards are arrays of Notice to help in the implementation of rendezvous
+ * Boards are arrays of Notice, handy in the implementation of rendezvous
  * protocols.
  */
 

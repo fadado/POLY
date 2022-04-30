@@ -10,8 +10,7 @@
 #include "poly/task.h"
 #include "poly/atomics.h"
 #include "poly/scalar.h"
-#include "poly/pass/future.h"
-
+#include "poly/pass/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Playing with different methods of sync.
@@ -71,8 +70,8 @@ END_BODY
 ////////////////////////////////////////////////////////////////////////
 
 TASK_TYPE (Fibonacci, static)
-	Future* future;
-	long    n;
+	Channel* future;
+	long     n;
 END_TYPE
 
 TASK_BODY (Fibonacci)
@@ -87,7 +86,7 @@ TASK_BODY (Fibonacci)
 
 	long result = slow_fib(this.n);
 	// ...long time...
-	future_send(this.future, (Unsigned)result); // what if error: return > 0 ???
+	channel_send(this.future, (Unsigned)result); // what if error: return > 0 ???
 END_BODY
 
 ////////////////////////////////////////////////////////////////////////
@@ -114,17 +113,17 @@ int main(int argc, char* argv[argc+1])
 
 	err += RUN_task(Spinner, .delay=us2ns(usDELAY));
 
-	Future inbox;
+	Channel inbox;
+	err += channel_init(&inbox, 1);
 	err += RUN_promise(Fibonacci, &inbox, .n=N);
-	// ... time
-	err += future_join(&inbox);
 
 	assert(err == 0);
 
-	long n = cast(future_receive(&inbox), long);
+	Scalar r;
+	err = channel_receive(&inbox, &r);
+	assert(err == 0);
+	long n = cast(r, long);
 	assert(n == 1836311903ul);
-	printf("\rFibonacci(%d) = %ld\n", N, n);
-	n = cast(future_receive(&inbox), long);
 	printf("\rFibonacci(%d) = %ld\n", N, n);
 
 	ns = now()-t;
@@ -136,10 +135,7 @@ int main(int argc, char* argv[argc+1])
 
 	show_cursor();
 
-//
-	atomic_int shared = 7;
-	MUL(&shared, 7);
-	assert(shared == 7*7);
+	channel_destroy(&inbox);
 
 	return 0;
 }

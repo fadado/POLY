@@ -15,10 +15,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Notice {
-	mtx_t*	mutex;
-	cnd_t 	queue;
-	signed	permits; // # of threads allowed to leave the queue
-	signed	waiting; // # of threads waiting in the queue
+	mtx_t*  mutex;
+	cnd_t   queue;
+	signed  permits; // # of threads allowed to leave the queue
+	signed  waiting; // # of threads waiting in the queue
 } Notice;
 
 static int  notice_broadcast(Notice *const this);
@@ -47,6 +47,7 @@ notice_init (Notice *const this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
+
 	const int err = cnd_init(&this->queue);
 	ASSERT_NOTICE_INVARIANT
 

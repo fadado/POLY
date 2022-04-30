@@ -52,12 +52,34 @@ static int  channel_send(Channel *const this, Scalar scalar);
  *
  *  TASK_BODY (name)
  *      ...
+ *      receive from input and send to output
+ *      ...
  *  END_BODY
  */
 #ifndef RUN_filter
 #define RUN_filter(T,I,O,...)\
     thread_fork(T, \
         &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
+        &(Thread){0})
+#endif
+
+/*
+ *  TASK_TYPE (name)
+ *      Channel* future;
+ *      slots
+ *      ...
+ *  END_TYPE
+ *
+ *  TASK_BODY (name)
+ *      ...
+ *      send final value to future
+ *      ...
+ *  END_BODY
+ */
+#ifndef RUN_promise
+#define RUN_promise(T,F,...)\
+    thread_fork(T, \
+        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__},\
         &(Thread){0})
 #endif
 
@@ -177,7 +199,7 @@ static inline int
 channel_send (Channel *const this, Scalar scalar)
 {
 	if (CHANNEL_CLOSED & this->flags) {
-		panic("channel_send cannot use a closed channel");
+		panic("cannot send to a closed channel");
 	}
 
 	int err;

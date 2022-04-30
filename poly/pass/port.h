@@ -35,6 +35,8 @@ static int  port_send(Port *const this, Scalar scalar);
  *
  *  TASK_BODY (name)
  *      ...
+ *      receive from input and send to output
+ *      ...
  *  END_BODY
  */
 #ifndef RUN_filter
