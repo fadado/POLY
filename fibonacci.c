@@ -8,7 +8,6 @@
 
 #include "poly/thread.h"
 #include "poly/task.h"
-#include "poly/atomics.h"
 #include "poly/scalar.h"
 #include "poly/pass/channel.h"
 
@@ -18,6 +17,8 @@
 
 #if 0
 
+#include "poly/atomics.h"
+
 static atomic_flag calculating = ATOMIC_FLAG_INIT;
 
 #define WAIT(R)    ({ TAS(&(R), RELAXED); while (TAS(&(R), ACQ_REL)); })
@@ -25,17 +26,37 @@ static atomic_flag calculating = ATOMIC_FLAG_INIT;
 
 #elif 0
 
+#include "poly/atomics.h"
+
 static atomic_bool calculating = false;
 
 #define WAIT(R)    while (!LOAD(&(R), ACQUIRE))
 #define SIGNAL(R)  STORE(&(R), true, RELEASE)
 
-#else
+#elif 0
 
 static volatile bool calculating = false;
 
 #define WAIT(R)    while (!(R))
 #define SIGNAL(R)  ((R) = true)
+
+#elif 0
+
+#include "poly/sync/handshake.h"
+
+static Handshake calculating;
+
+#define WAIT(R)    (void)handshake_wait(&(R))
+#define SIGNAL(R)  (void)handshake_wait(&(R))
+
+#else
+
+#include "poly/sync/barrier.h"
+
+static Barrier calculating;
+
+#define WAIT(R)    (void)barrier_wait(&(R))
+#define SIGNAL(R)  (void)barrier_wait(&(R))
 
 #endif
 
@@ -48,13 +69,13 @@ TASK_TYPE (Spinner, static)
 END_TYPE
 
 TASK_BODY (Spinner)
-	warn("TaskID: %d", TASK_ID);
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
 		thread_sleep(this.delay);
 	}
 
+	warn("TaskID: %d", TASK_ID);
 	WAIT (calculating);
 
 	spin(0);
@@ -75,14 +96,14 @@ TASK_TYPE (Fibonacci, static)
 END_TYPE
 
 TASK_BODY (Fibonacci)
+
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	warn("TaskID: %d", TASK_ID);
-
 	SIGNAL (calculating);
+	warn("TaskID: %d", TASK_ID);
 
 	long result = slow_fib(this.n);
 	// ...long time...
@@ -103,6 +124,14 @@ END_BODY
 int main(int argc, char* argv[argc+1])
 {
 	int err = 0;
+
+#if defined(HANDSHAKE_H)
+	err = handshake_init(&calculating);
+	assert(!err);
+#elif defined(BARRIER_H)
+	err = barrier_init(&calculating, 2);
+	assert(!err);
+#endif
 
 	enum { N=46, usDELAY=500}; // fib(46)=1836311903
 	Clock s,ms,us,ns, t = now();
@@ -137,6 +166,11 @@ int main(int argc, char* argv[argc+1])
 
 	channel_destroy(&inbox);
 
+#if defined(HANDSHAKE_H)
+	handshake_destroy(&calculating);
+#elif defined(BARRIER_H)
+	barrier_destroy(&calculating);
+#endif
 	return 0;
 }
 

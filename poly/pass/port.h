@@ -25,27 +25,6 @@ static int  port_receive(Port *const this, Scalar* scalar);
 static bool port_ready(Port const*const this);
 static int  port_send(Port *const this, Scalar scalar);
 
-/*
- *  TASK_TYPE (name)
- *      Port* input;
- *      Port* output;
- *      slots
- *      ...
- *  END_TYPE
- *
- *  TASK_BODY (name)
- *      ...
- *      receive from input and send to output
- *      ...
- *  END_BODY
- */
-#ifndef RUN_filter
-#define RUN_filter(T,I,O,...)\
-    thread_fork(T, \
-        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
-        &(Thread){0})
-#endif
-
 ////////////////////////////////////////////////////////////////////////
 // Port implementation
 ////////////////////////////////////////////////////////////////////////

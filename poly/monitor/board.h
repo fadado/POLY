@@ -36,7 +36,7 @@ board_init (Notice board[], unsigned n, union Lock lock)
 {
 	assert(n > 0);
 	for (unsigned i = 0; i < n; ++i) {
-		const int err = notice_init(&board[i], lock.mutex);
+		const int err = notice_init(&board[i], lock);
 		if (err != STATUS_SUCCESS) {
 			if (i > 0) {
 				board_destroy(board, i);

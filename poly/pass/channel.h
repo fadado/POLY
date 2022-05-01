@@ -42,47 +42,6 @@ static int  channel_init(Channel *const this, unsigned capacity);
 static int  channel_receive(Channel *const this, Scalar *const request);
 static int  channel_send(Channel *const this, Scalar scalar);
 
-/*
- *  TASK_TYPE (name)
- *      Channel* input;
- *      Channel* output;
- *      slots
- *      ...
- *  END_TYPE
- *
- *  TASK_BODY (name)
- *      ...
- *      receive from input and send to output
- *      ...
- *  END_BODY
- */
-#ifndef RUN_filter
-#define RUN_filter(T,I,O,...)\
-    thread_fork(T, \
-        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
-        &(Thread){0})
-#endif
-
-/*
- *  TASK_TYPE (name)
- *      Channel* future;
- *      slots
- *      ...
- *  END_TYPE
- *
- *  TASK_BODY (name)
- *      ...
- *      send final value to future
- *      ...
- *  END_BODY
- */
-#ifndef RUN_promise
-#define RUN_promise(T,F,...)\
-    thread_fork(T, \
-        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__},\
-        &(Thread){0})
-#endif
-
 ////////////////////////////////////////////////////////////////////////
 // Channel implementation
 ////////////////////////////////////////////////////////////////////////

@@ -5,6 +5,12 @@
 // Task: execution context + activation record
 ////////////////////////////////////////////////////////////////////////
 
+// TASK_ID: 0, 1, ...
+static _Thread_local unsigned TASK_ID = 0; // 0 reserved to main
+                                           //
+// private atomic global counter (provide unique IDs)
+static _Atomic unsigned task_ID_COUNT_ = 1;
+
 /*
  *  TASK_TYPE (name [,linkage])
  *      slots
@@ -37,13 +43,43 @@
 		return 0;\
 	}
 
-// TASK_ID: 0, 1, ...
-static _Thread_local unsigned TASK_ID = 0; // 0 reserved to main
-// private atomic global counter (provide unique IDs)
-static _Atomic unsigned task_ID_COUNT_ = 1;
-
 // Run a task, given the name and slots
 #define RUN_task(NAME,...)\
 	thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
+
+/*
+ *  TASK_TYPE (name)
+ *      Channel* input;  // Channel or Port
+ *      Channel* output;
+ *      ...
+ *  END_TYPE
+ *
+ *  TASK_BODY (name)
+ *      ...
+ *      receive from `input` and send to `output`
+ *      ...
+ *  END_BODY
+ */
+#define RUN_filter(T,I,O,...)\
+    thread_fork(T, \
+        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
+        &(Thread){0})
+
+/*
+ *  TASK_TYPE (name)
+ *      Channel* future;
+ *      ...
+ *  END_TYPE
+ *
+ *  TASK_BODY (name)
+ *      ...
+ *      send result value to `future`
+ *      ...
+ *  END_BODY
+ */
+#define RUN_promise(T,F,...)\
+    thread_fork(T, \
+        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__},\
+        &(Thread){0})
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp
