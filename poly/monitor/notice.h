@@ -70,35 +70,23 @@ notice_ready (Notice const*const this)
 	return this->waiting != 0; // thread safe?
 }
 
-#if 1
 static inline int
 notice_await (Notice *const this, bool(predicate)(void))
 {
+	// until predicate()
 	while (!predicate()) {
 		++this->waiting;
 		const int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
 		if (err != STATUS_SUCCESS) return err;
 	}
-	--this->permits; // can be negative!!!
+	--this->permits; // TODO: permits < 0 !!!!!!!!!!!!!!!!!!!!
+	//ASSERT_NOTICE_INVARIANT
+	//if (this->permits<0) warn("permits: %d", this->permits);
+
 	return STATUS_SUCCESS;
 }
 
-static inline int
-notice_wait (Notice *const this)
-{
-	int err;
-
-	bool permits_available(void) { return this->permits != 0; }
-	catch (notice_await(this, permits_available));
-	ASSERT_NOTICE_INVARIANT
-
-	return STATUS_SUCCESS;
-onerror:
-	return err;
-}
-
-#else
 static inline int
 notice_wait (Notice *const this)
 {
@@ -114,7 +102,6 @@ notice_wait (Notice *const this)
 
 	return STATUS_SUCCESS;
 }
-#endif
 
 static inline int
 notice_do_wait (Notice *const this)
