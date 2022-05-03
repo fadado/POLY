@@ -23,7 +23,7 @@ typedef struct Notice {
 
 static int  notice_broadcast(Notice *const this);
 static void notice_destroy(Notice *const this);
-static int  notice_enquire(Notice *const this);
+static int  notice_do_wait(Notice *const this);
 static int  notice_init(Notice *const this, union Lock lock);
 static int  notice_notify(Notice *const this);
 static bool notice_ready(Notice const*const this);
@@ -70,8 +70,40 @@ notice_ready (Notice const*const this)
 	return this->waiting != 0; // thread safe?
 }
 
+#if 1
 static inline int
-notice_enquire (Notice *const this)
+notice_await (Notice *const this, bool(predicate)(void))
+{
+	while (predicate()) {
+		++this->waiting;
+		const int err = cnd_wait(&this->queue, this->mutex);
+		--this->waiting;
+		if (err != STATUS_SUCCESS) return err;
+	}
+	return STATUS_SUCCESS;
+}
+
+static inline int
+notice_wait (Notice *const this)
+{
+	int err;
+
+	bool zero_permits(void) {
+		return this->permits == 0;
+	}
+	catch (notice_await(this, zero_permits));
+
+	--this->permits;
+	ASSERT_NOTICE_INVARIANT
+
+	return STATUS_SUCCESS;
+onerror:
+	return err;
+}
+
+#else
+static inline int
+notice_wait (Notice *const this)
 {
 	// until permits > 0
 	while (this->permits == 0) {
@@ -85,9 +117,10 @@ notice_enquire (Notice *const this)
 
 	return STATUS_SUCCESS;
 }
+#endif
 
 static inline int
-notice_wait (Notice *const this)
+notice_do_wait (Notice *const this)
 {
 	do {
 		++this->waiting;

@@ -101,7 +101,7 @@ barrier_wait (Barrier *const this)
 	enter_monitor(this);
 
 	if (--this->places != 0) {
-		catch (notice_wait(&this->move_on));
+		catch (notice_do_wait(&this->move_on));
 	} else {
 		status = BARRIER_FULL;
 		this->places = this->capacity;

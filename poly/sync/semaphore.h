@@ -89,7 +89,7 @@ semaphore_P (Semaphore *const this)
 	--this->counter;
 	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
 	if (waiting > 0) {
-		catch (notice_wait(&this->queue));
+		catch (notice_do_wait(&this->queue));
 	}
 
 	leave_monitor(this);

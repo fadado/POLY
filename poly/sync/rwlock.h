@@ -83,7 +83,7 @@ rwlock_acquire (RWLock *const this)
 	enter_monitor(this);
 
 	if (this->counter != RWLOCK_IDLE) {
-		catch (notice_enquire(&this->writers));
+		catch (notice_wait(&this->writers));
 		assert(this->counter == RWLOCK_IDLE);
 	}
 	this->counter = RWLOCK_WRITING;
@@ -122,7 +122,7 @@ rwlock_enter (RWLock *const this)
 	enter_monitor(this);
 
 	while (this->counter == RWLOCK_WRITING) {
-		catch (notice_wait(&this->readers));
+		catch (notice_do_wait(&this->readers));
 	}
 	++this->counter;
 

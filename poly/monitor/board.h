@@ -73,7 +73,7 @@ board_meet (Notice board[2], unsigned i)
 	int err;
 
 	catch (notice_notify(&board[i]));
-	catch (notice_enquire(&board[!i]));
+	catch (notice_wait(&board[!i]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -85,7 +85,7 @@ board_send (Notice board[2], void(thunk)(void))
 {
 	int err;
 
-	catch (notice_enquire(&board[0]));
+	catch (notice_wait(&board[0]));
 	thunk();
 	catch (notice_notify(&board[1]));
 
@@ -100,7 +100,7 @@ board_receive (Notice board[2])
 	int err;
 
 	catch (notice_notify(&board[0]));
-	catch (notice_enquire(&board[1]));
+	catch (notice_wait(&board[1]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -116,10 +116,10 @@ board_call (Notice board[3], void(thunk)(void))
 {
 	int err;
 
-	catch (notice_enquire(&board[0]));
+	catch (notice_wait(&board[0]));
 	thunk();
 	catch (notice_notify(&board[1]));
-	catch (notice_enquire(&board[2]));
+	catch (notice_wait(&board[2]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -132,7 +132,7 @@ board_accept (Notice board[3], void(thunk)(void))
 	int err;
 
 	catch (notice_notify(&board[0]));
-	catch (notice_enquire(&board[1]));
+	catch (notice_wait(&board[1]));
 	thunk();
 	catch (notice_notify(&board[2]));
 
