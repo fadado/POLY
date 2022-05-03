@@ -74,12 +74,13 @@ notice_ready (Notice const*const this)
 static inline int
 notice_await (Notice *const this, bool(predicate)(void))
 {
-	while (predicate()) {
+	while (!predicate()) {
 		++this->waiting;
 		const int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
 		if (err != STATUS_SUCCESS) return err;
 	}
+	--this->permits; // can be negative!!!
 	return STATUS_SUCCESS;
 }
 
@@ -88,12 +89,8 @@ notice_wait (Notice *const this)
 {
 	int err;
 
-	bool zero_permits(void) {
-		return this->permits == 0;
-	}
-	catch (notice_await(this, zero_permits));
-
-	--this->permits;
+	bool permits_available(void) { return this->permits != 0; }
+	catch (notice_await(this, permits_available));
 	ASSERT_NOTICE_INVARIANT
 
 	return STATUS_SUCCESS;

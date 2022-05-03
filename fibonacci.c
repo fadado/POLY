@@ -102,8 +102,8 @@ TASK_BODY (Fibonacci)
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	SIGNAL (calculating);
 	warn("TaskID: %d", TASK_ID);
+	SIGNAL (calculating);
 
 	long result = slow_fib(this.n);
 	// ...long time...
