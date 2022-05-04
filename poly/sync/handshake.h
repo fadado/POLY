@@ -49,7 +49,7 @@ handshake_init (Handshake *const this)
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=(board_init(this->board, 2, &this->syncronized))) != STATUS_SUCCESS) {
+	if ((err=(board_init(2, this->board, &this->syncronized))) != STATUS_SUCCESS) {
 		lock_destroy(&this->syncronized);
 		return err;
 	}
@@ -61,7 +61,7 @@ handshake_init (Handshake *const this)
 static void
 handshake_destroy (Handshake *const this)
 {
-	board_destroy(this->board, 2);
+	board_destroy(2, this->board);
 	lock_destroy(&this->syncronized);
 }
 

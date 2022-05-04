@@ -43,7 +43,7 @@ port_init (Port *const this)
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=(board_init(this->board, 2, &this->syncronized))) != STATUS_SUCCESS) {
+	if ((err=(board_init(2, this->board, &this->syncronized))) != STATUS_SUCCESS) {
 		lock_destroy(&this->syncronized);
 		return err;
 	}
@@ -55,7 +55,7 @@ port_init (Port *const this)
 static void
 port_destroy (Port *const this)
 {
-	board_destroy(this->board, 2);
+	board_destroy(2, this->board);
 	lock_destroy(&this->syncronized);
 }
 

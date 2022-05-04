@@ -33,6 +33,8 @@ static int  notice_wait(Notice *const this);
 // Notice implementation
 ////////////////////////////////////////////////////////////////////////
 
+// TODO: permits < 0 ???
+
 #ifdef DEBUG
 #	define ASSERT_NOTICE_INVARIANT\
 		assert(this->permits >= 0);\
@@ -69,6 +71,8 @@ notice_ready (Notice const*const this)
 {
 	return this->waiting != 0; // thread safe?
 }
+
+////////////////////////////////////////////////////////////////////////
 
 static inline int
 notice_await (Notice *const this, bool(predicate)(void))
@@ -118,6 +122,8 @@ notice_do_wait (Notice *const this)
 
 	return STATUS_SUCCESS;
 }
+
+////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int
 notice_notify (Notice *const this)

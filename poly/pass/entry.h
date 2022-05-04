@@ -50,7 +50,7 @@ entry_init (Entry *const this)
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=(board_init(this->board, 3, &this->syncronized))) != STATUS_SUCCESS) {
+	if ((err=(board_init(3, this->board, &this->syncronized))) != STATUS_SUCCESS) {
 		lock_destroy(&this->syncronized);
 		return err;
 	}
@@ -62,7 +62,7 @@ entry_init (Entry *const this)
 static void
 entry_destroy (Entry *const this)
 {
-	board_destroy(this->board, 3);
+	board_destroy(3, this->board);
 	lock_destroy(&this->syncronized);
 }
 

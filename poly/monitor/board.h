@@ -16,30 +16,30 @@
 // Board interface
 ////////////////////////////////////////////////////////////////////////
 
-static int  board_init(Notice board[], unsigned n, union Lock lock);
-static void board_destroy(Notice board[], unsigned n);
+static int  board_init(unsigned n, Notice board[static n], union Lock lock);
+static void board_destroy(unsigned n, Notice board[static n]);
 
-static int  board_meet(Notice board[2], unsigned i);
+static int  board_meet(Notice board[static 2], unsigned i);
 
-static int  board_send(Notice board[2], void(thunk)(void));
-static int  board_receive(Notice board[2]);
+static int  board_send(Notice board[static 2], void(thunk)(void));
+static int  board_receive(Notice board[static 2]);
 
-static int  board_call(Notice board[3], void(thunk)(void));
-static int  board_accept(Notice board[3], void(thunk)(void));
+static int  board_call(Notice board[static 3], void(thunk)(void));
+static int  board_accept(Notice board[static 3], void(thunk)(void));
 
 ////////////////////////////////////////////////////////////////////////
 // Board implementation
 ////////////////////////////////////////////////////////////////////////
 
 static int
-board_init (Notice board[], unsigned n, union Lock lock)
+board_init (unsigned n, Notice board[static n], union Lock lock)
 {
 	assert(n > 0);
 	for (unsigned i = 0; i < n; ++i) {
 		const int err = notice_init(&board[i], lock);
 		if (err != STATUS_SUCCESS) {
 			if (i > 0) {
-				board_destroy(board, i);
+				board_destroy(i, board);
 			}
 			return err;
 		}
@@ -48,7 +48,7 @@ board_init (Notice board[], unsigned n, union Lock lock)
 }
 
 static void
-board_destroy (Notice board[], unsigned n)
+board_destroy (unsigned n, Notice board[static n])
 {
 	assert(n > 0);
 	unsigned i = n;
@@ -63,7 +63,7 @@ board_destroy (Notice board[], unsigned n)
  */
 
 static ALWAYS inline int
-board_meet (Notice board[2], unsigned i)
+board_meet (Notice board[static 2], unsigned i)
 {
 	// Thread A | Thread B
 	// ---------+---------
@@ -81,7 +81,7 @@ onerror:
 }
 
 static ALWAYS inline int
-board_send (Notice board[2], void(thunk)(void))
+board_send (Notice board[static 2], void(thunk)(void))
 {
 	int err;
 
@@ -95,7 +95,7 @@ onerror:
 }
 
 static ALWAYS inline int
-board_receive (Notice board[2])
+board_receive (Notice board[static 2])
 {
 	int err;
 
@@ -112,7 +112,7 @@ onerror:
  */
 
 static ALWAYS inline int
-board_call (Notice board[3], void(thunk)(void))
+board_call (Notice board[static 3], void(thunk)(void))
 {
 	int err;
 
@@ -127,7 +127,7 @@ onerror:
 }
 
 static ALWAYS inline int
-board_accept (Notice board[3], void(thunk)(void))
+board_accept (Notice board[static 3], void(thunk)(void))
 {
 	int err;
 

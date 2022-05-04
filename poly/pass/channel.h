@@ -46,11 +46,17 @@ enum channel_flag {
 	CHANNEL_DRAINED   = (1<<4),
 };
 
+#define CHANNEL_FLAGS_INVARIANT\
+	assert(!((CHANNEL_BLOCKING & this->flags) && (CHANNEL_SHARED & this->flags)));\
+	assert(!(CHANNEL_BUFFERED & this->flags)  || (CHANNEL_SHARED & this->flags));\
+	assert(!(CHANNEL_DRAINED & this->flags)   || (CHANNEL_CLOSED & this->flags));
+
 // constants for board notices
 enum { CHANNEL_NON_EMPTY, CHANNEL_NON_FULL };
 
 #ifdef DEBUG
 #	define ASSERT_CHANNEL_INVARIANT\
+		CHANNEL_FLAGS_INVARIANT\
 		assert(this->occupation <= this->capacity);
 #else
 #	define ASSERT_CHANNEL_INVARIANT
@@ -66,7 +72,7 @@ channel_init (Channel *const this, unsigned capacity)
 	err = lock_init(&this->syncronized);
 	if (err != STATUS_SUCCESS) { return err; }
 
-	catch (board_init(this->board, 2, &this->syncronized));
+	catch (board_init(2, this->board, &this->syncronized));
 
 	switch (this->capacity) {
 		case 0:
@@ -80,9 +86,9 @@ channel_init (Channel *const this, unsigned capacity)
 			this->flags |= CHANNEL_SHARED;
 			this->flags |= CHANNEL_BUFFERED;
 			if ((err=fifo_init(&this->queue, capacity)) != STATUS_SUCCESS) {
-				board_destroy(this->board, 2);
+				board_destroy(2, this->board);
 				goto onerror;
-            }
+			}
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
@@ -101,7 +107,7 @@ channel_destroy (Channel *const this)
 	if (CHANNEL_BUFFERED & this->flags) {
 		fifo_destroy(&this->queue);
 	}
-	board_destroy(this->board, 2);
+	board_destroy(2, this->board);
 	lock_destroy(&this->syncronized);
 }
 
@@ -135,7 +141,9 @@ channel_send (Channel *const this, Scalar scalar)
 			this->value = scalar;
 		}
 		catch (board_send(this->board, thunk));
+		++this->occupation;
 	} else {
+		assert(CHANNEL_SHARED & this->flags);
 		bool non_full(void) {
 			return this->occupation < this->capacity;
 		}
@@ -146,13 +154,10 @@ channel_send (Channel *const this, Scalar scalar)
 		} else {
 			this->value = scalar;
 		}
-	}
-	++this->occupation;
-	ASSERT_CHANNEL_INVARIANT
-
-	if (CHANNEL_SHARED & this->flags) {
+		++this->occupation;
 		catch (notice_notify(&this->board[CHANNEL_NON_EMPTY]));
 	}
+	ASSERT_CHANNEL_INVARIANT
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;
@@ -178,7 +183,9 @@ channel_receive (Channel *const this, Scalar *const request)
 	if (CHANNEL_BLOCKING & this->flags) {
 		catch (board_receive(this->board));
 		receive(this->value);
+		--this->occupation;
 	} else {
+		assert(CHANNEL_SHARED & this->flags);
 		bool non_empty(void) {
 			return this->occupation > 0;
 		}
@@ -189,13 +196,11 @@ channel_receive (Channel *const this, Scalar *const request)
 		} else {
 			receive(this->value);
 		}
-	}
-	--this->occupation;
-	ASSERT_CHANNEL_INVARIANT
-
-	if (CHANNEL_SHARED & this->flags) {
+		--this->occupation;
 		catch (notice_notify(&this->board[CHANNEL_NON_FULL]));
 	}
+	ASSERT_CHANNEL_INVARIANT
+
 	if ((CHANNEL_CLOSED & this->flags) && this->occupation == 0) {
 		this->flags |= CHANNEL_DRAINED;
 	}
@@ -207,6 +212,7 @@ onerror:
 	return err;
 }
 
+#undef CHANNEL_FLAGS_INVARIANT
 #undef ASSERT_CHANNEL_INVARIANT
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
