@@ -37,7 +37,9 @@ board_init (unsigned n, Notice board[static n], union Lock lock)
 	assert(n > 0);
 	for (unsigned i = 0; i < n; ++i) {
 		const int err = notice_init(&board[i], lock);
-		if (err != STATUS_SUCCESS) {
+		if (err == STATUS_SUCCESS) {
+			continue;
+		} else {
 			if (i > 0) {
 				board_destroy(i, board);
 			}
@@ -51,11 +53,9 @@ static void
 board_destroy (unsigned n, Notice board[static n])
 {
 	assert(n > 0);
-	unsigned i = n;
 	do {
-		--i;
-		notice_destroy(&board[i]);
-	} while (i != 0);
+		notice_destroy(&board[--n]);
+	} while (n != 0);
 }
 
 /*

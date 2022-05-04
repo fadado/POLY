@@ -33,15 +33,16 @@ static int  notice_wait(Notice *const this);
 // Notice implementation
 ////////////////////////////////////////////////////////////////////////
 
-// TODO: permits < 0 ???
-
 #ifdef DEBUG
 #	define ASSERT_NOTICE_INVARIANT\
-		assert(this->permits >= 0);\
 		assert(this->waiting >= 0);\
 		assert(this->mutex != NULL);
+#	define ASSERT_NOTICE_INVARIANT_EXTRA\
+		ASSERT_NOTICE_INVARIANT\
+		assert(this->permits >= 0);
 #else
 #	define ASSERT_NOTICE_INVARIANT
+#	define ASSERT_NOTICE_INVARIANT_EXTRA
 #endif
 
 static inline int
@@ -49,11 +50,9 @@ notice_init (Notice *const this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
 	this->mutex = lock.mutex;
+	ASSERT_NOTICE_INVARIANT_EXTRA
 
-	const int err = cnd_init(&this->queue);
-	ASSERT_NOTICE_INVARIANT
-
-	return err;
+	return cnd_init(&this->queue);
 }
 
 static inline void
@@ -75,23 +74,6 @@ notice_ready (Notice const*const this)
 ////////////////////////////////////////////////////////////////////////
 
 static inline int
-notice_await (Notice *const this, bool(predicate)(void))
-{
-	// until predicate()
-	while (!predicate()) {
-		++this->waiting;
-		const int err = cnd_wait(&this->queue, this->mutex);
-		--this->waiting;
-		if (err != STATUS_SUCCESS) return err;
-	}
-	--this->permits; // TODO: permits < 0 !!!!!!!!!!!!!!!!!!!!
-	//ASSERT_NOTICE_INVARIANT
-	//if (this->permits<0) warn("permits: %d", this->permits);
-
-	return STATUS_SUCCESS;
-}
-
-static inline int
 notice_wait (Notice *const this)
 {
 	// until permits > 0
@@ -99,10 +81,10 @@ notice_wait (Notice *const this)
 		++this->waiting;
 		const int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
-		if (err != STATUS_SUCCESS) return err;
+		if (err == STATUS_SUCCESS) continue; else return err;
 	}
 	--this->permits;
-	ASSERT_NOTICE_INVARIANT
+	ASSERT_NOTICE_INVARIANT_EXTRA
 
 	return STATUS_SUCCESS;
 }
@@ -114,9 +96,25 @@ notice_do_wait (Notice *const this)
 		++this->waiting;
 		const int err = cnd_wait(&this->queue, this->mutex);
 		--this->waiting;
-		if (err != STATUS_SUCCESS) return err;
+		if (err == STATUS_SUCCESS) continue; else return err;
 	// until permits > 0
 	} while (this->permits == 0);
+	--this->permits;
+	ASSERT_NOTICE_INVARIANT_EXTRA
+
+	return STATUS_SUCCESS;
+}
+
+static inline int
+notice_await (Notice *const this, bool(predicate)(void))
+{
+	// until predicate()
+	while (!predicate()) {
+		++this->waiting;
+		const int err = cnd_wait(&this->queue, this->mutex);
+		--this->waiting;
+		if (err == STATUS_SUCCESS) continue; else return err;
+	}
 	--this->permits;
 	ASSERT_NOTICE_INVARIANT
 
@@ -129,10 +127,9 @@ static ALWAYS inline int
 notice_notify (Notice *const this)
 {
 	++this->permits;
-	const int err = cnd_signal(&this->queue);
 	ASSERT_NOTICE_INVARIANT
 
-	return err;
+	return cnd_signal(&this->queue);
 }
 
 static ALWAYS inline int
@@ -142,12 +139,12 @@ notice_broadcast (Notice *const this)
 		return STATUS_SUCCESS;
 	}
 	this->permits += this->waiting;
-	const int err = cnd_broadcast(&this->queue);
 	ASSERT_NOTICE_INVARIANT
 
-	return err;
+	return cnd_broadcast(&this->queue);
 }
 
 #undef ASSERT_NOTICE_INVARIANT
+#undef ASSERT_NOTICE_INVARIANT_EXTRA
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
