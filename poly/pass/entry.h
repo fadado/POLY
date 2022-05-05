@@ -1,5 +1,5 @@
-#ifndef ENTRY_H
-#define ENTRY_H
+#ifndef POLY_ENTRY_H
+#define POLY_ENTRY_H
 
 #ifndef POLY_H
 #include "../POLY.h"

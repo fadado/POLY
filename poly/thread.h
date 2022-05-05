@@ -1,5 +1,5 @@
-#ifndef THREAD_H
-#define THREAD_H
+#ifndef POLY_THREAD_H
+#define POLY_THREAD_H
 
 #ifndef POLY_H
 #include "POLY.h"

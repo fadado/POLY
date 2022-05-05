@@ -1,5 +1,5 @@
-#ifndef MONITOR_H
-#define MONITOR_H
+#ifndef POLY_MONITOR_H
+#define POLY_MONITOR_H
 
 ////////////////////////////////////////////////////////////////////////
 // Monitor helpers

@@ -1,5 +1,5 @@
-#ifndef HANDSHAKE_H
-#define HANDSHAKE_H
+#ifndef POLY_HANDSHAKE_H
+#define POLY_HANDSHAKE_H
 
 #ifndef POLY_H
 #include "../POLY.h"

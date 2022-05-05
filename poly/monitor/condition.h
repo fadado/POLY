@@ -1,5 +1,5 @@
-#ifndef CONDITION_H
-#define CONDITION_H
+#ifndef POLY_CONDITION_H
+#define POLY_CONDITION_H
 
 #ifndef POLY_H
 #include "../POLY.h"

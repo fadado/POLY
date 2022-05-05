@@ -1,5 +1,9 @@
-#ifndef TASK_H
-#define TASK_H
+#ifndef POLY_TASK_H
+#define POLY_TASK_H
+
+#ifndef POLY_THREAD_H
+#include "thread.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Task: execution context + activation record
@@ -73,7 +77,7 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *
  *  TASK_BODY (name)
  *      ...
- *      send result value to `future`
+ *      send result to `future`
  *      ...
  *  END_BODY
  */

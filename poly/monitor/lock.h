@@ -1,5 +1,5 @@
-#ifndef LOCK_H
-#define LOCK_H
+#ifndef POLY_LOCK_H
+#define POLY_LOCK_H
 
 #ifndef POLY_H
 #include "../POLY.h"
@@ -105,7 +105,7 @@ lock_try_for (union Lock this, Clock duration)
 // Monitor helper macros
 ////////////////////////////////////////////////////////////////////////
 
-#ifndef MONITOR_H
+#ifndef POLY_MONITOR_H
 #include "MONITOR.h"
 #endif
 

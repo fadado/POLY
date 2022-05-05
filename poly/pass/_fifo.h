@@ -1,5 +1,5 @@
-#ifndef FIFO_H
-#define FIFO_H
+#ifndef POLY_FIFO_H
+#define POLY_FIFO_H
 
 #ifndef POLY_H
 #include "../POLY.h"
@@ -48,10 +48,12 @@ fifo_init (FIFO *const this, unsigned size)
 	this->size = size;
 	this->front = this->count = 0;
 	this->buffer = calloc(this->size, sizeof(Scalar));
+
 	if (this->buffer == NULL) {
 		return STATUS_NOMEM;
 	}
 	ASSERT_FIFO_INVARIANT
+
 	return STATUS_SUCCESS;
 }
 

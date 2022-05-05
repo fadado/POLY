@@ -1,5 +1,5 @@
-#ifndef SCALAR_H
-#define SCALAR_H
+#ifndef POLY_SCALAR_H
+#define POLY_SCALAR_H
 
 #ifndef POLY_H
 #include "POLY.h"

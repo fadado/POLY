@@ -9,7 +9,6 @@
 
 // comment next line to disable assertions
 #define DEBUG
-#include "poly/thread.h"
 #include "poly/task.h"
 #include "poly/scalar.h"
 #include "poly/pass/port.h"

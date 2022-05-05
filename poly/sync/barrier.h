@@ -1,5 +1,5 @@
-#ifndef BARRIER_H
-#define BARRIER_H
+#ifndef POLY_BARRIER_H
+#define POLY_BARRIER_H
 
 #ifndef POLY_H
 #include "../POLY.h"

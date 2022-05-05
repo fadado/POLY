@@ -1,5 +1,5 @@
-#ifndef PORT_H
-#define PORT_H
+#ifndef POLY_PORT_H
+#define POLY_PORT_H
 
 #ifndef POLY_H
 #include "../POLY.h"

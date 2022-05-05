@@ -1,10 +1,11 @@
-#ifndef NOTICE_H
-#define NOTICE_H
+#ifndef POLY_NOTICE_H
+#define POLY_NOTICE_H
 
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
 #include "lock.h"
+#include "condition.h"
 
 /*
  * An enhanced replacement for C11 type `cnd_t`.
@@ -15,10 +16,10 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Notice {
-	mtx_t*  mutex;
-	cnd_t   queue;
-	signed  permits; // # of threads allowed to leave the queue
-	signed  waiting; // # of threads waiting in the queue
+	union Lock  lock;
+	Condition   queue;
+	signed      permits; // # of threads allowed to leave the queue
+	signed      waiting; // # of threads waiting in the queue
 } Notice;
 
 static int  notice_broadcast(Notice *const this);
@@ -34,25 +35,25 @@ static int  notice_wait(Notice *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_NOTICE_INVARIANT\
+#	define ASSERT_NOTICE_INVARIANT_NO_PERMITS\
 		assert(this->waiting >= 0);\
-		assert(this->mutex != NULL);
-#	define ASSERT_NOTICE_INVARIANT_EXTRA\
-		ASSERT_NOTICE_INVARIANT\
+		assert(this->lock.mutex != NULL);
+#	define ASSERT_NOTICE_INVARIANT\
+		ASSERT_NOTICE_INVARIANT_NO_PERMITS\
 		assert(this->permits >= 0);
 #else
+#	define ASSERT_NOTICE_INVARIANT_NO_PERMITS
 #	define ASSERT_NOTICE_INVARIANT
-#	define ASSERT_NOTICE_INVARIANT_EXTRA
 #endif
 
 static inline int
 notice_init (Notice *const this, union Lock lock)
 {
 	this->waiting = this->permits = 0;
-	this->mutex = lock.mutex;
-	ASSERT_NOTICE_INVARIANT_EXTRA
+	this->lock = lock;
+	ASSERT_NOTICE_INVARIANT
 
-	return cnd_init(&this->queue);
+	return condition_init(&this->queue);
 }
 
 static inline void
@@ -61,8 +62,8 @@ notice_destroy (Notice *const this)
 	assert(this->permits == 0);
 	assert(this->waiting == 0);
 
-	this->mutex = NULL;
-	cnd_destroy(&this->queue);
+	this->lock.mutex = NULL;
+	condition_destroy(&this->queue);
 }
 
 static ALWAYS inline bool
@@ -73,18 +74,20 @@ notice_ready (Notice const*const this)
 
 ////////////////////////////////////////////////////////////////////////
 
+#define _notice_enqueue(THIS)\
+	++(THIS)->waiting;\
+	const int err = condition_wait(&(THIS)->queue, (THIS)->lock);\
+	--(THIS)->waiting;\
+	if (err == STATUS_SUCCESS) continue; else return err
+
 static inline int
 notice_wait (Notice *const this)
 {
-	// until permits > 0
 	while (this->permits == 0) {
-		++this->waiting;
-		const int err = cnd_wait(&this->queue, this->mutex);
-		--this->waiting;
-		if (err == STATUS_SUCCESS) continue; else return err;
+		_notice_enqueue(this);
 	}
 	--this->permits;
-	ASSERT_NOTICE_INVARIANT_EXTRA
+	ASSERT_NOTICE_INVARIANT
 
 	return STATUS_SUCCESS;
 }
@@ -93,14 +96,10 @@ static inline int
 notice_do_wait (Notice *const this)
 {
 	do {
-		++this->waiting;
-		const int err = cnd_wait(&this->queue, this->mutex);
-		--this->waiting;
-		if (err == STATUS_SUCCESS) continue; else return err;
-	// until permits > 0
+		_notice_enqueue(this);
 	} while (this->permits == 0);
 	--this->permits;
-	ASSERT_NOTICE_INVARIANT_EXTRA
+	ASSERT_NOTICE_INVARIANT
 
 	return STATUS_SUCCESS;
 }
@@ -108,18 +107,16 @@ notice_do_wait (Notice *const this)
 static inline int
 notice_await (Notice *const this, bool(predicate)(void))
 {
-	// until predicate()
 	while (!predicate()) {
-		++this->waiting;
-		const int err = cnd_wait(&this->queue, this->mutex);
-		--this->waiting;
-		if (err == STATUS_SUCCESS) continue; else return err;
+		_notice_enqueue(this);
 	}
 	--this->permits;
-	ASSERT_NOTICE_INVARIANT
+	ASSERT_NOTICE_INVARIANT_NO_PERMITS
 
 	return STATUS_SUCCESS;
 }
+
+#undef _notice_enqueue
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -127,24 +124,21 @@ static ALWAYS inline int
 notice_notify (Notice *const this)
 {
 	++this->permits;
-	ASSERT_NOTICE_INVARIANT
+	ASSERT_NOTICE_INVARIANT_NO_PERMITS
 
-	return cnd_signal(&this->queue);
+	return condition_notify(&this->queue);
 }
 
 static ALWAYS inline int
 notice_broadcast (Notice *const this)
 {
-	if (this->waiting == 0) {
-		return STATUS_SUCCESS;
-	}
 	this->permits += this->waiting;
-	ASSERT_NOTICE_INVARIANT
+	ASSERT_NOTICE_INVARIANT_NO_PERMITS
 
-	return cnd_broadcast(&this->queue);
+	return condition_broadcast(&this->queue);
 }
 
+#undef ASSERT_NOTICE_INVARIANT_NO_PERMITS
 #undef ASSERT_NOTICE_INVARIANT
-#undef ASSERT_NOTICE_INVARIANT_EXTRA
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

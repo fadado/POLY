@@ -1,5 +1,5 @@
-#ifndef SEMAPHORE_H
-#define SEMAPHORE_H
+#ifndef POLY_SEMAPHORE_H
+#define POLY_SEMAPHORE_H
 
 #ifndef POLY_H
 #include "../POLY.h"

@@ -1,5 +1,5 @@
-#ifndef CHANNEL_H
-#define CHANNEL_H
+#ifndef POLY_CHANNEL_H
+#define POLY_CHANNEL_H
 
 #ifndef POLY_H
 #include "../POLY.h"
@@ -28,8 +28,9 @@ typedef struct Channel {
 
 static void channel_close(Channel *const this);
 static void channel_destroy(Channel *const this);
-static bool channel_drained(Channel const*const this);
+static bool channel_dry(Channel const*const this);
 static int  channel_init(Channel *const this, unsigned capacity);
+static bool channel_ready(Channel const*const this);
 static int  channel_receive(Channel *const this, Scalar *const request);
 static int  channel_send(Channel *const this, Scalar scalar);
 
@@ -43,13 +44,13 @@ enum channel_flag {
 	CHANNEL_BUFFERED  = (1<<1),
 	CHANNEL_SHARED    = (1<<2),
 	CHANNEL_CLOSED    = (1<<3),
-	CHANNEL_DRAINED   = (1<<4),
+	CHANNEL_DRY       = (1<<4),
 };
 
 #define CHANNEL_FLAGS_INVARIANT\
 	assert(!((CHANNEL_BLOCKING & this->flags) && (CHANNEL_SHARED & this->flags)));\
 	assert(!(CHANNEL_BUFFERED & this->flags)  || (CHANNEL_SHARED & this->flags));\
-	assert(!(CHANNEL_DRAINED & this->flags)   || (CHANNEL_CLOSED & this->flags));
+	assert(!(CHANNEL_DRY & this->flags)   || (CHANNEL_CLOSED & this->flags));
 
 // constants for board notices
 enum { CHANNEL_NON_EMPTY, CHANNEL_NON_FULL };
@@ -111,20 +112,30 @@ channel_destroy (Channel *const this)
 	lock_destroy(&this->syncronized);
 }
 
+////////////////////////////////////////////////////////////////////////
+
 static inline void
 channel_close (Channel *const this)
 {
 	this->flags |= CHANNEL_CLOSED;
 	if (this->occupation == 0) {
-		this->flags |= CHANNEL_DRAINED;
+		this->flags |= CHANNEL_DRY;
 	}
 }
 
 static ALWAYS inline bool
-channel_drained (Channel const*const this)
+channel_dry (Channel const*const this)
 {
-	return (CHANNEL_DRAINED & this->flags);
+	return (CHANNEL_DRY & this->flags);
 }
+
+static ALWAYS inline bool
+channel_ready (Channel const*const this)
+{
+	return this->occupation != 0; // thread safe?
+}
+
+////////////////////////////////////////////////////////////////////////
 
 static inline int
 channel_send (Channel *const this, Scalar scalar)
@@ -172,7 +183,7 @@ channel_receive (Channel *const this, Scalar *const request)
 	inline ALWAYS void receive(Scalar s) {
 		if (request != NULL) { *request = s; }
 	}
-	if (CHANNEL_DRAINED & this->flags) {
+	if (CHANNEL_DRY & this->flags) {
 		receive(0X0U);
 		return STATUS_SUCCESS;
 	}
@@ -199,11 +210,10 @@ channel_receive (Channel *const this, Scalar *const request)
 		--this->occupation;
 		catch (notice_notify(&this->board[CHANNEL_NON_FULL]));
 	}
-	ASSERT_CHANNEL_INVARIANT
-
 	if ((CHANNEL_CLOSED & this->flags) && this->occupation == 0) {
-		this->flags |= CHANNEL_DRAINED;
+		this->flags |= CHANNEL_DRY;
 	}
+	ASSERT_CHANNEL_INVARIANT
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;

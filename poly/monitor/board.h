@@ -1,5 +1,5 @@
-#ifndef BOARD_H
-#define BOARD_H
+#ifndef POLY_BOARD_H
+#define POLY_BOARD_H
 
 #ifndef POLY_H
 #include "../POLY.h"

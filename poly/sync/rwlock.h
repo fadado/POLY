@@ -1,5 +1,5 @@
-#ifndef RWLOCK_H
-#define RWLOCK_H
+#ifndef POLY_RWLOCK_H
+#define POLY_RWLOCK_H
 
 #ifndef POLY_H
 #include "../POLY.h"

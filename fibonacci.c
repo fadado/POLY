@@ -125,10 +125,10 @@ int main(int argc, char* argv[argc+1])
 {
 	int err = 0;
 
-#if defined(HANDSHAKE_H)
+#if defined(POLY_HANDSHAKE_H)
 	err = handshake_init(&calculating);
 	assert(!err);
-#elif defined(BARRIER_H)
+#elif defined(POLY_BARRIER_H)
 	err = barrier_init(&calculating, 2);
 	assert(!err);
 #endif
@@ -166,9 +166,9 @@ int main(int argc, char* argv[argc+1])
 
 	channel_destroy(&inbox);
 
-#if defined(HANDSHAKE_H)
+#if defined(POLY_HANDSHAKE_H)
 	handshake_destroy(&calculating);
-#elif defined(BARRIER_H)
+#elif defined(POLY_BARRIER_H)
 	barrier_destroy(&calculating);
 #endif
 	return 0;

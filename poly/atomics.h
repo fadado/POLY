@@ -1,8 +1,8 @@
 #ifdef __STDC_NO_ATOMICS__
 #error I need <stdatomic.h>. Sorry :-(
 #endif
-#ifndef SYNCOP_H
-#define SYNCOP_H
+#ifndef POLY_SYNCOP_H
+#define POLY_SYNCOP_H
 
 #include <stdatomic.h>
 
