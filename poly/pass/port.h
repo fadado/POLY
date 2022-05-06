@@ -71,7 +71,7 @@ port_send (Port *const this, Scalar scalar)
 	int err;
 	enter_monitor(this);
 
-	void thunk(void) {
+	auto void thunk(void) {
 		this->value = scalar;
 	}
 	catch (board_send(this->board, thunk));

@@ -72,7 +72,7 @@ entry_call (Entry *const this, Scalar request, Scalar* response)
 	int err;
 	enter_monitor(this);
 
-	void thunk(void) {
+	auto void thunk(void) {
 		this->request = request;
 	}
 	catch (board_call(this->board, thunk));

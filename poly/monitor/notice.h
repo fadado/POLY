@@ -35,14 +35,11 @@ static int  notice_wait(Notice *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_NOTICE_INVARIANT_NO_PERMITS\
-		assert(this->waiting >= 0);\
+#	define ASSERT_NOTICE_INVARIANT  \
+		assert(this->waiting >= 0); \
+		assert(this->permits >= 0); \
 		assert(this->lock.mutex != NULL);
-#	define ASSERT_NOTICE_INVARIANT\
-		ASSERT_NOTICE_INVARIANT_NO_PERMITS\
-		assert(this->permits >= 0);
 #else
-#	define ASSERT_NOTICE_INVARIANT_NO_PERMITS
 #	define ASSERT_NOTICE_INVARIANT
 #endif
 
@@ -74,10 +71,10 @@ notice_ready (Notice const*const this)
 
 ////////////////////////////////////////////////////////////////////////
 
-#define _notice_enqueue(THIS)\
-	++(THIS)->waiting;\
-	const int err = condition_wait(&(THIS)->queue, (THIS)->lock);\
-	--(THIS)->waiting;\
+#define _notice_enqueue(this)\
+	++this->waiting;\
+	const int err = condition_wait(&this->queue, this->lock);\
+	--this->waiting;\
 	if (err == STATUS_SUCCESS) continue; else return err
 
 static inline int
@@ -104,18 +101,6 @@ notice_do_wait (Notice *const this)
 	return STATUS_SUCCESS;
 }
 
-static inline int
-notice_await (Notice *const this, bool(predicate)(void))
-{
-	while (!predicate()) {
-		_notice_enqueue(this);
-	}
-	--this->permits;
-	ASSERT_NOTICE_INVARIANT_NO_PERMITS
-
-	return STATUS_SUCCESS;
-}
-
 #undef _notice_enqueue
 
 ////////////////////////////////////////////////////////////////////////
@@ -124,7 +109,7 @@ static ALWAYS inline int
 notice_notify (Notice *const this)
 {
 	++this->permits;
-	ASSERT_NOTICE_INVARIANT_NO_PERMITS
+	ASSERT_NOTICE_INVARIANT
 
 	return condition_notify(&this->queue);
 }
@@ -133,12 +118,11 @@ static ALWAYS inline int
 notice_broadcast (Notice *const this)
 {
 	this->permits += this->waiting;
-	ASSERT_NOTICE_INVARIANT_NO_PERMITS
+	ASSERT_NOTICE_INVARIANT
 
 	return condition_broadcast(&this->queue);
 }
 
-#undef ASSERT_NOTICE_INVARIANT_NO_PERMITS
 #undef ASSERT_NOTICE_INVARIANT
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

@@ -33,7 +33,7 @@ static atomic_bool calculating = false;
 #define WAIT(R)    while (!LOAD(&(R), ACQUIRE))
 #define SIGNAL(R)  STORE(&(R), true, RELEASE)
 
-#elif 0
+#elif 1
 
 static volatile bool calculating = false;
 

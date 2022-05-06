@@ -20,6 +20,9 @@
 // Error management
 ////////////////////////////////////////////////////////////////////////
 
+// to assert failure
+enum { internal_error=0, not_implemented=0 };
+
 // output to stderr
 #define warn(...) error(0, 0, __VA_ARGS__)
 
