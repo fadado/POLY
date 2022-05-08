@@ -12,57 +12,36 @@
 #include "poly/pass/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
-// Playing with different methods of sync.
-////////////////////////////////////////////////////////////////////////
-
-#if 0
 
 #include "poly/atomics.h"
 
-static atomic_flag calculating = ATOMIC_FLAG_INIT;
+typedef atomic_uint_fast8_t Event;
 
-#define WAIT(R)    ({ TAS(&(R), RELAXED); while (TAS(&(R), ACQ_REL)); })
-#define SIGNAL(R)  CLEAR(&(R), RELEASE)
+static ALWAYS inline void
+event_wait (Event* this)
+{
+	while (!LOAD(this, ACQUIRE)) {
+		/*spin*/;
+	}
+}
 
-#elif 0
+static ALWAYS inline void
+event_notify (Event* this)
+{
+	STORE(this, 1, RELEASE);
+}
 
-#include "poly/atomics.h"
-
-static atomic_bool calculating = false;
-
-#define WAIT(R)    while (!LOAD(&(R), ACQUIRE))
-#define SIGNAL(R)  STORE(&(R), true, RELEASE)
-
-#elif 1
-
-static volatile bool calculating = false;
-
-#define WAIT(R)    while (!(R))
-#define SIGNAL(R)  ((R) = true)
-
-#elif 0
-
-#include "poly/sync/handshake.h"
-
-static Handshake calculating;
-
-#define WAIT(R)    (void)handshake_wait(&(R))
-#define SIGNAL(R)  (void)handshake_wait(&(R))
-
-#else
-
-#include "poly/sync/barrier.h"
-
-static Barrier calculating;
-
-#define WAIT(R)    (void)barrier_wait(&(R))
-#define SIGNAL(R)  (void)barrier_wait(&(R))
-
-#endif
+static ALWAYS inline void
+event_clear (Event* this)
+{
+	STORE(this, 0, RELEASE);
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
+
+static Event calculating = {0};
 
 TASK_TYPE (Spinner, static)
 	int delay; // nanoseconds
@@ -76,7 +55,7 @@ TASK_BODY (Spinner)
 	}
 
 	warn("TaskID: %d", TASK_ID);
-	WAIT (calculating);
+	event_wait(&calculating);
 
 	spin(0);
 	for (;;)  {
@@ -103,7 +82,7 @@ TASK_BODY (Fibonacci)
 	}
 
 	warn("TaskID: %d", TASK_ID);
-	SIGNAL (calculating);
+	event_notify(&calculating);
 
 	long result = slow_fib(this.n);
 	// ...long time...
@@ -125,14 +104,6 @@ int main(int argc, char* argv[argc+1])
 {
 	int err = 0;
 
-#if defined(POLY_HANDSHAKE_H)
-	err = handshake_init(&calculating);
-	assert(!err);
-#elif defined(POLY_BARRIER_H)
-	err = barrier_init(&calculating, 2);
-	assert(!err);
-#endif
-
 	enum { N=46, usDELAY=500}; // fib(46)=1836311903
 	Clock s,ms,us,ns, t = now();
 
@@ -145,6 +116,7 @@ int main(int argc, char* argv[argc+1])
 	Channel inbox;
 	err += channel_init(&inbox, 1);
 	err += RUN_promise(Fibonacci, &inbox, .n=N);
+	//err+=RUN_task(Fibonacci, .future=&inbox, .n=N);
 
 	assert(err == 0);
 
@@ -166,11 +138,6 @@ int main(int argc, char* argv[argc+1])
 
 	channel_destroy(&inbox);
 
-#if defined(POLY_HANDSHAKE_H)
-	handshake_destroy(&calculating);
-#elif defined(POLY_BARRIER_H)
-	barrier_destroy(&calculating);
-#endif
 	return 0;
 }
 
