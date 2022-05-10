@@ -17,31 +17,14 @@
 
 typedef atomic_uint_fast8_t Event;
 
-static ALWAYS inline void
-event_wait (Event* this)
-{
-	while (!LOAD(this, ACQUIRE)) {
-		/*spin*/;
-	}
-}
+#define event_wait(e)      flag_wait(&(e))
+#define event_notify(e)    flag_set(&(e))
 
-static ALWAYS inline void
-event_notify (Event* this)
-{
-	STORE(this, 1, RELEASE);
-}
-
-static ALWAYS inline void
-event_clear (Event* this)
-{
-	STORE(this, 0, RELEASE);
-}
+static Event calculating = {0};
 
 ////////////////////////////////////////////////////////////////////////
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
-
-static Event calculating = {0};
 
 TASK_TYPE (Spinner, static)
 	int delay; // nanoseconds
@@ -55,7 +38,7 @@ TASK_BODY (Spinner)
 	}
 
 	warn("TaskID: %d", TASK_ID);
-	event_wait(&calculating);
+	event_wait(calculating);
 
 	spin(0);
 	for (;;)  {
@@ -82,7 +65,7 @@ TASK_BODY (Fibonacci)
 	}
 
 	warn("TaskID: %d", TASK_ID);
-	event_notify(&calculating);
+	event_notify(calculating);
 
 	long result = slow_fib(this.n);
 	// ...long time...
@@ -102,6 +85,14 @@ END_BODY
 
 int main(int argc, char* argv[argc+1])
 {
+#if 1
+	{
+		atomic_flag flag = ATOMIC_FLAG_INIT;
+		flag_flip(&flag);
+		flag_clear(&flag);
+	}
+#endif
+
 	int err = 0;
 
 	enum { N=46, usDELAY=500}; // fib(46)=1836311903
