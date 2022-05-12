@@ -1,5 +1,5 @@
 #ifndef __GNUC__
-#error I need the GNU C compiler. Sorry.
+#error I need the GNU C compiler. Sorry :-(
 #endif
 #ifndef POLY_H
 #define POLY_H

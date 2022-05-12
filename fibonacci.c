@@ -17,10 +17,10 @@
 
 typedef atomic_uint_fast8_t Event;
 
-#define event_wait(e)      flag_wait(&(e))
-#define event_notify(e)    flag_set(&(e))
+static Event calculating = {1};
 
-static Event calculating = {0};
+#define wait(e)		reg_wait(&(e), 1, ACQUIRE)
+#define signal(e)	reg_clear(&(e), RELEASE)
 
 ////////////////////////////////////////////////////////////////////////
 // Run forever painting the spinner
@@ -38,7 +38,7 @@ TASK_BODY (Spinner)
 	}
 
 	warn("TaskID: %d", TASK_ID);
-	event_wait(calculating);
+	wait(calculating);
 
 	spin(0);
 	for (;;)  {
@@ -65,7 +65,7 @@ TASK_BODY (Fibonacci)
 	}
 
 	warn("TaskID: %d", TASK_ID);
-	event_notify(calculating);
+	signal(calculating);
 
 	long result = slow_fib(this.n);
 	// ...long time...
@@ -85,14 +85,6 @@ END_BODY
 
 int main(int argc, char* argv[argc+1])
 {
-#if 1
-	{
-		atomic_flag flag = ATOMIC_FLAG_INIT;
-		flag_flip(&flag);
-		flag_clear(&flag);
-	}
-#endif
-
 	int err = 0;
 
 	enum { N=46, usDELAY=500}; // fib(46)=1836311903

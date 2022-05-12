@@ -34,38 +34,39 @@
 
 // memory_order mo = ...;
 enum {
-	RELAXED = memory_order_relaxed,
-	CONSUME = memory_order_consume,
-	ACQUIRE = memory_order_acquire,
-	RELEASE = memory_order_release,
-	ACQ_REL = memory_order_acq_rel,
-	SEQ_CST = memory_order_seq_cst
+    RELAXED = memory_order_relaxed,
+    CONSUME = memory_order_consume,
+    ACQUIRE = memory_order_acquire,
+    RELEASE = memory_order_release,
+    ACQ_REL = memory_order_acq_rel,
+    SEQ_CST = memory_order_seq_cst
 };
 
 ////////////////////////////////////////////////////////////////////////
 // Atomic flag
 ////////////////////////////////////////////////////////////////////////
 
-// { f := 0 }
-// atomic_flag f = ATOMIC_FLAG_INIT;
+// atomic_flag f = ATOMIC_FLAG_INIT; // assume equal to 0
 
 // _Bool atomic_flag_test_and_set(volatile atomic_flag *shared);
 // _Bool atomic_flag_test_and_set_explicit(volatile atomic_flag *shared, memory_order order);
 //
-// { v := *shared; *shared := 1; (v = FLAG_STATE_SET) }
+// { v := *shared; *shared := 1; (v = 1) }
 #define TAS(...)\
     M_1_2(__VA_ARGS__, atomic_flag_test_and_set_explicit, atomic_flag_test_and_set)(__VA_ARGS__)
 
 // void atomic_flag_clear(volatile atomic_flag *shared);
 // void atomic_flag_clear_explicit(volatile atomic_flag *shared, memory_order order);
 //
-// { *shared := FLAG_STATE_CLEAR }
+// { *shared := 0 }
 #define CLEAR(...)\
     M_1_2(__VA_ARGS__, atomic_flag_clear_explicit, atomic_flag_clear)(__VA_ARGS__)
 
 ////////////////////////////////////////////////////////////////////////
-// Atomic registers
+// Scalar registers
 ////////////////////////////////////////////////////////////////////////
+ 
+// static atomic(A) shared = {0};
 
 // void atomic_store(volatile A *shared, C desired);
 // void atomic_store_explicit(volatile A *shared, C desired, memory_order order);
@@ -101,17 +102,6 @@ enum {
 // { t := (*shared = *expected); t ? (*shared := desired) : (*expected := *shared); t }
 #define CASw(...)\
     M_3_5(__VA_ARGS__, atomic_compare_exchange_weak_explicit,_4_ignored, atomic_compare_exchange_weak)(__VA_ARGS__)
-
-/* CAS usage protocol:
- *
- *  static _Atomic(A) shared = ...
- *  ...
- *
- *  C x = LOAD(&shared);
- *  do {
- *      C y = ϕ(x);
- *  } while (!CASw(&shared, &x, y));
- */
 
 ////////////////////////////////////////////////////////////////////////
 // Fetch and ϕ
@@ -150,36 +140,66 @@ enum {
 // void atomic_signal_fence(memory_order order);
 
 ////////////////////////////////////////////////////////////////////////
-// Extensions
+// Idioms
 ////////////////////////////////////////////////////////////////////////
 
-/* Flag as mutex:
+/*
+ * atomic_flag f = ATOMIC_FLAG_INIT;
  *
- *  atomic_flag lock = ATOMIC_FLAG_INIT;
- *  flag_flip(&lock);   // lock
+ * if (TAS(&f)) REST else FIRST
+ * while (TAS(&f)) REST; FIRST
+ *
+ * #define acquire(R)     flag_flip((R), ACQ_REL)
+ * #define release(R)     flag_clear((R), RELEASE)
+ */
+
+// spins until the flag state flips from CLEAR to SET
+#define flag_flip(R,...)    while (TAS((R)__VA_OPT__(,)__VA_ARGS__))
+
+// change the flag state to CLEAR
+#define flag_clear(R,...)   CLEAR((R)__VA_OPT__(,)__VA_ARGS__)
+
+/*
+ * atomic_X r = {0};
+ *
+ * if (SWAP(&r,1)) REST else FIRST
+ * while (SWAP(&r,1)) REST; FIRST
+ *
+ * #define acquire(R)      while (LOAD((R), ACQUIRE) || SWAP((R), 1, ACQ_REL))
+ * #define acquire(R)      reg_flip((R), ACQ_REL)
+ * #define release(R)      reg_clear((R), RELEASE)
+ */
+
+// spins until the register flips from 0 to 1
+#define reg_flip(R,...)     while (SWAP((R), 1 __VA_OPT__(,)__VA_ARGS__))
+
+// change the register value to 0
+#define reg_clear(R,...)    STORE((R), 0 __VA_OPT__(,)__VA_ARGS__)
+
+// wait until the value != V
+#define reg_wait(R,V,...)   while ((V)==LOAD((R)__VA_OPT__(,)__VA_ARGS__))
+
+/*
+ * atomic_X r = {1};
+ *
+ * #define wait(e)      reg_wait(&(e), 1, ACQUIRE)
+ * #define signal(e)    reg_clear(&(e), RELEASE)
+ */
+
+/*
+ * STORE(&r,v)      r := v
+ * v = LOAD(&r)     v := r
+ * v = SWAP(&r,v)   r :=: v
+ */
+
+/* CAS usage protocol:
+ *
+ *  static atomic(A) shared = ...
  *  ...
- *  flag_clear(&lock);  // unlock
- */
-
-// wait until the state flips from CLEAR to SET
-#define FLIP(R,...)     while (TAS((R)__VA_OPT__(,)__VA_ARGS__))
-#define flag_flip(R)    FLIP((R), ACQ_REL)
-
-// change state to CLEAR
-#define flag_clear(R)   CLEAR(R, RELEASE)
-
-/* Flag as condition:
  *
- *  atomic_INTEGER done = {0};
- *  flag_wait(&done);  || flag_set(&done);
- *  flag_reset(&done); || ...
+ *  // shared := ϕ(shared)
+ *  C x = LOAD(&shared);
+ *  do { C y = ϕ(x); } while (!CASw(&shared, &x, y));
  */
-
-// wait until the value becomes 1
-#define flag_wait(R)    while (0==LOAD((R), ACQUIRE))
-
-// change value to 1 or 0
-#define flag_set(R)     STORE((R), 1, RELEASE)
-#define flag_reset(R)   STORE((R), 0, RELEASE)
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp
