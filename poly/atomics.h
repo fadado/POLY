@@ -149,15 +149,12 @@ enum {
  * if (TAS(&f)) REST else FIRST
  * while (TAS(&f)) REST; FIRST
  *
- * #define acquire(R)     flag_flip((R), ACQ_REL)
- * #define release(R)     flag_clear((R), RELEASE)
+ * #define acquire(R)     FLIP(R, ACQ_REL)
+ * #define release(R)     CLEAR(R, RELEASE)
  */
 
 // spins until the flag state flips from CLEAR to SET
-#define flag_flip(R,...)    while (TAS((R)__VA_OPT__(,)__VA_ARGS__))
-
-// change the flag state to CLEAR
-#define flag_clear(R,...)   CLEAR((R)__VA_OPT__(,)__VA_ARGS__)
+#define FLIP(R,...)      while (TAS(R __VA_OPT__(,)__VA_ARGS__))
 
 /*
  * atomic_X r = {0};
@@ -165,19 +162,15 @@ enum {
  * if (SWAP(&r,1)) REST else FIRST
  * while (SWAP(&r,1)) REST; FIRST
  *
- * #define acquire(R)      while (LOAD((R), ACQUIRE) || SWAP((R), 1, ACQ_REL))
- * #define acquire(R)      reg_flip((R), ACQ_REL)
- * #define release(R)      reg_clear((R), RELEASE)
+ * #define acquire(R)      reg_flip(R, ACQUIRE, ACQ_REL)
+ * #define release(R)      reg_clear(R, RELEASE)
  */
 
 // spins until the register flips from 0 to 1
-#define reg_flip(R,...)     while (SWAP((R), 1 __VA_OPT__(,)__VA_ARGS__))
+#define reg_flip(R,MO,RMW)  while (LOAD(R, MO) || SWAP(R, 1, RMW))
 
 // change the register value to 0
-#define reg_clear(R,...)    STORE((R), 0 __VA_OPT__(,)__VA_ARGS__)
-
-// wait until the value != V
-#define reg_wait(R,V,...)   while ((V)==LOAD((R)__VA_OPT__(,)__VA_ARGS__))
+#define reg_clear(R,MO)     STORE(R, 0, MO)
 
 /*
  * atomic_X r = {1};
@@ -185,6 +178,9 @@ enum {
  * #define wait(e)      reg_wait(&(e), 1, ACQUIRE)
  * #define signal(e)    reg_clear(&(e), RELEASE)
  */
+
+// wait until the value != V
+#define reg_wait(R,V,MO)    while ((V) == LOAD(R, MO))
 
 /*
  * STORE(&r,v)      r := v
@@ -198,8 +194,8 @@ enum {
  *  ...
  *
  *  // shared := ϕ(shared)
- *  C x = LOAD(&shared);
- *  do { C y = ϕ(x); } while (!CASw(&shared, &x, y));
+ *  C x = LOAD(&shared, ACQUIRE);
+ *  do { C y = ϕ(x); } while (!CASw(&shared, &x, y, ACQ_REL));
  */
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp
