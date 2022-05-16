@@ -62,8 +62,8 @@ enum channel_flag {
 		assert(this->occupation <= this->capacity);\
 		/* flags invariants */\
 		assert(!((CHANNEL_BLOCKING & this->flags) && (CHANNEL_SHARED & this->flags)));\
-		assert(!(CHANNEL_BUFFERED & this->flags)  || (CHANNEL_SHARED & this->flags));\
-		assert(!(CHANNEL_DRY & this->flags)   || (CHANNEL_CLOSED & this->flags));
+		assert(!(CHANNEL_BUFFERED & this->flags) || (CHANNEL_SHARED & this->flags));\
+		assert(!(CHANNEL_DRY & this->flags) || (CHANNEL_CLOSED & this->flags));
 #else
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
@@ -186,6 +186,7 @@ channel_send (Channel *const this, Scalar scalar)
 			this->value = scalar;
 		}
 		++this->occupation;
+
 		catch (condition_notify(&this->non_empty));
 	} else {
 		assert(internal_error);
@@ -202,11 +203,10 @@ onerror:
 static inline int
 channel_receive (Channel *const this, Scalar *const request)
 {
-	auto ALWAYS inline void receive(Scalar s) {
-		if (request != NULL) { *request = s; }
-	}
+	assert(request != NULL);
+
 	if (CHANNEL_DRY & this->flags) {
-		receive(0X0U);
+		*request = Unsigned(0x0);
 		return STATUS_SUCCESS;
 	}
 
@@ -215,7 +215,7 @@ channel_receive (Channel *const this, Scalar *const request)
 
 	if (CHANNEL_BLOCKING & this->flags) {
 		catch (board_receive(this->board));
-		receive(this->value);
+		*request = this->value;
 		--this->occupation;
 	} else if (CHANNEL_SHARED & this->flags) {
 		auto bool non_empty(void) { 
@@ -224,17 +224,20 @@ channel_receive (Channel *const this, Scalar *const request)
 		catch (condition_await(&this->non_empty, &this->syncronized, non_empty));
 
 		if (CHANNEL_BUFFERED & this->flags) {
-			receive(fifo_get(&this->queue));
+			*request = fifo_get(&this->queue);
 		} else {
-			receive(this->value);
+			*request = this->value;
 		}
 		--this->occupation;
+
 		catch (condition_notify(&this->non_full));
 	} else {
 		assert(internal_error);
 	}
-	if ((CHANNEL_CLOSED & this->flags) && this->occupation == 0) {
-		this->flags |= CHANNEL_DRY;
+	if (this->occupation == 0) {
+		if (CHANNEL_CLOSED & this->flags) {
+			this->flags |= CHANNEL_DRY;
+		}
 	}
 	ASSERT_CHANNEL_INVARIANT
 
