@@ -22,7 +22,7 @@ static int  barrier_init(Barrier *const this, int capacity);
 static void barrier_destroy(Barrier *const this);
 static int  barrier_wait(Barrier *const this);
 
-enum { BARRIER_FULL = -1 };
+enum { BARRIER_PHASE = -1 };
 
 ////////////////////////////////////////////////////////////////////////
 // Barrier implementation
@@ -36,12 +36,6 @@ enum { BARRIER_FULL = -1 };
 #else
 #	define ASSERT_BARRIER_INVARIANT
 #endif
-
-static ALWAYS inline int
-_barrier_empty (Barrier const*const this)
-{
-	return this->places == this->capacity;
-}
 
 /*  Barrier b;
  *
@@ -74,7 +68,7 @@ barrier_init (Barrier *const this, int capacity)
 static void
 barrier_destroy (Barrier *const this)
 {
-	assert(_barrier_empty(this));
+	assert(this->places == this->capacity); // empty
 
 	notice_destroy(&this->move_on);
 	lock_destroy(&this->syncronized);
@@ -83,11 +77,11 @@ barrier_destroy (Barrier *const this)
 /*
  * catch (barrier_wait(&b)) | catch (barrier_wait(&b)) | N threads 
  *
- * How to detect end of cycle:
+ * How to detect end of phase:
  *
  * switch (err = barrier_wait(&b)) {
  *     default:             goto onerror
- *     case BARRIER_FULL:   cycle completed
+ *     case BARRIER_PHASE:  phase completed
  *     case STATUS_SUCCESS: one place assigned
  * }
  *
@@ -103,7 +97,7 @@ barrier_wait (Barrier *const this)
 	if (--this->places != 0) {
 		catch (notice_do_wait(&this->move_on));
 	} else {
-		status = BARRIER_FULL;
+		status = BARRIER_PHASE;
 		this->places = this->capacity;
 		catch (notice_broadcast(&this->move_on));
 	}

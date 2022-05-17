@@ -43,9 +43,10 @@ static int  handshake_wait(Handshake *const this);
 static int
 handshake_init (Handshake *const this)
 {
+	int err;
+
 	this->who = 0;
 
-	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}

@@ -21,7 +21,7 @@ typedef struct Entry {
 } Entry;
 
 static int  entry_accept(Entry *const this, void(accept)(void));
-static int  entry_call(Entry *const this, Scalar request, Scalar* response);
+static int  entry_call(Entry *const this, Scalar request, Scalar response[static 1]);
 static void entry_destroy(Entry *const this);
 static int  entry_init(Entry *const this);
 static bool entry_ready(Entry const*const this);
@@ -35,12 +35,6 @@ static bool entry_ready(Entry const*const this);
 #else
 #	define ASSERT_ENTRY_INVARIANT
 #endif
-
-static ALWAYS inline bool
-entry_ready (Entry const*const this)
-{
-	return notice_ready(&this->board[0]);
-}
 
 static int
 entry_init (Entry *const this)
@@ -66,8 +60,18 @@ entry_destroy (Entry *const this)
 	lock_destroy(&this->syncronized);
 }
 
-static inline int
-entry_call (Entry *const this, Scalar request, Scalar* response)
+////////////////////////////////////////////////////////////////////////
+
+static ALWAYS inline bool
+entry_ready (Entry const*const this)
+{
+	return notice_ready(&this->board[0]);
+}
+
+////////////////////////////////////////////////////////////////////////
+
+static int
+entry_call (Entry *const this, Scalar request, Scalar response[static 1])
 {
 	int err;
 	enter_monitor(this);
@@ -76,9 +80,7 @@ entry_call (Entry *const this, Scalar request, Scalar* response)
 		this->request = request;
 	}
 	catch (board_call(this->board, thunk));
-	if (response != NULL) {
-		*response = this->response;
-	}
+	*response = this->response;
 	ASSERT_ENTRY_INVARIANT
 
 	leave_monitor(this);
@@ -88,7 +90,7 @@ onerror:
 	return err;
 }
 
-static inline int
+static int
 entry_accept (Entry *const this, void(accept)(void))
 {
 	int err;
@@ -118,7 +120,7 @@ onerror:
  *  Scalar s=x, r;
  *  call (&entry, s, &r);
  *
- *  #define call(e,s,r) catch (entry_call((e), (s), (r)))
+ *  #define call(e,s,r) catch (entry_call(e, s, r))
  *  #define loop        for (;;)
  *  #define select      int _open=0; int _selec=0;
  *  #define when(g,e)   if ((g) && ++_open && entry_ready(e) && ++_selec)
@@ -130,7 +132,7 @@ onerror:
  *          when (guard, this.entry) {
  *              void accept(void) {
  *                  ...
- *                  this.entry->response = f(this.entry->request);
+ *                  this.entry->response = ϕ(this.entry->request);
  *                  ...
  *              }
  *              catch (entry_accept(this.entry, accept));

@@ -66,7 +66,7 @@ enum {
 // Scalar registers
 ////////////////////////////////////////////////////////////////////////
  
-// static atomic(A) shared = {0};
+// static _Atomic(A) shared = {0};
 
 // void atomic_store(volatile A *shared, C desired);
 // void atomic_store_explicit(volatile A *shared, C desired, memory_order order);
