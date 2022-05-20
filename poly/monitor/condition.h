@@ -20,7 +20,7 @@ static int  condition_await(Condition *const this, union Lock lock, bool(predica
 static int  condition_broadcast(Condition *const this);
 static void condition_destroy(Condition *const this);
 static int  condition_init(Condition *const this);
-static int  condition_notify(Condition *const this);
+static int  condition_signal(Condition *const this);
 static int  condition_wait(Condition *const this, union Lock lock);
 static int  condition_wait_for(Condition *const this, union Lock lock, Clock duration);
 
@@ -41,7 +41,7 @@ condition_destroy (Condition *const this)
 }
 
 static ALWAYS inline int
-condition_notify (Condition *const this)
+condition_signal (Condition *const this)
 {
 	return cnd_signal(this);
 }
@@ -56,8 +56,10 @@ static ALWAYS inline int
 condition_await (Condition *const this, union Lock lock, bool(predicate)(void))
 {
 	while (!predicate()) {
-		const int err = cnd_wait(this, lock.mutex);
-		if (err == STATUS_SUCCESS) continue; else return err;
+		int const err = cnd_wait(this, lock.mutex);
+		if (err != STATUS_SUCCESS) {
+			return err;
+		}
 	}
 	return STATUS_SUCCESS;
 }

@@ -20,9 +20,7 @@ typedef struct Barrier {
 
 static int  barrier_init(Barrier *const this, int capacity);
 static void barrier_destroy(Barrier *const this);
-static int  barrier_wait(Barrier *const this);
-
-enum { BARRIER_PHASE = -1 };
+static int  barrier_wait(Barrier *const this, bool* last);
 
 ////////////////////////////////////////////////////////////////////////
 // Barrier implementation
@@ -31,19 +29,11 @@ enum { BARRIER_PHASE = -1 };
 #ifdef DEBUG
 #	define ASSERT_BARRIER_INVARIANT\
 		assert(this->capacity >= 0);\
-		assert(this->places >= 0);\
+		assert(this->places > 0);\
 		assert(this->places <= this->capacity);
 #else
 #	define ASSERT_BARRIER_INVARIANT
 #endif
-
-/*  Barrier b;
- *
- *  int N = # of thread to wait before opening the barrier
- *  catch (barrier_init(&b, N));
- *  ...
- *  barrier_destroy(&b);
- */
 
 static int
 barrier_init (Barrier *const this, int capacity)
@@ -75,36 +65,36 @@ barrier_destroy (Barrier *const this)
 }
 
 /*
- * catch (barrier_wait(&b)) | catch (barrier_wait(&b)) | N threads 
+ * catch (barrier_wait(&b,0)) | catch (barrier_wait(&b,0)) | N threads 
  *
  * How to detect end of phase:
  *
- * switch (err = barrier_wait(&b)) {
- *     default:             goto onerror
- *     case BARRIER_PHASE:  phase completed
- *     case STATUS_SUCCESS: one place assigned
- * }
+ * bool last = false;
+ * catch (barrier_wait(&b, &last));
+ * if (last) ...
  *
  */
 static inline int
-barrier_wait (Barrier *const this)
+barrier_wait (Barrier *const this, bool* last)
 {
-	int status = STATUS_SUCCESS;
-
 	int err;
 	enter_monitor(this);
 
-	if (--this->places != 0) {
-		catch (notice_do_wait(&this->move_on));
-	} else {
-		status = BARRIER_PHASE;
-		this->places = this->capacity;
-		catch (notice_broadcast(&this->move_on));
+	switch (this->places) {
+		case 1:
+			this->places = this->capacity;
+			catch (notice_broadcast(&this->move_on));
+			if (last != NULL) { *last = true; }
+			break;
+		default: // >= 2
+			--this->places;
+			catch (notice_do_wait(&this->move_on));
+			break;
 	}
 	ASSERT_BARRIER_INVARIANT
 
 	leave_monitor(this);
-	return status;
+	return STATUS_SUCCESS;
 onerror:
 	break_monitor(this);
 	return err;

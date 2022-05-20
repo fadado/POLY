@@ -33,13 +33,6 @@ static int  handshake_wait(Handshake *const this);
 #	define ASSERT_HANDSHAKE_INVARIANT
 #endif
 
-/*  Handshake h;
- *
- *  catch (handshake_init(&b));
- *  ...
- *  handshake_destroy(&b);
- */
-
 static int
 handshake_init (Handshake *const this)
 {
@@ -77,7 +70,7 @@ handshake_wait (Handshake *const this)
 	enter_monitor(this);
 
 	unsigned const who = this->who;
-	this->who = !who;
+	this->who = 1 - who;
 	catch (board_meet(this->board, who));
 	ASSERT_HANDSHAKE_INVARIANT
 

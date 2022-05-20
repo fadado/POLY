@@ -103,7 +103,7 @@ rwlock_release (RWLock *const this)
 
 	this->counter = RWLOCK_IDLE;
 	if (notice_ready(&this->writers)) {
-		catch (notice_notify(&this->writers));
+		catch (notice_signal(&this->writers));
 	} else if (notice_ready(&this->readers)) {
 		catch (notice_broadcast(&this->readers));
 	}
@@ -141,7 +141,7 @@ rwlock_leave (RWLock *const this)
 
 	if (--this->counter == RWLOCK_IDLE) {
 		if (notice_ready(&this->writers)) {
-			catch (notice_notify(&this->writers));
+			catch (notice_signal(&this->writers));
 		}
 	}
 

@@ -14,9 +14,10 @@
 typedef struct Semaphore {
 	Lock    syncronized;
 	Notice  queue;
-	signed  counter;    // <0: abs(#) of blocked threads;
-                        //  0: idle;
-                        // >0: value (available resources)
+	// counter <  0: abs(#) of blocked threads;
+	// counter == 0: idle;
+	// counter >  0: value (available resources)
+	signed  counter;
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
@@ -24,28 +25,18 @@ static int  semaphore_init(Semaphore *const this, unsigned count);
 static int  semaphore_P(Semaphore *const this);
 static int  semaphore_V(Semaphore *const this);
 
-#define     semaphore_down(s) semaphore_P(s)
-#define     semaphore_wait(s) semaphore_P(s)
 #define     semaphore_acquire(s) semaphore_P(s)
-
-#define     semaphore_up(s) semaphore_V(s)
-#define     semaphore_signal(s) semaphore_V(s)
 #define     semaphore_release(s) semaphore_V(s)
+
+#define     semaphore_wait(s) semaphore_P(s)
+#define     semaphore_signal(s) semaphore_V(s)
+
+#define     semaphore_down(s) semaphore_P(s)
+#define     semaphore_up(s) semaphore_V(s)
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation
 ////////////////////////////////////////////////////////////////////////
-
-/*  Semaphore mutex;
- *  Semaphore signal;
- *  Semaphore allocator;
- *
- *  catch (semaphore_init(&mutex, 1));
- *  catch (semaphore_init(&signal, 0));
- *  catch (semaphore_init(&allocator, N));
- *  ...
- *  semaphore_destroy(&s);
- */
 
 static int
 semaphore_init (Semaphore *const this, unsigned count)
@@ -66,18 +57,22 @@ semaphore_init (Semaphore *const this, unsigned count)
 static void
 semaphore_destroy (Semaphore *const this)
 {
-	assert(this->counter == 0 );
+	assert(this->counter == 0 ); // ???
 
 	notice_destroy(&this->queue);
 	lock_destroy(&this->syncronized);
 }
 
 /*
+ * catch (semaphore_init(&mutex, 1));
  * catch (semaphore_acquire(&mutex))
  * ...
  * catch (semaphore_release(&mutex))
  *
- * catch (semaphore_wait(&signal)) | catch (semaphore_signal(&signal))
+ * catch (semaphore_init(&event, 0));
+ * catch (semaphore_wait(&event)) | catch (semaphore_signal(&event))
+ *
+ * catch (semaphore_init(&allocator, N));
  */
 
 static inline int
@@ -108,7 +103,7 @@ semaphore_V (Semaphore *const this)
 	unsigned const waiting = (this->counter < 0) ? -this->counter : 0;
 	++this->counter;
 	if (waiting > 0) {
-		catch (notice_notify(&this->queue));
+		catch (notice_signal(&this->queue));
 	}
 
 	leave_monitor(this);

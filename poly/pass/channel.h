@@ -191,7 +191,7 @@ channel_send (Channel *const this, Scalar scalar)
 			}
 			++this->occupation;
 
-			catch (condition_notify(&this->non_empty));
+			catch (condition_signal(&this->non_empty));
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
@@ -233,7 +233,7 @@ channel_receive (Channel *const this, Scalar response[static 1])
 			}
 			--this->occupation;
 
-			catch (condition_notify(&this->non_full));
+			catch (condition_signal(&this->non_full));
 			break;
 	}
 	if (this->occupation == 0) {
