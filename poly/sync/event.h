@@ -14,7 +14,9 @@
 typedef struct Event {
 	Lock    	syncronized;
 	Condition	queue;
-	bool   		signaled;
+	// counter ==  0: not signaled
+	// counter ==  1: signaled
+	unsigned	counter;
 } Event;
 
 static void event_destroy(Event *const this);
@@ -30,7 +32,7 @@ static int  event_reset(Event *const this);
 static int
 event_init (Event *const this)
 {
-	this->signaled = false;
+	this->counter = 0;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -62,7 +64,7 @@ event_wait (Event *const this)
 	int err;
 	enter_monitor(this);
 
-	while (!this->signaled) {
+	while (this->counter == 0) {
 		catch (condition_wait(&this->queue, &this->syncronized));
 	}
 
@@ -79,7 +81,7 @@ event_signal (Event *const this)
 	int err;
 	enter_monitor(this);
 
-	this->signaled = true;
+	this->counter = 1;
 	catch (condition_broadcast(&this->queue));
 
 	leave_monitor(this);
@@ -95,7 +97,7 @@ event_reset (Event *const this)
 	int err;
 	enter_monitor(this);
 
-	this->signaled = false;
+	this->counter = 0;
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;

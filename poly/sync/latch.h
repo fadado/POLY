@@ -13,8 +13,8 @@
 
 typedef struct Latch {
 	Lock   		syncronized;
-	Condition	move_on;
-	signed 		places;   // # of threads still expected before opening
+	Condition	queue;
+	signed 		counter;   // # of threads still expected before opening
 } Latch;
 
 static int  latch_init(Latch *const this, int capacity);
@@ -27,7 +27,7 @@ static int  latch_wait(Latch *const this);
 
 #ifdef DEBUG
 #	define ASSERT_LATCH_INVARIANT\
-		assert(this->places >= 0);
+		assert(this->counter >= 0);
 #else
 #	define ASSERT_LATCH_INVARIANT
 #endif
@@ -37,13 +37,13 @@ latch_init (Latch *const this, int capacity)
 {
 	assert(capacity > 1);
 
-	this->places = capacity;
+	this->counter = capacity;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=condition_init(&this->move_on)) != STATUS_SUCCESS) {
+	if ((err=condition_init(&this->queue)) != STATUS_SUCCESS) {
 		lock_destroy(&this->syncronized);
 		return err;
 	}
@@ -55,7 +55,7 @@ latch_init (Latch *const this, int capacity)
 static void
 latch_destroy (Latch *const this)
 {
-	condition_destroy(&this->move_on);
+	condition_destroy(&this->queue);
 	lock_destroy(&this->syncronized);
 }
 
@@ -68,18 +68,18 @@ latch_wait (Latch *const this)
 	int err;
 	enter_monitor(this);
 
-	switch (this->places) {
+	switch (this->counter) {
 		case 0: // forever open
 			break;
 		case 1:
-			this->places = 0;
-			catch (condition_broadcast(&this->move_on));
+			this->counter = 0;
+			catch (condition_broadcast(&this->queue));
 			break;
 		default: // >= 2
-			--this->places;
+			--this->counter;
 			do {
-				catch (condition_wait(&this->move_on, &this->syncronized));
-			} while (this->places > 0);
+				catch (condition_wait(&this->queue, &this->syncronized));
+			} while (this->counter > 0);
 			break;
 	}
 	ASSERT_LATCH_INVARIANT

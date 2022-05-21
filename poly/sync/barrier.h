@@ -13,9 +13,9 @@
 
 typedef struct Barrier {
 	Lock    syncronized;
-	Notice  move_on;
+	Notice  queue;
+	signed  counter;  // # of threads still expected before opening
 	signed  capacity; // # of threads to wait before opening the barrier
-	signed  places;   // # of threads still expected before opening
 } Barrier;
 
 static int  barrier_init(Barrier *const this, int capacity);
@@ -29,8 +29,8 @@ static int  barrier_wait(Barrier *const this, bool* last);
 #ifdef DEBUG
 #	define ASSERT_BARRIER_INVARIANT\
 		assert(this->capacity >= 0);\
-		assert(this->places > 0);\
-		assert(this->places <= this->capacity);
+		assert(this->counter > 0);\
+		assert(this->counter <= this->capacity);
 #else
 #	define ASSERT_BARRIER_INVARIANT
 #endif
@@ -40,13 +40,13 @@ barrier_init (Barrier *const this, int capacity)
 {
 	assert(capacity > 1);
 
-	this->places = this->capacity = capacity;
+	this->counter = this->capacity = capacity;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=notice_init(&this->move_on, &this->syncronized)) != STATUS_SUCCESS) {
+	if ((err=notice_init(&this->queue, &this->syncronized)) != STATUS_SUCCESS) {
 		lock_destroy(&this->syncronized);
 		return err;
 	}
@@ -58,9 +58,9 @@ barrier_init (Barrier *const this, int capacity)
 static void
 barrier_destroy (Barrier *const this)
 {
-	assert(this->places == this->capacity); // empty
+	assert(this->counter == this->capacity); // empty
 
-	notice_destroy(&this->move_on);
+	notice_destroy(&this->queue);
 	lock_destroy(&this->syncronized);
 }
 
@@ -80,15 +80,15 @@ barrier_wait (Barrier *const this, bool* last)
 	int err;
 	enter_monitor(this);
 
-	switch (this->places) {
+	switch (this->counter) {
 		case 1:
-			this->places = this->capacity;
-			catch (notice_broadcast(&this->move_on));
+			this->counter = this->capacity;
+			catch (notice_broadcast(&this->queue));
 			if (last != NULL) { *last = true; }
 			break;
 		default: // >= 2
-			--this->places;
-			catch (notice_do_wait(&this->move_on));
+			--this->counter;
+			catch (notice_do_wait(&this->queue));
 			break;
 	}
 	ASSERT_BARRIER_INVARIANT
