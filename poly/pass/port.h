@@ -65,7 +65,7 @@ port_ready (Port const*const this)
 	return notice_ready(&this->board[0]);
 }
 
-static inline int
+static int
 port_send (Port *const this, Scalar scalar)
 {
 	int err;
@@ -84,7 +84,7 @@ onerror:
 	return err;
 }
 
-static inline int
+static int
 port_receive (Port *const this, Scalar* scalar)
 {
 	int err;

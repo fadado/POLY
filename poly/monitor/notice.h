@@ -75,7 +75,7 @@ notice_ready (Notice const*const this)
 	++this->waiting;\
 	const int err = condition_wait(&this->queue, this->lock);\
 	--this->waiting;\
-	if (err == STATUS_SUCCESS) continue; else return err
+	if (err != STATUS_SUCCESS) return err
 
 static inline int
 notice_wait (Notice *const this)

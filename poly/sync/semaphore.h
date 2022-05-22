@@ -75,7 +75,7 @@ semaphore_destroy (Semaphore *const this)
  * catch (semaphore_init(&allocator, N));
  */
 
-static inline int
+static int
 semaphore_P (Semaphore *const this)
 {
 	int err;
@@ -94,7 +94,7 @@ onerror:
 	return err;
 }
 
-static inline int
+static int
 semaphore_V (Semaphore *const this)
 {
 	int err;

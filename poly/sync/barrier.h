@@ -42,7 +42,7 @@ barrier_init (Barrier *const this, int capacity)
 	assert(capacity > 1);
 
 	this->counter = this->capacity = capacity;
-	this->phase = 0; // overflow is wellcome
+	this->phase = 0; // overflow is welcome
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -76,7 +76,7 @@ barrier_destroy (Barrier *const this)
  * if (last) ...
  *
  */
-static inline int
+static int
 barrier_wait (Barrier *const this, bool* last)
 {
 	int err;

@@ -58,7 +58,7 @@ event_destroy (Event *const this)
  * catch (event_wait(&event)) | catch (event_signal(&event))
  */
 
-static inline int
+static int
 event_wait (Event *const this)
 {
 	int err;
@@ -75,7 +75,7 @@ onerror:
 	return err;
 }
 
-static inline int
+static int
 event_signal (Event *const this)
 {
 	int err;
@@ -91,7 +91,7 @@ onerror:
 	return err;
 }
 
-static int
+static inline int
 event_reset (Event *const this)
 {
 	int err;

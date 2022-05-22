@@ -160,7 +160,7 @@ channel_ready (Channel const*const this)
 
 ////////////////////////////////////////////////////////////////////////
 
-static inline int
+static int
 channel_send (Channel *const this, Scalar scalar)
 {
 	if (CHANNEL_CLOSED & this->flags) {
@@ -203,7 +203,7 @@ onerror:
 	return err;
 }
 
-static inline int
+static int
 channel_receive (Channel *const this, Scalar response[static 1])
 {
 	if (CHANNEL_DRY & this->flags) {

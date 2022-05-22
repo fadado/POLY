@@ -63,7 +63,7 @@ handshake_destroy (Handshake *const this)
  * catch (handshake_wait(&b)) | catch (handshake_wait(&b))
  */
 
-static inline int
+static int
 handshake_wait (Handshake *const this)
 {
 	int err;

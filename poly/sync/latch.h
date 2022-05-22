@@ -62,7 +62,7 @@ latch_destroy (Latch *const this)
 /*
  * catch (latch_wait(&b)) | catch (latch_wait(&b)) | N threads 
  */
-static inline int
+static int
 latch_wait (Latch *const this)
 {
 	int err;
