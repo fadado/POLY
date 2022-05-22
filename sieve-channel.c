@@ -10,7 +10,6 @@
 #define DEBUG
 #include "poly/task.h"
 #include "poly/scalar.h"
-#include "poly/sync/latch.h"
 #include "poly/pass/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
