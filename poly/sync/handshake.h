@@ -15,7 +15,7 @@
 typedef struct Handshake {
 	Lock      syncronized;
 	Notice    board[2];
-	unsigned  counter; // flips between 0 and 1: 0,1,0,1,0,1...
+	unsigned  value;    // 0,1,0,1,0,1...
 } Handshake;
 
 static int  handshake_init(Handshake *const this);
@@ -28,7 +28,7 @@ static int  handshake_wait(Handshake *const this);
 
 #ifdef DEBUG
 #	define ASSERT_HANDSHAKE_INVARIANT\
-		assert(this->counter < 2);
+		assert(this->value < 2);
 #else
 #	define ASSERT_HANDSHAKE_INVARIANT
 #endif
@@ -38,7 +38,7 @@ handshake_init (Handshake *const this)
 {
 	int err;
 
-	this->counter = 0;
+	this->value = 0; // 0,1,0,1...
 
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
@@ -69,8 +69,8 @@ handshake_wait (Handshake *const this)
 	int err;
 	enter_monitor(this);
 
-	unsigned const who = this->counter;
-	this->counter = 1 - who;
+	unsigned const who = this->value;
+	this->value = !who;
 	catch (board_meet(this->board, who));
 	ASSERT_HANDSHAKE_INVARIANT
 

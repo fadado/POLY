@@ -12,9 +12,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct Latch {
-	Lock   		syncronized;
-	Condition	queue;
-	signed 		counter;   // # of threads still expected before opening
+	Lock        syncronized;
+	Condition   queue;
+	signed      value;   // # of threads still expected before opening
 } Latch;
 
 static int  latch_init(Latch *const this, int capacity);
@@ -27,7 +27,7 @@ static int  latch_wait(Latch *const this);
 
 #ifdef DEBUG
 #	define ASSERT_LATCH_INVARIANT\
-		assert(this->counter >= 0);
+		assert(this->value >= 0);
 #else
 #	define ASSERT_LATCH_INVARIANT
 #endif
@@ -35,9 +35,9 @@ static int  latch_wait(Latch *const this);
 static int
 latch_init (Latch *const this, int capacity)
 {
-	assert(capacity > 1);
+	assert(capacity >= 2);
 
-	this->counter = capacity;
+	this->value = capacity;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -68,18 +68,18 @@ latch_wait (Latch *const this)
 	int err;
 	enter_monitor(this);
 
-	switch (this->counter) {
+	switch (this->value) {
 		case 0: // forever open
 			break;
 		case 1:
-			this->counter = 0;
+			this->value = 0;
 			catch (condition_broadcast(&this->queue));
 			break;
 		default: // >= 2
-			--this->counter;
+			--this->value;
 			do {
 				catch (condition_wait(&this->queue, &this->syncronized));
-			} while (this->counter > 0);
+			} while (this->value > 0);
 			break;
 	}
 	ASSERT_LATCH_INVARIANT

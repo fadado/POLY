@@ -14,9 +14,7 @@
 typedef struct Event {
 	Lock    	syncronized;
 	Condition	queue;
-	// counter ==  0: not signaled
-	// counter ==  1: signaled
-	unsigned	counter;
+	unsigned	value;  // 0: not happened; 1: already happened
 } Event;
 
 static void event_destroy(Event *const this);
@@ -29,10 +27,19 @@ static int  event_reset(Event *const this);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
+enum { EVENT_NOT_HAPPENED, EVENT_ALREADY_HAPPENED };
+
+#ifdef DEBUG
+#	define ASSERT_EVENT_INVARIANT\
+		assert(this->value < 2);
+#else
+#	define ASSERT_EVENT_INVARIANT
+#endif
+
 static int
 event_init (Event *const this)
 {
-	this->counter = 0;
+	this->value = EVENT_NOT_HAPPENED;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -42,6 +49,8 @@ event_init (Event *const this)
 		lock_destroy(&this->syncronized);
 		return err;
 	}
+	ASSERT_EVENT_INVARIANT
+
 	return STATUS_SUCCESS;
 }
 
@@ -64,9 +73,10 @@ event_wait (Event *const this)
 	int err;
 	enter_monitor(this);
 
-	while (this->counter == 0) {
+	while (this->value == EVENT_NOT_HAPPENED) {
 		catch (condition_wait(&this->queue, &this->syncronized));
 	}
+	ASSERT_EVENT_INVARIANT
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;
@@ -81,8 +91,9 @@ event_signal (Event *const this)
 	int err;
 	enter_monitor(this);
 
-	this->counter = 1;
+	this->value = EVENT_ALREADY_HAPPENED;
 	catch (condition_broadcast(&this->queue));
+	ASSERT_EVENT_INVARIANT
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;
@@ -97,7 +108,7 @@ event_reset (Event *const this)
 	int err;
 	enter_monitor(this);
 
-	this->counter = 0;
+	this->value = EVENT_NOT_HAPPENED;
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;

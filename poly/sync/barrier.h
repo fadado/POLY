@@ -14,9 +14,9 @@
 typedef struct Barrier {
 	Lock        syncronized;
 	Condition   queue;
-	signed      counter;    // # of threads still expected before opening
+	signed      value;      // # of threads still expected before opening
 	signed      capacity;   // # of threads to wait before opening the barrier
-	unsigned    phase;      // an unique token for each phase
+	unsigned    cycle;      // an unique token for each cycle
 } Barrier;
 
 static int  barrier_init(Barrier *const this, int capacity);
@@ -30,8 +30,7 @@ static int  barrier_wait(Barrier *const this, bool* last);
 #ifdef DEBUG
 #	define ASSERT_BARRIER_INVARIANT\
 		assert(this->capacity >= 0);\
-		assert(this->counter > 0);\
-		assert(this->counter <= this->capacity);
+		assert(0 < this->value && this->value <= this->capacity);
 #else
 #	define ASSERT_BARRIER_INVARIANT
 #endif
@@ -41,8 +40,8 @@ barrier_init (Barrier *const this, int capacity)
 {
 	assert(capacity > 1);
 
-	this->counter = this->capacity = capacity;
-	this->phase = 0; // overflow is welcome
+	this->value = this->capacity = capacity;
+	this->cycle = 0; // 0,1,2...MAX,0,1,... (overflow is welcome)
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -60,7 +59,7 @@ barrier_init (Barrier *const this, int capacity)
 static void
 barrier_destroy (Barrier *const this)
 {
-	assert(this->counter == this->capacity); // empty
+	assert(this->value == this->capacity); // empty
 
 	condition_destroy(&this->queue);
 	lock_destroy(&this->syncronized);
@@ -69,7 +68,7 @@ barrier_destroy (Barrier *const this)
 /*
  * catch (barrier_wait(&b,0)) | catch (barrier_wait(&b,0)) | N threads 
  *
- * How to detect end of phase:
+ * How to detect end of cycle:
  *
  * bool last = false;
  * catch (barrier_wait(&b, &last));
@@ -82,19 +81,19 @@ barrier_wait (Barrier *const this, bool* last)
 	int err;
 	enter_monitor(this);
 
-	switch (this->counter) {
+	switch (this->value) {
 		case 1:
-			this->counter = this->capacity;
-			++this->phase;
+			this->value = this->capacity;
+			++this->cycle;
 			catch (condition_broadcast(&this->queue));
 			if (last != NULL) { *last = true; }
 			break;
 		default: // >= 2
-			--this->counter;
-			unsigned const phase = this->phase;
+			--this->value;
+			unsigned const cycle = this->cycle;
 			do {
 				catch (condition_wait(&this->queue, &this->syncronized));
-			} while (phase == this->phase);
+			} while (cycle == this->cycle);
 			break;
 	}
 	ASSERT_BARRIER_INVARIANT
