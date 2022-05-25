@@ -18,12 +18,12 @@ typedef struct RWLock {
 	signed  counter; // -1: writing; 0: idle; >0: # of active readers
 } RWLock;
 
-static int  rwlock_acquire(RWLock *const this);
-static void rwlock_destroy(RWLock *const this);
-static int  rwlock_enter(RWLock *const this);
+static int  rwlock_acquireR(RWLock *const this);
+static int  rwlock_acquireW(RWLock *const this);
 static int  rwlock_init(RWLock *const this);
-static int  rwlock_leave(RWLock *const this);
-static int  rwlock_release(RWLock *const this);
+static int  rwlock_releaseR(RWLock *const this);
+static int  rwlock_releaseW(RWLock *const this);
+static void rwlock_destroy(RWLock *const this);
 
 ////////////////////////////////////////////////////////////////////////
 // RWLock implementation
@@ -70,14 +70,13 @@ rwlock_destroy (RWLock *const this)
 	lock_destroy(&this->syncronized);
 }
 
+////////////////////////////////////////////////////////////////////////
+
 /*
- * catch (rwlock_acquire(&rw)) | catch (rwlock_enter(&rw)) | catch (rwlock_enter(&rw))
- * ...                         | ...                       | ...
- * catch (rwlock_release(&rw)) | catch (rwlock_leave(&rw)) | catch (rwlock_leave(&rw)) 
  */
 
 static inline int
-rwlock_acquire (RWLock *const this)
+rwlock_acquireW (RWLock *const this)
 {
 	int err;
 	enter_monitor(this);
@@ -96,7 +95,7 @@ onerror:
 }
 
 static inline int
-rwlock_release (RWLock *const this)
+rwlock_releaseW (RWLock *const this)
 {
 	int err;
 	enter_monitor(this);
@@ -115,8 +114,10 @@ onerror:
 	return err;
 }
 
+////////////////////////////////////////////////////////////////////////
+
 static inline int
-rwlock_enter (RWLock *const this)
+rwlock_acquireR (RWLock *const this)
 {
 	int err;
 	enter_monitor(this);
@@ -134,12 +135,13 @@ onerror:
 }
 
 static inline int
-rwlock_leave (RWLock *const this)
+rwlock_releaseR (RWLock *const this)
 {
 	int err;
 	enter_monitor(this);
 
-	if (--this->counter == RWLOCK_IDLE) {
+	--this->counter;
+	if (this->counter == RWLOCK_IDLE) {
 		if (notice_ready(&this->writers)) {
 			catch (notice_signal(&this->writers));
 		}

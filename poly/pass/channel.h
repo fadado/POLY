@@ -179,10 +179,9 @@ channel_send (Channel *const this, Scalar scalar)
 			++this->occupation;
 			break;
 		case CHANNEL_MODE_ASYNC:
-			auto bool non_full(void) {
-				return this->occupation < this->capacity;
+			while (this->occupation == this->capacity) { // while full
+				catch (condition_wait(&this->non_full, &this->syncronized));
 			}
-			catch (condition_await(&this->non_full, &this->syncronized, non_full));
 
 			if (this->buffered) {
 				fifo_put(&this->queue, scalar);
@@ -221,10 +220,9 @@ channel_receive (Channel *const this, Scalar response[static 1])
 			--this->occupation;
 			break;
 		case CHANNEL_MODE_ASYNC:
-			auto bool non_empty(void) { 
-				return this->occupation > 0;
+			while (this->occupation == 0) { // while empty
+				catch (condition_wait(&this->non_empty, &this->syncronized));
 			}
-			catch (condition_await(&this->non_empty, &this->syncronized, non_empty));
 
 			if (this->buffered) {
 				*response = fifo_get(&this->queue);

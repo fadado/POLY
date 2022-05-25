@@ -16,7 +16,6 @@
 
 typedef cnd_t Condition;
 
-static int  condition_await(Condition *const this, union Lock lock, bool(predicate)(void));
 static int  condition_broadcast(Condition *const this);
 static void condition_destroy(Condition *const this);
 static int  condition_init(Condition *const this);
@@ -50,18 +49,6 @@ static ALWAYS inline int
 condition_wait (Condition *const this, union Lock lock)
 {
 	return cnd_wait(this, lock.mutex);
-}
-
-static ALWAYS inline int
-condition_await (Condition *const this, union Lock lock, bool(predicate)(void))
-{
-	while (!predicate()) {
-		int const err = cnd_wait(this, lock.mutex);
-		if (err != STATUS_SUCCESS) {
-			return err;
-		}
-	}
-	return STATUS_SUCCESS;
 }
 
 static ALWAYS inline int

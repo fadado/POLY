@@ -123,7 +123,9 @@ notice_broadcast (Notice *const this)
 	int err;
 
 	this->permits += this->waiting;
-	catch (condition_broadcast(&this->queue));
+	if (this->permits > 0) {
+		catch (condition_broadcast(&this->queue));
+	}
 	ASSERT_NOTICE_INVARIANT
 
 	return STATUS_SUCCESS;
