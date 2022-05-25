@@ -71,17 +71,14 @@ notice_ready (Notice const*const this)
 
 ////////////////////////////////////////////////////////////////////////
 
-#define _notice_enqueue(this)\
-	++this->waiting;\
-	const int err = condition_wait(&this->queue, this->lock);\
-	--this->waiting;\
-	if (err != STATUS_SUCCESS) return err
-
 static inline int
 notice_wait (Notice *const this)
 {
 	while (this->permits == 0) {
-		_notice_enqueue(this);
+		++this->waiting;
+		int const err = condition_wait(&this->queue, this->lock);
+		--this->waiting;
+		if (err != STATUS_SUCCESS) { return err; }
 	}
 	--this->permits;
 	ASSERT_NOTICE_INVARIANT
@@ -93,7 +90,10 @@ static inline int
 notice_do_wait (Notice *const this)
 {
 	do {
-		_notice_enqueue(this);
+		++this->waiting;
+		int const err = condition_wait(&this->queue, this->lock);
+		--this->waiting;
+		if (err != STATUS_SUCCESS) { return err; }
 	} while (this->permits == 0);
 	--this->permits;
 	ASSERT_NOTICE_INVARIANT
@@ -101,26 +101,34 @@ notice_do_wait (Notice *const this)
 	return STATUS_SUCCESS;
 }
 
-#undef _notice_enqueue
-
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int
 notice_signal (Notice *const this)
 {
+	int err;
+
 	++this->permits;
+	catch (condition_signal(&this->queue));
 	ASSERT_NOTICE_INVARIANT
 
-	return condition_signal(&this->queue);
+	return STATUS_SUCCESS;
+onerror:
+	return err;
 }
 
 static ALWAYS inline int
 notice_broadcast (Notice *const this)
 {
+	int err;
+
 	this->permits += this->waiting;
+	catch (condition_broadcast(&this->queue));
 	ASSERT_NOTICE_INVARIANT
 
-	return condition_broadcast(&this->queue);
+	return STATUS_SUCCESS;
+onerror:
+	return err;
 }
 
 #undef ASSERT_NOTICE_INVARIANT

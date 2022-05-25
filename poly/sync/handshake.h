@@ -36,9 +36,10 @@ static int  handshake_wait(Handshake *const this);
 static int
 handshake_init (Handshake *const this)
 {
+	enum { starting_notice = 0 };
 	int err;
 
-	this->value = 0; // 0,1,0,1...
+	this->value = starting_notice;
 
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
