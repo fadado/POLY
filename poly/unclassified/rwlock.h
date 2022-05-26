@@ -5,17 +5,17 @@
 #include "../POLY.h"
 #endif
 #include "../monitor/lock.h"
-#include "../monitor/notice.h"
+#include "../monitor/condition.h"
 
 ////////////////////////////////////////////////////////////////////////
 // RWLock interface
 ////////////////////////////////////////////////////////////////////////
 
 typedef struct RWLock {
-	Lock    syncronized;
-	Notice  readers;
-	Notice  writers;
-	signed  counter; // -1: writing; 0: idle; >0: # of active readers
+	Lock        syncronized;
+	Condition   qR, qW; // queues for readers and writers
+	int         nR, nW; // threads waiting in each queue
+	signed      value;  // -1: writing; 00: idle; >0: # of active readers
 } RWLock;
 
 static int  rwlock_acquireR(RWLock *const this);
@@ -36,23 +36,22 @@ static void rwlock_destroy(RWLock *const this);
  *  rwlock_destroy(&rw);
  */
 
-enum { RWLOCK_IDLE=0, RWLOCK_WRITING=-1 };
-
 static int
 rwlock_init (RWLock *const this)
 {
-	this->counter = RWLOCK_IDLE;
+	this->value = 00; // nobody holds the lock
+	this->nR = this->nW = 0;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
 		return err;
 	}
-	if ((err=notice_init(&this->readers, &this->syncronized)) != STATUS_SUCCESS) {
+	if ((err=condition_init(&this->qR)) != STATUS_SUCCESS) {
 		lock_destroy(&this->syncronized);
 		return err;
 	}
-	if ((err=notice_init(&this->writers, &this->syncronized)) != STATUS_SUCCESS) {
-		notice_destroy(&this->readers);
+	if ((err=condition_init(&this->qW)) != STATUS_SUCCESS) {
+		condition_destroy(&this->qR);
 		lock_destroy(&this->syncronized);
 		return err;
 	}
@@ -63,17 +62,14 @@ rwlock_init (RWLock *const this)
 static void
 rwlock_destroy (RWLock *const this)
 {
-	assert(this->counter == RWLOCK_IDLE);
+	assert(this->value == 00); // nobody holds the lock
 
-	notice_destroy(&this->readers);
-	notice_destroy(&this->writers);
+	condition_destroy(&this->qR);
+	condition_destroy(&this->qW);
 	lock_destroy(&this->syncronized);
 }
 
 ////////////////////////////////////////////////////////////////////////
-
-/*
- */
 
 static inline int
 rwlock_acquireW (RWLock *const this)
@@ -81,11 +77,14 @@ rwlock_acquireW (RWLock *const this)
 	int err;
 	enter_monitor(this);
 
-	if (this->counter != RWLOCK_IDLE) {
-		catch (notice_wait(&this->writers));
-		assert(this->counter == RWLOCK_IDLE);
+	while (this->value != 00) { // wait until no W or R holds the lock
+		++this->nW;
+		err = condition_wait(&this->qW, &this->syncronized);
+		--this->nW;
+		if (err != STATUS_SUCCESS) { goto onerror; }
 	}
-	this->counter = RWLOCK_WRITING;
+
+	this->value = -1; // writer acquires the lock
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;
@@ -95,17 +94,20 @@ onerror:
 }
 
 static inline int
-rwlock_releaseW (RWLock *const this)
+rwlock_acquireR (RWLock *const this)
 {
 	int err;
 	enter_monitor(this);
 
-	this->counter = RWLOCK_IDLE;
-	if (notice_ready(&this->writers)) {
-		catch (notice_signal(&this->writers));
-	} else if (notice_ready(&this->readers)) {
-		catch (notice_broadcast(&this->readers));
+	while (this->value == -1 || this->nW > 0) { // wait until no W exists
+		++this->nR;
+		err = condition_wait(&this->qR, &this->syncronized);
+		--this->nR;
+		if (err != STATUS_SUCCESS) { goto onerror; }
 	}
+
+	assert(this->value >= 0);
+	++this->value;
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;
@@ -117,15 +119,20 @@ onerror:
 ////////////////////////////////////////////////////////////////////////
 
 static inline int
-rwlock_acquireR (RWLock *const this)
+rwlock_releaseW (RWLock *const this)
 {
 	int err;
 	enter_monitor(this);
 
-	while (this->counter == RWLOCK_WRITING) {
-		catch (notice_do_wait(&this->readers));
+	assert(this->value == -1); // writer must hold the lock
+
+	this->value = 00; // writer releases the lock
+
+	if (this->nW > 0) { // there are W waiting
+		catch (condition_signal(&this->qW));
+	} else if (this->nR > 0) { // there are R waiting
+		catch (condition_broadcast(&this->qR));
 	}
-	++this->counter;
 
 	leave_monitor(this);
 	return STATUS_SUCCESS;
@@ -140,10 +147,13 @@ rwlock_releaseR (RWLock *const this)
 	int err;
 	enter_monitor(this);
 
-	--this->counter;
-	if (this->counter == RWLOCK_IDLE) {
-		if (notice_ready(&this->writers)) {
-			catch (notice_signal(&this->writers));
+	assert(this->value > 0); // some R hold the lock
+
+	--this->value;
+	if (this->value == 00) { // no W or R holds the lock
+        assert(this->nR == 0);
+		if (this->nW > 0) {  // there are W waiting
+			catch (condition_signal(&this->qW));
 		}
 	}
 

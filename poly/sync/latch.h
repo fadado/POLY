@@ -69,17 +69,17 @@ latch_wait (Latch *const this)
 	enter_monitor(this);
 
 	switch (this->value) {
-		case 0: // forever open
-			break;
-		case 1:
-			this->value = 0;
-			catch (condition_broadcast(&this->queue));
-			break;
 		default: // >= 2
 			--this->value;
 			do {
 				catch (condition_wait(&this->queue, &this->syncronized));
 			} while (this->value > 0);
+			break;
+		case 1:
+			this->value = 0;
+			catch (condition_broadcast(&this->queue));
+			break;
+		case 0: // forever open
 			break;
 	}
 	ASSERT_LATCH_INVARIANT

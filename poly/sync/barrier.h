@@ -82,18 +82,21 @@ barrier_wait (Barrier *const this, bool* last)
 	enter_monitor(this);
 
 	switch (this->value) {
-		case 1:
-			this->value = this->capacity;
-			++this->cycle;
-			catch (condition_broadcast(&this->queue));
-			if (last != NULL) { *last = true; }
-			break;
 		default: // >= 2
 			--this->value;
 			unsigned const cycle = this->cycle;
 			do {
 				catch (condition_wait(&this->queue, &this->syncronized));
 			} while (cycle == this->cycle);
+			break;
+		case 1:
+			this->value = this->capacity;
+			++this->cycle;
+			catch (condition_broadcast(&this->queue));
+			if (last != NULL) { *last = true; }
+			break;
+		case 0:
+			assert(internal_error);
 			break;
 	}
 	ASSERT_BARRIER_INVARIANT
