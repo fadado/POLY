@@ -67,19 +67,14 @@ handshake_destroy (Handshake *const this)
 static int
 handshake_wait (Handshake *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	unsigned const who = this->value;
 	this->value = !who;
 	catch (board_meet(this->board, who));
 	ASSERT_HANDSHAKE_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #undef ASSERT_HANDSHAKE_INVARIANT

@@ -73,8 +73,7 @@ entry_ready (Entry const*const this)
 static int
 entry_call (Entry *const this, Scalar request, Scalar response[static 1])
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	auto void thunk(void) {
 		this->request = request;
@@ -83,27 +82,18 @@ entry_call (Entry *const this, Scalar request, Scalar response[static 1])
 	*response = this->response;
 	ASSERT_ENTRY_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static int
 entry_accept (Entry *const this, void(accept)(void))
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	catch (board_accept(this->board, accept));
 	ASSERT_ENTRY_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 ////////////////////////////////////////////////////////////////////////

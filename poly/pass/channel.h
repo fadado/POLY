@@ -167,8 +167,7 @@ channel_send (Channel *const this, Scalar scalar)
 		panic("cannot send to a closed channel");
 	}
 
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	switch (this->mode) {
 		case CHANNEL_MODE_SYNC:
@@ -195,11 +194,7 @@ channel_send (Channel *const this, Scalar scalar)
 	}
 	ASSERT_CHANNEL_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static int
@@ -210,8 +205,7 @@ channel_receive (Channel *const this, Scalar response[static 1])
 		return STATUS_SUCCESS;
 	}
 
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	switch (this->mode) {
 		case CHANNEL_MODE_SYNC:
@@ -241,11 +235,7 @@ channel_receive (Channel *const this, Scalar response[static 1])
 	}
 	ASSERT_CHANNEL_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #undef ASSERT_CHANNEL_INVARIANT

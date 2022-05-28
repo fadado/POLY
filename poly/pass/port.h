@@ -68,8 +68,7 @@ port_ready (Port const*const this)
 static int
 port_send (Port *const this, Scalar scalar)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	auto void thunk(void) {
 		this->value = scalar;
@@ -77,18 +76,13 @@ port_send (Port *const this, Scalar scalar)
 	catch (board_send(this->board, thunk));
 	ASSERT_PORT_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static int
 port_receive (Port *const this, Scalar* scalar)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	catch (board_receive(this->board));
 	if (scalar != NULL) {
@@ -96,11 +90,7 @@ port_receive (Port *const this, Scalar* scalar)
 	}
 	ASSERT_PORT_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #undef ASSERT_PORT_INVARIANT

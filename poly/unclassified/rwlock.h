@@ -39,7 +39,7 @@ static void rwlock_destroy(RWLock *const this);
 static int
 rwlock_init (RWLock *const this)
 {
-	this->value = 00; // nobody holds the lock
+	this->value = 00; // no W or R holds the lock
 	this->nR = this->nW = 0;
 
 	int err;
@@ -62,7 +62,7 @@ rwlock_init (RWLock *const this)
 static void
 rwlock_destroy (RWLock *const this)
 {
-	assert(this->value == 00); // nobody holds the lock
+	assert(this->value == 00); // no W or R holds the lock
 
 	condition_destroy(&this->qR);
 	condition_destroy(&this->qW);
@@ -74,46 +74,36 @@ rwlock_destroy (RWLock *const this)
 static inline int
 rwlock_acquireW (RWLock *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	while (this->value != 00) { // wait until no W or R holds the lock
 		++this->nW;
 		err = condition_wait(&this->qW, &this->syncronized);
 		--this->nW;
-		if (err != STATUS_SUCCESS) { goto onerror; }
+		catch (err);
 	}
 
 	this->value = -1; // writer acquires the lock
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static inline int
 rwlock_acquireR (RWLock *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	while (this->value == -1 || this->nW > 0) { // wait until no W exists
 		++this->nR;
 		err = condition_wait(&this->qR, &this->syncronized);
 		--this->nR;
-		if (err != STATUS_SUCCESS) { goto onerror; }
+		catch (err);
 	}
 
 	assert(this->value >= 0);
 	++this->value;
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -121,8 +111,7 @@ onerror:
 static inline int
 rwlock_releaseW (RWLock *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	assert(this->value == -1); // writer must hold the lock
 
@@ -134,18 +123,13 @@ rwlock_releaseW (RWLock *const this)
 		catch (condition_broadcast(&this->qR));
 	}
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static inline int
 rwlock_releaseR (RWLock *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	assert(this->value > 0); // some R hold the lock
 
@@ -157,11 +141,7 @@ rwlock_releaseR (RWLock *const this)
 		}
 	}
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

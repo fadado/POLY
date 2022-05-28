@@ -84,8 +84,7 @@ semaphore_destroy (Semaphore *const this)
 static int
 semaphore_P (Semaphore *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	while (this->value == 0) {
 		catch (condition_wait(&this->queue, &this->syncronized));
@@ -93,28 +92,19 @@ semaphore_P (Semaphore *const this)
 	--this->value;
 	ASSERT_SEMAPHORE_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static int
 semaphore_V (Semaphore *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	++this->value;
 	catch (condition_signal(&this->queue));
 	ASSERT_SEMAPHORE_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #undef ASSERT_SEMAPHORE_INVARIANT

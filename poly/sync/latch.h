@@ -65,8 +65,7 @@ latch_destroy (Latch *const this)
 static int
 latch_wait (Latch *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	switch (this->value) {
 		default: // >= 2
@@ -84,11 +83,7 @@ latch_wait (Latch *const this)
 	}
 	ASSERT_LATCH_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #undef ASSERT_LATCH_INVARIANT

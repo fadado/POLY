@@ -70,48 +70,36 @@ event_destroy (Event *const this)
 static int
 event_wait (Event *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	while (this->value == EVENT_NOT_HAPPENED) {
 		catch (condition_wait(&this->queue, &this->syncronized));
 	}
 	ASSERT_EVENT_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static int
 event_signal (Event *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	this->value = EVENT_ALREADY_HAPPENED;
 	catch (condition_broadcast(&this->queue));
 	ASSERT_EVENT_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 static inline int
 event_reset (Event *const this)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	this->value = EVENT_NOT_HAPPENED;
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
+	ENTRY_END
 }
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

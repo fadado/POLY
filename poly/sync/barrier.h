@@ -78,8 +78,7 @@ barrier_destroy (Barrier *const this)
 static int
 barrier_wait (Barrier *const this, bool* last)
 {
-	int err;
-	enter_monitor(this);
+	MONITOR_ENTRY
 
 	switch (this->value) {
 		default: // >= 2
@@ -101,11 +100,7 @@ barrier_wait (Barrier *const this, bool* last)
 	}
 	ASSERT_BARRIER_INVARIANT
 
-	leave_monitor(this);
-	return STATUS_SUCCESS;
-onerror:
-	break_monitor(this);
-	return err;
+	ENTRY_END
 }
 
 #undef ASSERT_BARRIER_INVARIANT

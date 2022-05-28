@@ -26,4 +26,21 @@
 #define break_monitor(OBJ)\
 	lock_release(&(OBJ)->syncronized)
 
+////////////////////////////////////////////////////////////////////////
+
+#define MONITOR_ENTRY\
+	int err;\
+	if ((err=lock_acquire(&this->syncronized))!=STATUS_SUCCESS){\
+		return err;\
+	}
+
+#define ENTRY_END\
+	if ((err=lock_release(&this->syncronized))!=STATUS_SUCCESS){\
+		return err;\
+	}\
+	return STATUS_SUCCESS;\
+onerror:\
+	lock_release(&this->syncronized);\
+	return err;
+
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
