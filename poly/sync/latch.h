@@ -26,7 +26,7 @@ static int  latch_wait(Latch *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_LATCH_INVARIANT\
+#	define ASSERT_LATCH_INVARIANT \
 		assert(this->value >= 0);
 #else
 #	define ASSERT_LATCH_INVARIANT

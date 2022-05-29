@@ -36,7 +36,7 @@ static int  semaphore_V(Semaphore *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_SEMAPHORE_INVARIANT\
+#	define ASSERT_SEMAPHORE_INVARIANT \
 		assert(this->value >= 0);
 #else
 #	define ASSERT_SEMAPHORE_INVARIANT

@@ -21,11 +21,11 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *      ...
  *  END_TYPE
  */
-#define TASK_TYPE(NAME,...)\
-	__VA_ARGS__ int NAME(void*);\
+#define TASK_TYPE(NAME,...)      \
+	__VA_ARGS__ int NAME(void*); \
 	struct NAME {
 
-#define END_TYPE\
+#define END_TYPE \
 	};
 
 /*
@@ -34,21 +34,21 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *      ...
  *  END_BODY
  */
-#define TASK_BODY(NAME)\
-	int NAME (void* arg_)\
-	{\
-		/*assert(arg_ != NULL);*/\
-		struct NAME const this = *((struct NAME*)arg_);\
-		/* fetch-and-increment atomic global counter*/\
-		TASK_ID = task_ID_COUNT_++;\
+#define TASK_BODY(NAME)                                 \
+	int NAME (void* arg_)                               \
+	{                                                   \
+		/*assert(arg_ != NULL);*/                       \
+		struct NAME const this = *((struct NAME*)arg_); \
+		/* fetch-and-increment atomic global counter*/  \
+		TASK_ID = task_ID_COUNT_++;                     \
 		thread_detach(thread_current());
 
-#define END_BODY\
-		return 0;\
+#define END_BODY  \
+		return 0; \
 	}
 
 // Run a task, given the name and slots
-#define RUN_task(NAME,...)\
+ #define RUN_task(NAME,...) \
 	thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
 
 /*
@@ -64,9 +64,9 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *      ...
  *  END_BODY
  */
-#define RUN_filter(T,I,O,...)\
-    thread_fork(T, \
-        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__},\
+#define RUN_filter(T,I,O,...)                                         \
+    thread_fork(T,                                                    \
+        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__}, \
         &(Thread){0})
 
 /*
@@ -81,9 +81,9 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *      ...
  *  END_BODY
  */
-#define RUN_promise(T,F,...)\
-    thread_fork(T, \
-        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__},\
+#define RUN_promise(T,F,...)                              \
+    thread_fork(T,                                        \
+        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, \
         &(Thread){0})
 
 #endif // vim:ai:sw=4:ts=4:et:syntax=cpp

@@ -61,11 +61,11 @@ lock_init (union Lock this, unsigned mask)
 }
 
 // Deduce mask from lock type, and calls lock_init function
-#define lock_init(LOCK) lock_init((LOCK), \
-	_Generic((LOCK),\
-		PlainLock*: mtx_plain,\
-		TimedLock*: mtx_timed,\
-		RecursiveLock*: mtx_plain|mtx_recursive,\
+#define lock_init(LOCK) lock_init((LOCK),        \
+	_Generic((LOCK),                             \
+		PlainLock*: mtx_plain,                   \
+		TimedLock*: mtx_timed,                   \
+		RecursiveLock*: mtx_plain|mtx_recursive, \
 		TimedRecursiveLock*: mtx_timed|mtx_recursive))
 
 static ALWAYS inline void

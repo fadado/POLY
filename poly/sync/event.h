@@ -30,7 +30,7 @@ static int  event_reset(Event *const this);
 enum { EVENT_NOT_HAPPENED, EVENT_ALREADY_HAPPENED };
 
 #ifdef DEBUG
-#	define ASSERT_EVENT_INVARIANT\
+#	define ASSERT_EVENT_INVARIANT \
 		assert(this->value < 2);
 #else
 #	define ASSERT_EVENT_INVARIANT

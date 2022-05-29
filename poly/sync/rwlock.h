@@ -14,15 +14,15 @@
 typedef struct RWLock {
 	Lock        syncronized;
 	Condition   qR, qW; // queues for readers and writers
-	int         nR, nW; // threads waiting in each queue
+	int         nR, nW; // # of threads waiting in each queue
 	signed      value;  // -1: writing; 00: idle; >0: # of active readers
 } RWLock;
 
-static int  rwlock_acquireR(RWLock *const this);
-static int  rwlock_acquireW(RWLock *const this);
+static int  rwlock_waitR(RWLock *const this);
+static int  rwlock_waitW(RWLock *const this);
 static int  rwlock_init(RWLock *const this);
-static int  rwlock_releaseR(RWLock *const this);
-static int  rwlock_releaseW(RWLock *const this);
+static int  rwlock_signalR(RWLock *const this);
+static int  rwlock_signalW(RWLock *const this);
 static void rwlock_destroy(RWLock *const this);
 
 ////////////////////////////////////////////////////////////////////////
@@ -72,7 +72,7 @@ rwlock_destroy (RWLock *const this)
 ////////////////////////////////////////////////////////////////////////
 
 static inline int
-rwlock_acquireW (RWLock *const this)
+rwlock_waitW (RWLock *const this)
 {
 	MONITOR_ENTRY
 
@@ -83,13 +83,13 @@ rwlock_acquireW (RWLock *const this)
 		catch (err);
 	}
 
-	this->value = -1; // writer acquires the lock
+	this->value = -1; // writer waits the lock
 
 	ENTRY_END
 }
 
 static inline int
-rwlock_acquireR (RWLock *const this)
+rwlock_waitR (RWLock *const this)
 {
 	MONITOR_ENTRY
 
@@ -109,13 +109,13 @@ rwlock_acquireR (RWLock *const this)
 ////////////////////////////////////////////////////////////////////////
 
 static inline int
-rwlock_releaseW (RWLock *const this)
+rwlock_signalW (RWLock *const this)
 {
 	MONITOR_ENTRY
 
 	assert(this->value == -1); // writer must hold the lock
 
-	this->value = 00; // writer releases the lock
+	this->value = 00; // writer signals the lock
 
 	if (this->nW > 0) { // there are W waiting
 		catch (condition_signal(&this->qW));
@@ -127,7 +127,7 @@ rwlock_releaseW (RWLock *const this)
 }
 
 static inline int
-rwlock_releaseR (RWLock *const this)
+rwlock_signalR (RWLock *const this)
 {
 	MONITOR_ENTRY
 
@@ -135,7 +135,7 @@ rwlock_releaseR (RWLock *const this)
 
 	--this->value;
 	if (this->value == 00) { // no W or R holds the lock
-        assert(this->nR == 0);
+		assert(this->nR == 0);
 		if (this->nW > 0) {  // there are W waiting
 			catch (condition_signal(&this->qW));
 		}

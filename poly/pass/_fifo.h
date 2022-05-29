@@ -33,10 +33,10 @@ static Scalar fifo_get(FIFO *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_FIFO_INVARIANT\
-		assert(0 <= this->count && this->count <= this->size);\
-		assert(0 <= this->front && this->front < this->size);\
-		assert(this->buffer != NULL);\
+#	define ASSERT_FIFO_INVARIANT                               \
+		assert(0 <= this->count && this->count <= this->size); \
+		assert(0 <= this->front && this->front < this->size);  \
+		assert(this->buffer != NULL);                          \
 		assert(!(fifo_empty(this) && fifo_full(this)));
 #else
 #	define ASSERT_FIFO_INVARIANT
