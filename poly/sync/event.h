@@ -62,7 +62,7 @@ event_destroy (Event *const this)
 }
 
 /*
- * catch (event_init(&event));
+ * catch (event_init(&event))
  * ...
  * catch (event_wait(&event)) | catch (event_signal(&event))
  */
@@ -73,7 +73,7 @@ event_wait (Event *const this)
 	MONITOR_ENTRY
 
 	while (this->value == EVENT_NOT_HAPPENED) {
-		catch (condition_wait(&this->queue, &this->syncronized));
+		catch (condition_wait(&this->queue, &this->syncronized))
 	}
 	ASSERT_EVENT_INVARIANT
 
@@ -86,7 +86,7 @@ event_signal (Event *const this)
 	MONITOR_ENTRY
 
 	this->value = EVENT_ALREADY_HAPPENED;
-	catch (condition_broadcast(&this->queue));
+	catch (condition_broadcast(&this->queue))
 	ASSERT_EVENT_INVARIANT
 
 	ENTRY_END

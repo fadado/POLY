@@ -30,7 +30,8 @@ static int  barrier_wait(Barrier *const this, bool* last);
 #ifdef DEBUG
 #	define ASSERT_BARRIER_INVARIANT  \
 		assert(this->capacity >= 0); \
-		assert(0 < this->value && this->value <= this->capacity);
+		assert(0 < this->value       \
+                && this->value <= this->capacity);
 #else
 #	define ASSERT_BARRIER_INVARIANT
 #endif
@@ -71,7 +72,7 @@ barrier_destroy (Barrier *const this)
  * How to detect end of cycle:
  *
  * bool last = false;
- * catch (barrier_wait(&b, &last));
+ * catch (barrier_wait(&b, &last))
  * if (last) ...
  *
  */
@@ -85,13 +86,13 @@ barrier_wait (Barrier *const this, bool* last)
 			--this->value;
 			unsigned const cycle = this->cycle;
 			do {
-				catch (condition_wait(&this->queue, &this->syncronized));
+				catch (condition_wait(&this->queue, &this->syncronized))
 			} while (cycle == this->cycle);
 			break;
 		case 1:
 			this->value = this->capacity;
 			++this->cycle;
-			catch (condition_broadcast(&this->queue));
+			catch (condition_broadcast(&this->queue))
 			if (last != NULL) { *last = true; }
 			break;
 		case 0:

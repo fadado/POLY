@@ -30,7 +30,7 @@ static int task_producer(void* arg)
 	Channel* channel = arg;
 	for (int i=0; i < M; ++i) {
 		char c = '0'+i;
-		catch (channel_send(channel, (Unsigned)c));
+		catch (channel_send(channel, (Unsigned)c))
 #ifdef DEBUG
 		//warn("Snd> %c", c);
 #endif
@@ -57,8 +57,8 @@ static int task_consumer(void* arg)
 #endif
 	Channel* channel = arg;
 	Scalar s;
-	while (!channel_drained(channel)) {
-		catch (channel_receive(channel, &s));
+	while (!channel_dry(channel)) {
+		catch (channel_receive(channel, &s))
 		char c = cast(s, char);
 #ifdef DEBUG
 		//warn("Rcv< %c", s);
@@ -82,15 +82,17 @@ int main(int argc, char* argv[argc+1])
 	int err, status;
 
 	Channel channel;
-	catch (channel_init(&channel, N));
+	catch (channel_init(&channel, N))
 
 	Thread producer, consumer;
 
-	catch (thread_fork(task_producer, &channel, &producer));
-	catch (thread_fork(task_consumer, &channel, &consumer));
+	catch (thread_fork(task_producer, &channel, &producer))
+	catch (thread_fork(task_consumer, &channel, &consumer))
 
-	catch (thread_join(producer, &status)); catch (status);
-	catch (thread_join(consumer, &status)); catch (status);
+	catch (thread_join(producer, &status))
+	catch (status)
+	catch (thread_join(consumer, &status))
+	catch (status)
 
 	channel_destroy(&channel);
 

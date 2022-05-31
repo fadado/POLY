@@ -73,7 +73,7 @@ port_send (Port *const this, Scalar scalar)
 	auto void thunk(void) {
 		this->value = scalar;
 	}
-	catch (board_send(this->board, thunk));
+	catch (board_send(this->board, thunk))
 	ASSERT_PORT_INVARIANT
 
 	ENTRY_END
@@ -84,7 +84,7 @@ port_receive (Port *const this, Scalar* scalar)
 {
 	MONITOR_ENTRY
 
-	catch (board_receive(this->board));
+	catch (board_receive(this->board))
 	if (scalar != NULL) {
 		*scalar = this->value;
 	}

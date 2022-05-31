@@ -58,7 +58,8 @@ enum { CHANNEL_MODE_SYNC='S', CHANNEL_MODE_ASYNC='A' };
 #ifdef DEBUG
 #	define ASSERT_CHANNEL_INVARIANT                 \
 		assert(this->occupation <= this->capacity); \
-		assert(!(CHANNEL_DRY & this->flags) || (CHANNEL_CLOSED & this->flags));
+		assert(!(CHANNEL_DRY & this->flags)         \
+                || (CHANNEL_CLOSED & this->flags));
 #else
 #	define ASSERT_CHANNEL_INVARIANT
 #endif
@@ -77,7 +78,7 @@ channel_init (Channel *const this, unsigned capacity)
 		case 0:
 			this->mode = CHANNEL_MODE_SYNC;
 			this->capacity = 1;
-			catch (board_init(2, this->board, &this->syncronized));
+			catch (board_init(2, this->board, &this->syncronized))
 			break;
 		case 1:
 			this->mode = CHANNEL_MODE_ASYNC;
@@ -93,7 +94,7 @@ channel_init (Channel *const this, unsigned capacity)
 		default: // > 1
 			this->mode = CHANNEL_MODE_ASYNC;
 			this->buffered = true;
-			catch (fifo_init(&this->queue, capacity));
+			catch (fifo_init(&this->queue, capacity))
 			if ((err = condition_init(&this->non_empty)) != STATUS_SUCCESS) {
 				fifo_destroy(&this->queue);
 				goto onerror;
@@ -174,12 +175,12 @@ channel_send (Channel *const this, Scalar scalar)
 			auto void thunk(void) {
 				this->value = scalar;
 			}
-			catch (board_send(this->board, thunk));
+			catch (board_send(this->board, thunk))
 			++this->occupation;
 			break;
 		case CHANNEL_MODE_ASYNC:
 			while (this->occupation == this->capacity) { // while full
-				catch (condition_wait(&this->non_full, &this->syncronized));
+				catch (condition_wait(&this->non_full, &this->syncronized))
 			}
 
 			if (this->buffered) {
@@ -189,7 +190,7 @@ channel_send (Channel *const this, Scalar scalar)
 			}
 			++this->occupation;
 
-			catch (condition_signal(&this->non_empty));
+			catch (condition_signal(&this->non_empty))
 			break;
 	}
 	ASSERT_CHANNEL_INVARIANT
@@ -209,13 +210,13 @@ channel_receive (Channel *const this, Scalar response[static 1])
 
 	switch (this->mode) {
 		case CHANNEL_MODE_SYNC:
-			catch (board_receive(this->board));
+			catch (board_receive(this->board))
 			*response = this->value;
 			--this->occupation;
 			break;
 		case CHANNEL_MODE_ASYNC:
 			while (this->occupation == 0) { // while empty
-				catch (condition_wait(&this->non_empty, &this->syncronized));
+				catch (condition_wait(&this->non_empty, &this->syncronized))
 			}
 
 			if (this->buffered) {
@@ -225,7 +226,7 @@ channel_receive (Channel *const this, Scalar response[static 1])
 			}
 			--this->occupation;
 
-			catch (condition_signal(&this->non_full));
+			catch (condition_signal(&this->non_full))
 			break;
 	}
 	if (this->occupation == 0) {

@@ -70,15 +70,15 @@ semaphore_destroy (Semaphore *const this)
 }
 
 /*
- * catch (semaphore_init(&mutex, 1));
+ * catch (semaphore_init(&mutex, 1))
  * catch (semaphore_acquire(&mutex))
  * ...
  * catch (semaphore_release(&mutex))
  *
- * catch (semaphore_init(&event, 0));
+ * catch (semaphore_init(&event, 0))
  * catch (semaphore_wait(&event)) | catch (semaphore_signal(&event))
  *
- * catch (semaphore_init(&allocator, N));
+ * catch (semaphore_init(&allocator, N))
  */
 
 static int
@@ -87,7 +87,7 @@ semaphore_P (Semaphore *const this)
 	MONITOR_ENTRY
 
 	while (this->value == 0) {
-		catch (condition_wait(&this->queue, &this->syncronized));
+		catch (condition_wait(&this->queue, &this->syncronized))
 	}
 	--this->value;
 	ASSERT_SEMAPHORE_INVARIANT
