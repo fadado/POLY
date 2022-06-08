@@ -27,10 +27,10 @@ static int  handshake_wait(Handshake *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_HANDSHAKE_INVARIANT \
-		assert(this->value < 2);
+#   define ASSERT_HANDSHAKE_INVARIANT \
+        assert(this->value < 2);
 #else
-#	define ASSERT_HANDSHAKE_INVARIANT
+#   define ASSERT_HANDSHAKE_INVARIANT
 #endif
 
 static int

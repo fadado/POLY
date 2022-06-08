@@ -28,12 +28,12 @@ static int  barrier_wait(Barrier *const this, bool* last);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_BARRIER_INVARIANT  \
-		assert(this->capacity >= 0); \
-		assert(0 < this->value       \
+#   define ASSERT_BARRIER_INVARIANT  \
+        assert(this->capacity >= 0); \
+        assert(0 < this->value       \
                 && this->value <= this->capacity);
 #else
-#	define ASSERT_BARRIER_INVARIANT
+#   define ASSERT_BARRIER_INVARIANT
 #endif
 
 static int

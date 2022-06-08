@@ -35,12 +35,12 @@ static int  notice_wait(Notice *const this);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_NOTICE_INVARIANT  \
-		assert(this->waiting >= 0); \
-		assert(this->permits >= 0); \
-		assert(this->lock.mutex != NULL);
+#   define ASSERT_NOTICE_INVARIANT  \
+        assert(this->waiting >= 0); \
+        assert(this->permits >= 0); \
+        assert(this->lock.mutex != NULL);
 #else
-#	define ASSERT_NOTICE_INVARIANT
+#   define ASSERT_NOTICE_INVARIANT
 #endif
 
 static inline int

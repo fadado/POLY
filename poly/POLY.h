@@ -51,7 +51,7 @@ static_assert(STATUS_TIMEDOUT >= 0);
 // error management strategy (assume `int err` has been defined)
 #define catch(X)                       \
     if ((err=(X)) != STATUS_SUCCESS) { \
-		goto onerror;                  \
+        goto onerror;                  \
     }
 
 ////////////////////////////////////////////////////////////////////////

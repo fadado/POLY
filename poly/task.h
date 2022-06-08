@@ -22,11 +22,11 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *  END_TYPE
  */
 #define TASK_TYPE(NAME,...)      \
-	__VA_ARGS__ int NAME(void*); \
-	struct NAME {
+    __VA_ARGS__ int NAME(void*); \
+    struct NAME {
 
 #define END_TYPE \
-	};
+    };
 
 /*
  *  TASK_BODY (name)
@@ -35,21 +35,21 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
  *  END_BODY
  */
 #define TASK_BODY(NAME)                                 \
-	int NAME (void* arg_)                               \
-	{                                                   \
-		/*assert(arg_ != NULL);*/                       \
-		struct NAME const this = *((struct NAME*)arg_); \
-		/* fetch-and-increment atomic global counter*/  \
-		TASK_ID = task_ID_COUNT_++;                     \
-		thread_detach(thread_current());
+    int NAME (void* arg_)                               \
+    {                                                   \
+        /*assert(arg_ != NULL);*/                       \
+        struct NAME const this = *((struct NAME*)arg_); \
+        /* fetch-and-increment atomic global counter*/  \
+        TASK_ID = task_ID_COUNT_++;                     \
+        thread_detach(thread_current());
 
 #define END_BODY  \
-		return 0; \
-	}
+        return 0; \
+    }
 
 // Run a task, given the name and slots
  #define RUN_task(NAME,...) \
-	thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
+    thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
 
 /*
  *  TASK_TYPE (name)

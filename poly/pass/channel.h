@@ -56,12 +56,12 @@ enum { CHANNEL_CLOSED=0x01, CHANNEL_DRY=0x02 };
 enum { CHANNEL_MODE_SYNC='S', CHANNEL_MODE_ASYNC='A' };
 
 #ifdef DEBUG
-#	define ASSERT_CHANNEL_INVARIANT                 \
-		assert(this->occupation <= this->capacity); \
-		assert(!(CHANNEL_DRY & this->flags)         \
+#   define ASSERT_CHANNEL_INVARIANT                 \
+        assert(this->occupation <= this->capacity); \
+        assert(!(CHANNEL_DRY & this->flags)         \
                 || (CHANNEL_CLOSED & this->flags));
 #else
-#	define ASSERT_CHANNEL_INVARIANT
+#   define ASSERT_CHANNEL_INVARIANT
 #endif
 
 static int

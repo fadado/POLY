@@ -30,9 +30,9 @@ static int  port_send(Port *const this, Scalar scalar);
 ////////////////////////////////////////////////////////////////////////
 
 #ifdef DEBUG
-#	define ASSERT_PORT_INVARIANT
+#   define ASSERT_PORT_INVARIANT
 #else
-#	define ASSERT_PORT_INVARIANT
+#   define ASSERT_PORT_INVARIANT
 #endif
 
 static int
