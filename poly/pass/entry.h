@@ -65,10 +65,11 @@ entry_destroy (Entry *const this)
 static ALWAYS inline bool
 entry_ready (Entry const*const this)
 {
-	return notice_ready(&this->board[0]);
+	MONITOR_ENTRY
+	bool const r = notice_ready(&this->board[0]);
+	ENTRY_END
+	return r;
 }
-
-////////////////////////////////////////////////////////////////////////
 
 static int
 entry_call (Entry *const this, Scalar request, Scalar response[static 1])

@@ -66,7 +66,7 @@ notice_destroy (Notice *const this)
 static ALWAYS inline bool
 notice_ready (Notice const*const this)
 {
-	return this->waiting != 0; // thread safe?
+	return this->waiting != 0;
 }
 
 ////////////////////////////////////////////////////////////////////////

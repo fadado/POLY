@@ -18,6 +18,7 @@ static _Atomic unsigned task_ID_COUNT_ = 1;
 /*
  *  TASK_TYPE (name [,linkage])
  *      slots
+ *      entries
  *      ...
  *  END_TYPE
  */
