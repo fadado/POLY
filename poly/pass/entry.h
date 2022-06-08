@@ -98,11 +98,11 @@ entry_accept (Entry *const this, void(accept)(void))
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Server tasks experiments
+// Server experiments
 ////////////////////////////////////////////////////////////////////////
 
 /*
- *  TASK_TYPE (Server)
+ *  THREAD_TYPE (Server)
  *      Entry* entry1;
  *      Entry* entry2;
  *      ...

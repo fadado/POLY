@@ -7,7 +7,6 @@
 #define DEBUG
 
 #include "poly/thread.h"
-#include "poly/task.h"
 #include "poly/scalar.h"
 #include "poly/pass/channel.h"
 
@@ -26,18 +25,18 @@ static Event calculating = {1};
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (Spinner, static)
+THREAD_TYPE (Spinner, static)
 	int delay; // nanoseconds
 END_TYPE
 
-TASK_BODY (Spinner)
+THREAD_BODY (Spinner)
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
 		thread_sleep(this.delay);
 	}
 
-	warn("TaskID: %d", TASK_ID);
+	warn("TaskID: %d", THREAD_ID);
 	wait(calculating);
 
 	spin(0);
@@ -52,19 +51,19 @@ END_BODY
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (Fibonacci, static)
+THREAD_TYPE (Fibonacci, static)
 	Channel* future;
 	long     n;
 END_TYPE
 
-TASK_BODY (Fibonacci)
+THREAD_BODY (Fibonacci)
 
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	warn("TaskID: %d", TASK_ID);
+	warn("TaskID: %d", THREAD_ID);
 	signal(calculating);
 
 	long result = slow_fib(this.n);
@@ -92,14 +91,14 @@ int main(int argc, char* argv[argc+1])
 
 	hide_cursor();
 
-	warn("TaskID: %d", TASK_ID);
+	warn("TaskID: %d", THREAD_ID);
 
-	err += RUN_task(Spinner, .delay=us2ns(usDELAY));
+	err += RUN_thread(Spinner, .delay=us2ns(usDELAY));
 
 	Channel inbox;
 	err += channel_init(&inbox, 1);
 	err += RUN_promise(Fibonacci, &inbox, .n=N);
-	//err+=RUN_task(Fibonacci, .future=&inbox, .n=N);
+	//err+=RUN_thread(Fibonacci, .future=&inbox, .n=N);
 
 	assert(err == 0);
 

@@ -8,7 +8,7 @@
 
 // comment next line to disable assertions
 #define DEBUG
-#include "poly/task.h"
+#include "poly/thread.h"
 #include "poly/scalar.h"
 #include "poly/pass/channel.h"
 
@@ -16,12 +16,12 @@
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (Candidates, static)
+THREAD_TYPE (Candidates, static)
 	Channel* input;
 	Channel* output;
 END_TYPE
 
-TASK_BODY (Candidates)
+THREAD_BODY (Candidates)
 	assert(this.input == NULL);
 
 	int n = 2;
@@ -36,13 +36,13 @@ END_BODY
 // Filter multiples of `this->prime`
 ////////////////////////////////////////////////////////////////////////
 
-TASK_TYPE (Sieve, static)
+THREAD_TYPE (Sieve, static)
 	Channel* input;
 	Channel* output;
 	int      prime;
 END_TYPE
 
-TASK_BODY (Sieve)
+THREAD_BODY (Sieve)
 	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
 	}

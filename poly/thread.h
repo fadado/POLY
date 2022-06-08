@@ -79,4 +79,86 @@ thread_exit (int result)
 	thrd_exit(result);
 }
 
+////////////////////////////////////////////////////////////////////////
+// ADA style
+////////////////////////////////////////////////////////////////////////
+
+// THREAD_ID: 0, 1, ...
+static _Thread_local unsigned THREAD_ID = 0; // 0 reserved to main
+
+// private atomic global counter (provide unique IDs)
+static _Atomic unsigned thread_ID_COUNT_ = 1;
+
+/*
+ *  THREAD_TYPE (name [,linkage])
+ *      slots
+ *      entries
+ *      ...
+ *  END_TYPE
+ */
+#define THREAD_TYPE(NAME,...)    \
+    __VA_ARGS__ int NAME(void*); \
+    struct NAME {
+
+#define END_TYPE \
+    };
+
+/*
+ *  THREAD_BODY (name)
+ *      code
+ *      ...
+ *  END_BODY
+ */
+#define THREAD_BODY(NAME)                               \
+    int NAME (void* arg_)                               \
+    {                                                   \
+        /*assert(arg_ != NULL);*/                       \
+        struct NAME const this = *((struct NAME*)arg_); \
+        /* fetch-and-increment atomic global counter*/  \
+        THREAD_ID = thread_ID_COUNT_++;                 \
+        thread_detach(thread_current());
+
+#define END_BODY  \
+        return 0; \
+    }
+
+// Run a thread, given the name and slots
+ #define RUN_thread(NAME,...) \
+    thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
+
+/*
+ *  THREAD_TYPE (name)
+ *      Channel* input;  // Channel or Port
+ *      Channel* output;
+ *      ...
+ *  END_TYPE
+ *
+ *  THREAD_BODY (name)
+ *      ...
+ *      receive from `input` and send to `output`
+ *      ...
+ *  END_BODY
+ */
+#define RUN_filter(T,I,O,...)                                         \
+    thread_fork(T,                                                    \
+        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__}, \
+        &(Thread){0})
+
+/*
+ *  THREAD_TYPE (name)
+ *      Channel* future;
+ *      ...
+ *  END_TYPE
+ *
+ *  THREAD_BODY (name)
+ *      ...
+ *      send result to `future`
+ *      ...
+ *  END_BODY
+ */
+#define RUN_promise(T,F,...)                              \
+    thread_fork(T,                                        \
+        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, \
+        &(Thread){0})
+
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
