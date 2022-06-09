@@ -4,6 +4,10 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
+#ifndef POLY_MONITOR_H
+#include "MONITOR.h"
+#endif
+
 
 /*
  * A façade on top of C11 type `mtx_t`.
@@ -100,13 +104,5 @@ lock_try_for (union Lock this, Clock duration)
 	const long   ns = t - s2ns(s);
 	return mtx_timedlock(this.mutex, &(struct timespec){.tv_sec=s, .tv_nsec=ns});
 }
-
-////////////////////////////////////////////////////////////////////////
-// Monitor helper macros
-////////////////////////////////////////////////////////////////////////
-
-#ifndef POLY_MONITOR_H
-#include "MONITOR.h"
-#endif
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

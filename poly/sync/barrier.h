@@ -21,7 +21,7 @@ typedef struct Barrier {
 
 static int  barrier_init(Barrier *const this, int capacity);
 static void barrier_destroy(Barrier *const this);
-static int  barrier_wait(Barrier *const this, bool* last);
+static int  barrier_wait(Barrier *const this, bool last[static 1]);
 
 ////////////////////////////////////////////////////////////////////////
 // Barrier implementation
@@ -67,17 +67,17 @@ barrier_destroy (Barrier *const this)
 }
 
 /*
- * catch (barrier_wait(&b,0)) | catch (barrier_wait(&b,0)) | N threads 
+ * catch (barrier_wait(&b,0)); | catch (barrier_wait(&b,0)); | N threads 
  *
  * How to detect end of cycle:
  *
  * bool last = false;
- * catch (barrier_wait(&b, &last))
+ * catch (barrier_wait(&b, &last));
  * if (last) ...
  *
  */
 static int
-barrier_wait (Barrier *const this, bool* last)
+barrier_wait (Barrier *const this, bool last[static 1])
 {
 	MONITOR_ENTRY
 
@@ -86,14 +86,14 @@ barrier_wait (Barrier *const this, bool* last)
 			--this->value;
 			unsigned const cycle = this->cycle;
 			do {
-				catch (condition_wait(&this->queue, &this->syncronized))
+				catch (condition_wait(&this->queue, &this->syncronized));
 			} while (cycle == this->cycle);
 			break;
 		case 1:
 			this->value = this->capacity;
 			++this->cycle;
-			catch (condition_broadcast(&this->queue))
-			if (last != NULL) { *last = true; }
+			catch (condition_broadcast(&this->queue));
+			last[0] = true;
 			break;
 		case 0:
 			assert(internal_error);

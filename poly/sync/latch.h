@@ -60,7 +60,7 @@ latch_destroy (Latch *const this)
 }
 
 /*
- * catch (latch_wait(&b)) | catch (latch_wait(&b)) | N threads 
+ * catch (latch_wait(&b)); | catch (latch_wait(&b)); | N threads 
  */
 static int
 latch_wait (Latch *const this)
@@ -71,12 +71,12 @@ latch_wait (Latch *const this)
 		default: // >= 2
 			--this->value;
 			do {
-				catch (condition_wait(&this->queue, &this->syncronized))
+				catch (condition_wait(&this->queue, &this->syncronized));
 			} while (this->value > 0);
 			break;
 		case 1:
 			this->value = 0;
-			catch (condition_broadcast(&this->queue))
+			catch (condition_broadcast(&this->queue));
 			break;
 		case 0: // forever open
 			break;

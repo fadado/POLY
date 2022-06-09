@@ -17,9 +17,9 @@ typedef thrd_t Thread;
 
 static Thread   thread_current(void);
 static int      thread_detach(Thread thread);
+static int      thread_create(Thread* this, int main(void*), void* argument);
 static bool     thread_equal(Thread lhs, Thread rhs);
 static void     thread_exit(int result);
-static int      thread_fork(int main(void*), void* argument, Thread* this);
 static int      thread_join(Thread thread, int *const result);
 static int      thread_sleep(Clock duration);
 static void     thread_yield(void);
@@ -29,7 +29,7 @@ static void     thread_yield(void);
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline int
-thread_fork (int main(void*), void* argument, Thread* this)
+thread_create (Thread* this, int main(void*), void* argument)
 {
 	return thrd_create(this, main, argument);
 }
@@ -80,21 +80,22 @@ thread_exit (int result)
 }
 
 ////////////////////////////////////////////////////////////////////////
-// ADA style
+// Ada style
 ////////////////////////////////////////////////////////////////////////
 
-// THREAD_ID: 0, 1, ...
-static _Thread_local unsigned THREAD_ID = 0; // 0 reserved to main
-
+// THREAD_ID: 0, 1, ... (0 reserved to main)
+static _Thread_local unsigned   THREAD_ID = 0;
 // private atomic global counter (provide unique IDs)
-static _Atomic unsigned thread_ID_COUNT_ = 1;
+static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
 
 /*
  *  THREAD_TYPE (name [,linkage])
- *      slots
+ *      parameters
  *      entries
- *      ...
  *  END_TYPE
+ * =>
+ *  int name(void*);
+ *  struct name { parameters entries };
  */
 #define THREAD_TYPE(NAME,...)    \
     __VA_ARGS__ int NAME(void*); \
@@ -106,8 +107,18 @@ static _Atomic unsigned thread_ID_COUNT_ = 1;
 /*
  *  THREAD_BODY (name)
  *      code
- *      ...
  *  END_BODY
+ * =>
+ *  int name(void* arg_)
+ *  {
+ *      struct name const this = *((struct name*)arg_);
+ *      THREAD_ID = THREAD_ID_COUNT_++;
+ *      thread_detach(thread_current());
+ *      ...
+ *      code
+ *      ...
+ *      return STATUS_SUCCESS;
+ *  }
  */
 #define THREAD_BODY(NAME)                               \
     int NAME (void* arg_)                               \
@@ -115,50 +126,25 @@ static _Atomic unsigned thread_ID_COUNT_ = 1;
         /*assert(arg_ != NULL);*/                       \
         struct NAME const this = *((struct NAME*)arg_); \
         /* fetch-and-increment atomic global counter*/  \
-        THREAD_ID = thread_ID_COUNT_++;                 \
+        THREAD_ID = THREAD_ID_COUNT_++;                 \
         thread_detach(thread_current());
 
-#define END_BODY  \
-        return 0; \
+#define END_BODY                \
+        return STATUS_SUCCESS;  \
     }
 
-// Run a thread, given the name and slots
- #define RUN_thread(NAME,...) \
-    thread_fork(NAME, &(struct NAME){__VA_ARGS__}, &(Thread){0})
-
 /*
- *  THREAD_TYPE (name)
- *      Channel* input;  // Channel or Port
- *      Channel* output;
- *      ...
- *  END_TYPE
+ * Run a thread, given the name and parameters.
  *
- *  THREAD_BODY (name)
- *      ...
- *      receive from `input` and send to `output`
- *      ...
- *  END_BODY
- */
-#define RUN_filter(T,I,O,...)                                         \
-    thread_fork(T,                                                    \
-        &(struct T){.input=(I), .output=(O)__VA_OPT__(,)__VA_ARGS__}, \
-        &(Thread){0})
-
-/*
- *  THREAD_TYPE (name)
- *      Channel* future;
- *      ...
- *  END_TYPE
+ *  create (name, parameters...);
+ * =>
+ *  thread_create(&(Thread){0}, name, &(struct name){parameters})
  *
- *  THREAD_BODY (name)
- *      ...
- *      send result to `future`
- *      ...
- *  END_BODY
+ * Parameters form:
+ *
+ *  .p1=v, .p2=v, ...
  */
-#define RUN_promise(T,F,...)                              \
-    thread_fork(T,                                        \
-        &(struct T){.future=(F)__VA_OPT__(,)__VA_ARGS__}, \
-        &(Thread){0})
+#define create(NAME,...) \
+    thread_create(&(Thread){0}, NAME, &(struct NAME){__VA_ARGS__})
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

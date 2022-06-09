@@ -73,7 +73,7 @@ int main(int argc, char* argv[argc+1])
 
 	Port* input = alloc();
 	port_init(input);
-	err = RUN_filter(Candidates, NULL, input);
+	err = filter(Candidates, NULL, input);
 	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {
@@ -83,7 +83,7 @@ int main(int argc, char* argv[argc+1])
 
 		Port* output = alloc();
 		port_init(output);
-		err = RUN_filter(Sieve, input, output, .prime=prime);
+		err = filter(Sieve, input, output, .prime=prime);
 		assert(err == 0);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));

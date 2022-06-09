@@ -4,6 +4,9 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
+#ifndef POLY_MONITOR_H
+#include "MONITOR.h"
+#endif
 #include "lock.h"
 
 /*

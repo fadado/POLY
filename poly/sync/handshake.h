@@ -61,7 +61,7 @@ handshake_destroy (Handshake *const this)
 }
 
 /*
- * catch (handshake_wait(&b)) | catch (handshake_wait(&b))
+ * catch (handshake_wait(&b)); | catch (handshake_wait(&b));
  */
 
 static int
@@ -71,7 +71,7 @@ handshake_wait (Handshake *const this)
 
 	unsigned const who = this->value;
 	this->value = !who;
-	catch (board_meet(this->board, who))
+	catch (board_meet(this->board, who));
 	ASSERT_HANDSHAKE_INVARIANT
 
 	ENTRY_END

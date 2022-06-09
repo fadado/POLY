@@ -4,6 +4,9 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
+#ifndef POLY_PASS_H
+#include "PASS.h"
+#endif
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"
@@ -79,8 +82,8 @@ entry_call (Entry *const this, Scalar request, Scalar response[static 1])
 	auto void thunk(void) {
 		this->request = request;
 	}
-	catch (board_call(this->board, thunk))
-	*response = this->response;
+	catch (board_call(this->board, thunk));
+	response[0] = this->response;
 	ASSERT_ENTRY_INVARIANT
 
 	ENTRY_END
@@ -91,7 +94,7 @@ entry_accept (Entry *const this, void(accept)(void))
 {
 	MONITOR_ENTRY
 
-	catch (board_accept(this->board, accept))
+	catch (board_accept(this->board, accept));
 	ASSERT_ENTRY_INVARIANT
 
 	ENTRY_END
@@ -111,7 +114,7 @@ entry_accept (Entry *const this, void(accept)(void))
  *  Scalar s=x, r;
  *  call (&entry, s, &r);
  *
- *  #define call(e,s,r) catch (entry_call(e, s, r))
+ *  #define call(e,s,r) catch (entry_call(e, s, r));
  *  #define loop        for (;;)
  *  #define select      int _open=0; int _selec=0;
  *  #define when(g,e)   if ((g) && ++_open && entry_ready(e) && ++_selec)
@@ -126,7 +129,7 @@ entry_accept (Entry *const this, void(accept)(void))
  *                  this.entry->response = ϕ(this.entry->request);
  *                  ...
  *              }
- *              catch (entry_accept(this.entry, accept))
+ *              catch (entry_accept(this.entry, accept));
  *          }
  *      or
  *          when ...

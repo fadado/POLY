@@ -4,6 +4,9 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
+#ifndef POLY_MONITOR_H
+#include "MONITOR.h"
+#endif
 #include "lock.h"
 #include "notice.h"
 
@@ -37,9 +40,7 @@ board_init (unsigned n, Notice board[static n], union Lock lock)
 	assert(n > 0);
 	for (unsigned i = 0; i < n; ++i) {
 		const int err = notice_init(&board[i], lock);
-		if (err == STATUS_SUCCESS) {
-			continue;
-		} else {
+		if (err != STATUS_SUCCESS) {
 			if (i > 0) {
 				board_destroy(i, board);
 			}
@@ -54,7 +55,8 @@ board_destroy (unsigned n, Notice board[static n])
 {
 	assert(n > 0);
 	do {
-		notice_destroy(&board[--n]);
+		--n;
+		notice_destroy(&board[n]);
 	} while (n != 0);
 }
 
@@ -72,8 +74,8 @@ board_meet (Notice board[static 2], unsigned i)
 	assert(i < 2);
 	int err;
 
-	catch (notice_signal(&board[i]))
-	catch (notice_wait(&board[!i]))
+	catch (notice_signal(&board[i]));
+	catch (notice_wait(&board[!i]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -85,9 +87,9 @@ board_send (Notice board[static 2], void(thunk)(void))
 {
 	int err;
 
-	catch (notice_wait(&board[0]))
+	catch (notice_wait(&board[0]));
 	thunk();
-	catch (notice_signal(&board[1]))
+	catch (notice_signal(&board[1]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -99,8 +101,8 @@ board_receive (Notice board[static 2])
 {
 	int err;
 
-	catch (notice_signal(&board[0]))
-	catch (notice_wait(&board[1]))
+	catch (notice_signal(&board[0]));
+	catch (notice_wait(&board[1]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -116,10 +118,10 @@ board_call (Notice board[static 3], void(thunk)(void))
 {
 	int err;
 
-	catch (notice_wait(&board[0]))
+	catch (notice_wait(&board[0]));
 	thunk();
-	catch (notice_signal(&board[1]))
-	catch (notice_wait(&board[2]))
+	catch (notice_signal(&board[1]));
+	catch (notice_wait(&board[2]));
 
 	return STATUS_SUCCESS;
 onerror:
@@ -131,10 +133,10 @@ board_accept (Notice board[static 3], void(thunk)(void))
 {
 	int err;
 
-	catch (notice_signal(&board[0]))
-	catch (notice_wait(&board[1]))
+	catch (notice_signal(&board[0]));
+	catch (notice_wait(&board[1]));
 	thunk();
-	catch (notice_signal(&board[2]))
+	catch (notice_signal(&board[2]));
 
 	return STATUS_SUCCESS;
 onerror:

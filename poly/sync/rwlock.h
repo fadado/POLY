@@ -31,7 +31,7 @@ static void rwlock_destroy(RWLock *const this);
 
 /*  RWLock rw;
  *
- *  catch (rwlock_init(&rw))
+ *  catch (rwlock_init(&rw));
  *  ...
  *  rwlock_destroy(&rw);
  */
@@ -80,7 +80,7 @@ rwlock_waitW (RWLock *const this)
 		++this->nW;
 		err = condition_wait(&this->qW, &this->syncronized);
 		--this->nW;
-		catch (err)
+		catch (err);
 	}
 
 	this->value = -1; // writer waits the lock
@@ -97,7 +97,7 @@ rwlock_waitR (RWLock *const this)
 		++this->nR;
 		err = condition_wait(&this->qR, &this->syncronized);
 		--this->nR;
-		catch (err)
+		catch (err);
 	}
 
 	assert(this->value >= 0);
@@ -118,9 +118,9 @@ rwlock_signalW (RWLock *const this)
 	this->value = 00; // writer signals the lock
 
 	if (this->nW > 0) { // there are W waiting
-		catch (condition_signal(&this->qW))
+		catch (condition_signal(&this->qW));
 	} else if (this->nR > 0) { // there are R waiting
-		catch (condition_broadcast(&this->qR))
+		catch (condition_broadcast(&this->qR));
 	}
 
 	ENTRY_END
@@ -137,7 +137,7 @@ rwlock_signalR (RWLock *const this)
 	if (this->value == 00) { // no W or R holds the lock
 		assert(this->nR == 0);
 		if (this->nW > 0) {  // there are W waiting
-			catch (condition_signal(&this->qW))
+			catch (condition_signal(&this->qW));
 		}
 	}
 

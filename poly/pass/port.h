@@ -4,6 +4,9 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
+#ifndef POLY_PASS_H
+#include "PASS.h"
+#endif
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"
@@ -21,7 +24,7 @@ typedef struct Port {
 
 static void port_destroy(Port *const this);
 static int  port_init(Port *const this);
-static int  port_receive(Port *const this, Scalar* scalar);
+static int  port_receive(Port *const this, Scalar scalar[static 1]);
 static bool port_ready(Port const*const this);
 static int  port_send(Port *const this, Scalar scalar);
 
@@ -73,20 +76,20 @@ port_send (Port *const this, Scalar scalar)
 	auto void thunk(void) {
 		this->value = scalar;
 	}
-	catch (board_send(this->board, thunk))
+	catch (board_send(this->board, thunk));
 	ASSERT_PORT_INVARIANT
 
 	ENTRY_END
 }
 
 static int
-port_receive (Port *const this, Scalar* scalar)
+port_receive (Port *const this, Scalar scalar[static 1])
 {
 	MONITOR_ENTRY
 
-	catch (board_receive(this->board))
+	catch (board_receive(this->board));
 	if (scalar != NULL) {
-		*scalar = this->value;
+		scalar[0] = this->value;
 	}
 	ASSERT_PORT_INVARIANT
 
