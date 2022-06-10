@@ -17,7 +17,7 @@
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Candidates, static)
+THREAD_TYPE (Candidates)
 	Port* input;
 	Port* output;
 END_TYPE
@@ -37,7 +37,7 @@ END_BODY
 // Filter multiples of `this->prime`
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Sieve, static)
+THREAD_TYPE (Sieve)
 	Port* input;
 	Port* output;
 	int prime;

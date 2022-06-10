@@ -89,29 +89,29 @@ static _Thread_local unsigned   THREAD_ID = 0;
 static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
 
 /*
- *  THREAD_TYPE (name [,linkage])
- *      parameters
- *      entries
+ *  THREAD_TYPE (name)
+ *      slots
  *  END_TYPE
  * =>
- *  int name(void*);
- *  struct name { parameters entries };
+ *  int name_body(void*);
+ *  struct name_type { slots };
  */
-#define THREAD_TYPE(NAME,...)    \
-    __VA_ARGS__ int NAME(void*); \
-    struct NAME {
+#define THREAD_TYPE(NAME)   \
+    int NAME##_body(void*); \
+/*  struct NAME##_face;   */\
+    struct NAME##_type {
 
 #define END_TYPE \
-    };
+    }; // struct end
 
 /*
  *  THREAD_BODY (name)
  *      code
  *  END_BODY
  * =>
- *  int name(void* arg_)
+ *  int name_body(void* arg_)
  *  {
- *      struct name const this = *((struct name*)arg_);
+ *      struct name_type const this = *((struct name_type*)arg_);
  *      THREAD_ID = THREAD_ID_COUNT_++;
  *      thread_detach(thread_current());
  *      ...
@@ -120,31 +120,31 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *      return STATUS_SUCCESS;
  *  }
  */
-#define THREAD_BODY(NAME)                               \
-    int NAME (void* arg_)                               \
-    {                                                   \
-        /*assert(arg_ != NULL);*/                       \
-        struct NAME const this = *((struct NAME*)arg_); \
-        /* fetch-and-increment atomic global counter*/  \
-        THREAD_ID = THREAD_ID_COUNT_++;                 \
+#define THREAD_BODY(NAME)                \
+    int NAME##_body (void* arg_)         \
+    {                                    \
+        /*assert(arg_ != NULL);*/        \
+        struct NAME##_type const this = *((struct NAME##_type*)arg_); \
+        /* fetch-and-increment atomic global counter*/ \
+        THREAD_ID = THREAD_ID_COUNT_++;  \
         thread_detach(thread_current());
 
 #define END_BODY                \
         return STATUS_SUCCESS;  \
-    }
+    } // function end
 
 /*
- * Run a thread, given the name and parameters.
+ * Run a thread, given the thread type name and slots.
  *
- *  create (name, parameters...);
+ *  create (name, slots...);
  * =>
- *  thread_create(&(Thread){0}, name, &(struct name){parameters})
+ *  thread_create(&(Thread){0}, name_body, &(struct name_type){slots})
  *
- * Parameters form:
+ * Slots syntax:
  *
- *  .p1=v, .p2=v, ...
+ *  .s1=v, .s2=v, ...
  */
 #define create(NAME,...) \
-    thread_create(&(Thread){0}, NAME, &(struct NAME){__VA_ARGS__})
+    thread_create(&(Thread){0}, NAME##_body, &(struct NAME##_type){__VA_ARGS__})
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

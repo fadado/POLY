@@ -23,7 +23,7 @@ typedef struct Entry {
 	Scalar  response;
 } Entry;
 
-static int  entry_accept(Entry *const this, void(accept)(void));
+static int  entry_accept(Entry *const this, void(thunk)(void));
 static int  entry_call(Entry *const this, Scalar request, Scalar response[static 1]);
 static void entry_destroy(Entry *const this);
 static int  entry_init(Entry *const this);
@@ -90,52 +90,72 @@ entry_call (Entry *const this, Scalar request, Scalar response[static 1])
 }
 
 static int
-entry_accept (Entry *const this, void(accept)(void))
+entry_accept (Entry *const this, void(thunk)(void))
 {
 	MONITOR_ENTRY
 
-	catch (board_accept(this->board, accept));
+	catch (board_accept(this->board, thunk));
 	ASSERT_ENTRY_INVARIANT
 
 	ENTRY_END
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Server experiments
+// Rendezvous
 ////////////////////////////////////////////////////////////////////////
 
+#define INTERFACE_TYPE(T)   struct POLY_PACKED T##_face {
+
+#define INTERFACE_SLOT(T)   struct T##_face * I_
+
+#define interface(T)        struct T##_face
+
+#define call(E,S,R)         catch (entry_call((E), (S), (R)))
+
 /*
- *  THREAD_TYPE (Server)
- *      Entry* entry1;
- *      Entry* entry2;
+ *
+ *  INTERFACE_TYPE (T)
+ *      Entry e1;
+ *      Entry e2;
  *      ...
  *  END_TYPE
  *
- *  Scalar s=x, r;
- *  call (&entry, s, &r);
+ *  THREAD_TYPE (T)
+ *      ...
+ *      INTERFACE_SLOT (T);
+ *  END_TYPE
  *
- *  #define call(e,s,r) catch (entry_call(e, s, r));
- *  #define loop        for (;;)
- *  #define select      int _open=0; int _selec=0;
- *  #define when(g,e)   if ((g) && ++_open && entry_ready(e) && ++_selec)
- *  #define terminate   if (!_open) panic("ops") elif (!_selec) break else continue
- *  #define or
+ *  static interface(Printer) IPrinter;
+ *  interface_init(n, &IPrinter);
+ *  err = task(Printer,...);
+ *  Scalar r;
+ *  entry_call(&IPrinter.e1, s, &r);
+ */
+
+#define select          int _open=0; int _selec=0;
+
+#define entry(E)        &this.I_->E
+
+#define when(G,E)       if ((G) && ++_open && entry_ready(entry(E)) && ++_selec)
+
+#define terminate       if (!_open) panic("ops!") elif (!_selec) break else continue
+ 
+/*
  *
- *  loop {
+ *  for (;;) {
  *      select {
- *          when (guard, this.entry) {
- *              void accept(void) {
- *                  ...
- *                  this.entry->response = ϕ(this.entry->request);
- *                  ...
+ *          when (guard, e1) {
+ *              void thunk(void) {
+ *                  Scalar s = f(entry(e1)->request);
+ *                  entry(e1)->response = s;
  *              }
- *              catch (entry_accept(this.entry, accept));
+ *              catch (entry_accept(entry(e1), thunk));
  *          }
- *      or
+ *    //or
  *          when ...
- *      or
+ *    //or
  *          when ...
- *      or
+ *    //or
  *          terminate;
  *      }
  *  }

@@ -25,7 +25,7 @@ static Event calculating = {1};
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Spinner, static)
+THREAD_TYPE (Spinner)
 	int delay; // nanoseconds
 END_TYPE
 
@@ -51,7 +51,7 @@ END_BODY
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Fibonacci, static)
+THREAD_TYPE (Fibonacci)
 	Channel* future;
 	long     n;
 END_TYPE

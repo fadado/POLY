@@ -67,8 +67,9 @@ static_assert(STATUS_TIMEDOUT >= 0);
 // sequential consistency
 #define atomic(T)   _Atomic(T)
 
-// private trick: see `scalar.h` and `lock.h` for examples
+// private tricks
 #define POLY_TRANSPARENT __attribute__((__transparent_union__))
+#define POLY_PACKED      __attribute__((__packed__))
 
 ////////////////////////////////////////////////////////////////////////
 // Clock time measured in nanoseconds
