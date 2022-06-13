@@ -18,8 +18,8 @@
  *      ...
  *  END_BODY
  */
-#define filter(T,I,O,...) \
-    create (T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
+#define go_filter(T,I,O,...) \
+    go(T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
 
 /*
  *  THREAD_TYPE (name)
@@ -33,7 +33,7 @@
  *      ...
  *  END_BODY
  */
-#define promise(T,F,...) \
-    create (T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
+#define go_promise(T,F,...) \
+    go(T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

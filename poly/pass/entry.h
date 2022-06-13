@@ -110,8 +110,6 @@ entry_accept (Entry *const this, void(thunk)(void))
 
 #define interface(T)        struct T##_face
 
-#define call(E,S,R)         catch (entry_call((E), (S), (R)))
-
 /*
  *
  *  INTERFACE_TYPE (T)
@@ -127,7 +125,7 @@ entry_accept (Entry *const this, void(thunk)(void))
  *
  *  static interface(Printer) IPrinter;
  *  interface_init(n, &IPrinter);
- *  err = task(Printer,...);
+ *  err = go_task(Printer,...);
  *  Scalar r;
  *  entry_call(&IPrinter.e1, s, &r);
  */

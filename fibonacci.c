@@ -93,11 +93,11 @@ int main(int argc, char* argv[argc+1])
 
 	warn("TaskID: %d", THREAD_ID);
 
-	err += create(Spinner, .delay=us2ns(usDELAY));
+	err += go(Spinner, .delay=us2ns(usDELAY));
 
 	Channel inbox;
 	err += channel_init(&inbox, 1);
-	err += promise(Fibonacci, &inbox, .n=N);
+	err += go_promise(Fibonacci, &inbox, .n=N);
 
 	assert(err == 0);
 

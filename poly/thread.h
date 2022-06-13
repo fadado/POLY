@@ -136,7 +136,7 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
 /*
  * Run a thread, given the thread type name and slots.
  *
- *  create (name, slots...);
+ *  go (name, slots...);
  * =>
  *  thread_create(&(Thread){0}, name_body, &(struct name_type){slots})
  *
@@ -144,7 +144,7 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *
  *  .s1=v, .s2=v, ...
  */
-#define create(NAME,...) \
+#define go(NAME,...) \
     thread_create(&(Thread){0}, NAME##_body, &(struct NAME##_type){__VA_ARGS__})
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
