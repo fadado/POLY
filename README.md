@@ -9,11 +9,12 @@ poly
 │   ├── condition.h
 │   ├── lock.h
 │   └── notice.h
-├── pass
+├── passing
 │   ├── channel.h
 │   ├── entry.h
+│   ├── interface.h
 │   └── port.h
-├── sync
+├── sharing
 │   ├── barrier.h
 │   ├── event.h
 │   ├── handshake.h

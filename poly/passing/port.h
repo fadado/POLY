@@ -4,9 +4,6 @@
 #ifndef POLY_H
 #include "../POLY.h"
 #endif
-#ifndef POLY_PASS_H
-#include "PASS.h"
-#endif
 #include "../monitor/lock.h"
 #include "../monitor/notice.h"
 #include "../monitor/board.h"

@@ -8,7 +8,7 @@
 #define DEBUG
 #include "poly/thread.h"
 #include "poly/scalar.h"
-#include "poly/pass/channel.h"
+#include "poly/passing/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 // FIFO test

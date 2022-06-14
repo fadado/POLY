@@ -8,7 +8,7 @@
 
 #include "poly/thread.h"
 #include "poly/scalar.h"
-#include "poly/pass/channel.h"
+#include "poly/passing/channel.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -93,11 +93,11 @@ int main(int argc, char* argv[argc+1])
 
 	warn("TaskID: %d", THREAD_ID);
 
-	err += go(Spinner, .delay=us2ns(usDELAY));
+	err += run(Spinner, .delay=us2ns(usDELAY));
 
 	Channel inbox;
 	err += channel_init(&inbox, 1);
-	err += go_promise(Fibonacci, &inbox, .n=N);
+	err += run_promise(Fibonacci, &inbox, .n=N);
 
 	assert(err == 0);
 

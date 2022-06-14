@@ -7,7 +7,7 @@
 // uncomment next line to enable assertions
 #define DEBUG
 #include "poly/thread.h"
-#include "poly/sync/semaphore.h"
+#include "poly/sharing/semaphore.h"
 #include "poly/scalar.h"
 
 static Semaphore test_lock_mutex;

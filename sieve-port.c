@@ -11,7 +11,7 @@
 #define DEBUG
 #include "poly/thread.h"
 #include "poly/scalar.h"
-#include "poly/pass/port.h"
+#include "poly/passing/port.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Generate 2,3,5,7,9...
@@ -73,7 +73,7 @@ int main(int argc, char* argv[argc+1])
 
 	Port* input = alloc();
 	port_init(input);
-	err = go_filter(Candidates, NULL, input);
+	err = run_filter(Candidates, NULL, input);
 	assert(err == 0);
 
 	for (int i=1; i <= n; ++i) {
@@ -83,7 +83,7 @@ int main(int argc, char* argv[argc+1])
 
 		Port* output = alloc();
 		port_init(output);
-		err = go_filter(Sieve, input, output, .prime=prime);
+		err = run_filter(Sieve, input, output, .prime=prime);
 		assert(err == 0);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));
