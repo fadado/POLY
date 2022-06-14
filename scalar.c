@@ -6,8 +6,27 @@
 #define DEBUG
 #include "poly/scalar.h"
 
+#include "poly/passing/interface.h"
+
+INTERFACE_TYPE (ITest)
+    Entry a;
+    Entry b;
+    Entry c;
+};
+
+static_assert(sizeof(struct ITest_face) == sizeof(Entry)*3);
+
+#define ENTRIES(I)  (sizeof(I)/sizeof(Entry))
+
 int main(int argc, char* argv[argc+1])
 {
+////////////////////////////////////////////////////////////////////////
+
+    interface(ITest) iface;
+    assert(ENTRIES(iface) == 3);
+    interface_init(ENTRIES(iface), &iface);
+    interface_destroy(ENTRIES(iface), &iface);
+
 ////////////////////////////////////////////////////////////////////////
 
 	Scalar s1, s2 = {0};

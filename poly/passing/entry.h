@@ -24,7 +24,7 @@ static int  entry_accept(Entry *const this, void(thunk)(void));
 static int  entry_call(Entry *const this, Scalar request, Scalar response[static 1]);
 static void entry_destroy(Entry *const this);
 static int  entry_init(Entry *const this);
-static bool entry_ready(Entry const*const this);
+static bool entry_ready(Entry *const this);
 
 ////////////////////////////////////////////////////////////////////////
 // Entry implementation
@@ -63,11 +63,11 @@ entry_destroy (Entry *const this)
 ////////////////////////////////////////////////////////////////////////
 
 static ALWAYS inline bool
-entry_ready (Entry const*const this)
+entry_ready (Entry *const this)
 {
-	MONITOR_ENTRY
+    lock_acquire(&this->syncronized);
 	bool const r = notice_ready(&this->board[0]);
-	ENTRY_END
+    lock_release(&this->syncronized);
 	return r;
 }
 
@@ -96,65 +96,6 @@ entry_accept (Entry *const this, void(thunk)(void))
 
 	ENTRY_END
 }
-
-////////////////////////////////////////////////////////////////////////
-// Rendezvous
-////////////////////////////////////////////////////////////////////////
-
-#define INTERFACE_TYPE(T)   struct POLY_PACKED T##_face {
-
-#define INTERFACE_SLOT(T)   struct T##_face * I_
-
-#define interface(T)        struct T##_face
-
-/*
- *
- *  INTERFACE_TYPE (T)
- *      Entry e1;
- *      Entry e2;
- *      ...
- *  END_TYPE
- *
- *  THREAD_TYPE (T)
- *      ...
- *      INTERFACE_SLOT (T);
- *  END_TYPE
- *
- *  static interface(Printer) IPrinter;
- *  interface_init(n, &IPrinter);
- *  err = go_task(Printer,...);
- *  Scalar r;
- *  entry_call(&IPrinter.e1, s, &r);
- */
-
-#define select          int _open=0; int _selec=0;
-
-#define entry(E)        &this.I_->E
-
-#define when(G,E)       if ((G) && ++_open && entry_ready(entry(E)) && ++_selec)
-
-#define terminate       if (!_open) panic("ops!") elif (!_selec) break else continue
- 
-/*
- *
- *  for (;;) {
- *      select {
- *          when (guard, e1) {
- *              void thunk(void) {
- *                  Scalar s = f(entry(e1)->request);
- *                  entry(e1)->response = s;
- *              }
- *              catch (entry_accept(entry(e1), thunk));
- *          }
- *    //or
- *          when ...
- *    //or
- *          when ...
- *    //or
- *          terminate;
- *      }
- *  }
- */
 
 #undef ASSERT_ENTRY_INVARIANT
 

@@ -136,7 +136,7 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
 /*
  * Run a thread, given the thread type name and slots.
  *
- *  run (name, slots...);
+ *  run_thread (name, slots...);
  * =>
  *  thread_create(&(Thread){0}, name_body, &(struct name_type){slots})
  *
@@ -144,7 +144,7 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *
  *  .s1=v, .s2=v, ...
  */
-#define run(NAME,...) \
+#define run_thread(NAME,...) \
     thread_create(&(Thread){0}, NAME##_body, &(struct NAME##_type){__VA_ARGS__})
 
 /*
@@ -161,7 +161,7 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *  END_BODY
  */
 #define run_filter(T,I,O,...) \
-    run(T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
+    run_thread(T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
 
 /*
  *  THREAD_TYPE (name)
@@ -176,6 +176,6 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *  END_BODY
  */
 #define run_promise(T,F,...) \
-    run(T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
+    run_thread(T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

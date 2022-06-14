@@ -1,6 +1,12 @@
 #ifndef __GNUC__
 #error I need the GNU C compiler. Sorry :-(
 #endif
+#ifdef __STDC_NO_THREADS__
+#error I need <threads.h>. Sorry :-(
+#endif
+#ifdef __STDC_NO_ATOMICS__
+#error I need <stdatomic.h>. Sorry :-(
+#endif
 #ifndef POLY_H
 #define POLY_H
 
@@ -69,7 +75,6 @@ static_assert(STATUS_TIMEDOUT >= 0);
 
 // private tricks
 #define POLY_TRANSPARENT __attribute__((__transparent_union__))
-#define POLY_PACKED      __attribute__((__packed__))
 
 ////////////////////////////////////////////////////////////////////////
 // Clock time measured in nanoseconds

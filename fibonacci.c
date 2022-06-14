@@ -93,7 +93,7 @@ int main(int argc, char* argv[argc+1])
 
 	warn("TaskID: %d", THREAD_ID);
 
-	err += run(Spinner, .delay=us2ns(usDELAY));
+	err += run_thread(Spinner, .delay=us2ns(usDELAY));
 
 	Channel inbox;
 	err += channel_init(&inbox, 1);
