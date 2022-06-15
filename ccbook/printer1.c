@@ -23,11 +23,15 @@ END_BODY
 
 int main()
 {
+	int err;
+
 	printf("Hi from main thread\n");
 	run_thread(Printer1);
 	printf("Bye from main thread\n");
 
 	while (!done) { thread_yield(); }
+
+	return 0;
 }
 
 // vim:ai:sw=4:ts=4:syntax=cpp

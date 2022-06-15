@@ -11,15 +11,19 @@ THREAD_TYPE(Hello)
 END_TYPE
 
 THREAD_BODY(Hello)
-	printf("Hello, world\n");
+	printf("Hello, world!\n");
 	done = true;
 END_BODY
 
-int main()
+int main(void)
 {
+	int err;
+
 	run_thread(Hello);
 
 	while (!done) { thread_yield(); }
+
+	return 0;
 }
 
 // vim:ai:sw=4:ts=4:syntax=cpp

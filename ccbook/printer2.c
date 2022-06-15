@@ -29,6 +29,8 @@ int main()
 	printf("Bye from main thread\n");
 
 	while (done < 2) { thread_yield(); }
+
+	return 0;
 }
 
 // vim:ai:sw=4:ts=4:syntax=cpp
