@@ -56,6 +56,8 @@ interface_destroy (unsigned n, Entry entries[])
 #define run_task(T,I,...) \
     run_thread(T, .IFACE_=(I) __VA_OPT__(,)__VA_ARGS__)
 
+#define ENTRIES(I)  (sizeof(I)/sizeof(Entry))
+
 /*
  *
  *  INTERFACE_TYPE (T)

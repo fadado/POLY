@@ -5,8 +5,6 @@
 #include "poly/passing/entry.h"
 #include "poly/passing/interface.h"
 
-static atomic(int) done;
-
 INTERFACE_TYPE(Printer3)
 	Entry print;
 END_TYPE
@@ -22,30 +20,70 @@ THREAD_BODY(Printer3)
 		if (msg != NULL && *msg != '\0') {
 			printf("%d: %s\n", this.i, msg);
 		}
-		entry(print).response = Signed(0);
+		entry(print).response = Signed(this.i);
 	}
 	entry_accept(&entry(print), thunk);
-	++done;
 END_BODY
 
 int main()
 {
+	int err;
 	interface(Printer3) iface1, iface2;
-	interface_init(1, &iface1);
-	interface_init(1, &iface2);
 
-	run_task(Printer3, &iface1, .i=1);
-	run_task(Printer3, &iface2, .i=2);
+	catch (interface_init(ENTRIES(iface1), &iface1));
+	catch (interface_init(ENTRIES(iface2), &iface2));
+
+	// TODO: bug???
+#if 1 // OK
+	err = run_task(Printer3, &iface1, .i=1);
+	catch (err);
+#elif 0 // OK
+	err = thread_create(&(Thread){0},
+			Printer3_body,
+			&(struct Printer3_type){.i=1, .IFACE_=&iface1});
+	catch (err);
+#elif 0
+	if ((err=thread_create(&(Thread){0},
+			Printer3_body,
+			&(struct Printer3_type){.i=1, .IFACE_=&iface1})) != 0)
+		goto onerror;
+#elif 0
+	if (thread_create(&(Thread){0},
+			Printer3_body,
+			&(struct Printer3_type){.i=1, .IFACE_=&iface1}) != 0)
+		goto onerror;
+#elif 0
+	// !!!!!!!!!!!!!!!!!
+	struct Printer3_type* p = &(struct Printer3_type){.i=1, .IFACE_=&iface1};
+	if (thread_create(&(Thread){0}, Printer3_body, p) != 0)
+		goto onerror;
+#elif 1
+	catch (run_task(Printer3, &iface1, .i=1));
+#endif
+	err = run_task(Printer3, &iface2, .i=2);
+	catch (err);
 
 	Scalar s, r;
 	s = Pointer("Good Morning!");
-	entry_call(&iface1.print, s, &r);
-	entry_call(&iface2.print, s, &r);
+	catch (entry_call(&iface1.print, s, &r));
+	assert(cast(r, int) == 1);
+	catch (entry_call(&iface2.print, s, &r));
+	assert(cast(r, int) == 2);
 
-	while (done < 2) { thread_yield(); }
+	interface_destroy(ENTRIES(iface1), &iface1);
+	interface_destroy(ENTRIES(iface1), &iface2);
 
-	interface_destroy(1, &iface1);
-	interface_destroy(1, &iface2);
+	return 0;
+onerror:
+	char* msg;
+	switch (err) {
+		case STATUS_BUSY: msg="BUSY"; break;
+		case STATUS_ERROR: msg="ERROR"; break;
+		case STATUS_NOMEM: msg="NOMEM"; break;
+		case STATUS_TIMEDOUT: msg="TIMEDOUT"; break;
+		default: msg="unknown error code"; break;
+	}
+	error(1, 0, "%s (%d)", msg, err);
 }
 
 // vim:ai:sw=4:ts=4:syntax=cpp

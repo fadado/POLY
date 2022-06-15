@@ -30,11 +30,12 @@
 enum { internal_error=0, not_implemented=0 };
 
 // output to stderr
-#define warn(...) error(0, 0, __VA_ARGS__)
+#define warn(FMT, ...) \
+	error(0, 0, FMT __VA_OPT__(,)__VA_ARGS__)
 
 // die with an output text
-#define panic(FMT,...)\
-	error_at_line(~0,EPERM,__FILE__,__LINE__,FMT __VA_OPT__(,)__VA_ARGS__)
+#define panic(FMT, ...) \
+	error_at_line(~0, EPERM, __FILE__ ,__LINE__, FMT __VA_OPT__(,)__VA_ARGS__)
 
 // aliases
 enum {
@@ -55,10 +56,9 @@ static_assert(STATUS_NOMEM >= 0);
 static_assert(STATUS_TIMEDOUT >= 0);
 
 // error management strategy (assume `int err` has been defined)
-#define catch(X) do {                 \
+#define catch(X)                      \
     if ((err=(X)) != STATUS_SUCCESS)  \
-        goto onerror;                 \
-} while (0)
+        goto onerror
 
 ////////////////////////////////////////////////////////////////////////
 // Other facilities
