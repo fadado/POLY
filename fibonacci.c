@@ -36,7 +36,7 @@ THREAD_BODY (Spinner)
 		thread_sleep(this.delay);
 	}
 
-	warn("TaskID: %d", THREAD_ID);
+	warn("Thread_ID: %d", Thread_ID);
 	wait(calculating);
 
 	spin(0);
@@ -63,7 +63,7 @@ THREAD_BODY (Fibonacci)
 		return slow_fib(x-1) + slow_fib(x-2);
 	}
 
-	warn("TaskID: %d", THREAD_ID);
+	warn("Thread_ID: %d", Thread_ID);
 	signal(calculating);
 
 	long result = slow_fib(this.n);
@@ -91,7 +91,7 @@ int main(int argc, char* argv[argc+1])
 
 	hide_cursor();
 
-	warn("TaskID: %d", THREAD_ID);
+	warn("Thread_ID: %d", Thread_ID);
 
 	run_thread(Spinner, .delay=us2ns(usDELAY));
 

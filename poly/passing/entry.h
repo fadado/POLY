@@ -16,12 +16,12 @@
 typedef struct Entry {
 	Lock    syncronized;
 	Notice  board[3];
-	Scalar  request;
-	Scalar  response;
+	Scalar  query;
+	Scalar  reply;
 } Entry;
 
 static int  entry_accept(Entry *const this, void(thunk)(void));
-static int  entry_call(Entry *const this, Scalar request, Scalar response[static 1]);
+static int  entry_call(Entry *const this, Scalar query, Scalar reply[static 1]);
 static void entry_destroy(Entry *const this);
 static int  entry_init(Entry *const this);
 static bool entry_ready(Entry *const this);
@@ -72,15 +72,15 @@ entry_ready (Entry *const this)
 }
 
 static int
-entry_call (Entry *const this, Scalar request, Scalar response[static 1])
+entry_call (Entry *const this, Scalar query, Scalar reply[static 1])
 {
 	MONITOR_ENTRY
 
 	auto void thunk(void) {
-		this->request = request;
+		this->query = query;
 	}
 	catch (board_call(this->board, thunk));
-	response[0] = this->response;
+	reply[0] = this->reply;
 	ASSERT_ENTRY_INVARIANT
 
 	ENTRY_END

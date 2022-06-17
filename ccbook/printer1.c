@@ -9,12 +9,7 @@
 
 static atomic(bool) done;
 
-INTERFACE_TYPE(Printer1)
-END_TYPE
-
-THREAD_TYPE(Printer1)
-	INTERFACE_SLOT(Printer1);
-END_TYPE
+THREAD_TYPE(Printer1) END_TYPE
 
 THREAD_BODY(Printer1)
 	printf("Hi from printer thread\n");

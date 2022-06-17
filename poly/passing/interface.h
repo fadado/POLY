@@ -41,22 +41,17 @@ interface_destroy (unsigned n, Entry entries[])
 	} while (n != 0);
 }
 
-#define interface_destroy(N,E) interface_init((N), (Entry*)(E))
+#define interface_destroy(N,E) interface_destroy((N), (Entry*)(E))
 
 ////////////////////////////////////////////////////////////////////////
 // Interface definition
 ////////////////////////////////////////////////////////////////////////
 
-#define INTERFACE_TYPE(T)   struct T##_face {
+#define INTERFACE_TYPE(T)   struct T##_face_ {
 
-#define INTERFACE_SLOT(T)   struct T##_face * IFACE_
+#define ENTRIES(I)          (sizeof(I)/sizeof(Entry))
 
-#define interface(T)        struct T##_face
-
-#define run_task(T,I,...) \
-    run_thread(T, .IFACE_=(I) __VA_OPT__(,)__VA_ARGS__)
-
-#define ENTRIES(I)  (sizeof(I)/sizeof(Entry))
+#define interface(T)        struct T##_face_
 
 /*
  *
@@ -73,7 +68,7 @@ interface_destroy (unsigned n, Entry entries[])
  *
  *  static interface(Printer) IPrinter;
  *  interface_init(n, &IPrinter);
- *  err = run_task(Printer,...);
+ *  err = run_task(Printer &IPrinter,...);
  *  Scalar r;
  *  entry_call(&IPrinter.e1, s, &r);
  */
@@ -82,13 +77,13 @@ interface_destroy (unsigned n, Entry entries[])
 // Select statement
 ////////////////////////////////////////////////////////////////////////
 
-#define select          int _open=0; int _selec=0;
+#define select          int open_=0; int selec_=0;
 
-#define entry(E)        this.IFACE_->E
+#define entry(E)        this.interface_->E
 
-#define when(G,E)       if ((G) && ++_open && entry_ready(entry(E)) && ++_selec)
+#define when(G,E)       if ((G) && ++open_ && entry_ready(entry(E)) && ++selec_)
 
-#define terminate       if (!_open) panic("ops!") elif (!_selec) break else continue
+#define terminate       if (!open_) panic("ops!") elif (!selec_) break else continue
  
 /*
  *
@@ -96,8 +91,8 @@ interface_destroy (unsigned n, Entry entries[])
  *      select {
  *          when (guard, e1) {
  *              void thunk(void) {
- *                  Scalar s = f(entry(e1)->request);
- *                  entry(e1)->response = s;
+ *                  Scalar s = f(entry(e1)->query);
+ *                  entry(e1)->reply = s;
  *              }
  *              catch (entry_accept(entry(e1), thunk));
  *          }
@@ -110,7 +105,5 @@ interface_destroy (unsigned n, Entry entries[])
  *      }
  *  }
  */
-
-#undef ASSERT_INTERFACE_INVARIANT
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp

@@ -11,18 +11,17 @@ END_TYPE
 
 THREAD_TYPE(Printer3)
 	int i;
-	INTERFACE_SLOT(Printer3);
 END_TYPE
 
 THREAD_BODY(Printer3)
-	void thunk(void) {
-		char* msg = cast(entry(print).request, char*);
+	void accept(void) {
+		char* msg = cast(entry(print).query, char*);
 		if (msg != NULL && *msg != '\0') {
 			printf("%d: %s\n", this.i, msg);
 		}
-		entry(print).response = Signed(this.i);
+		entry(print).reply = Signed(this.i);
 	}
-	entry_accept(&entry(print), thunk);
+	entry_accept(&entry(print), accept);
 END_BODY
 
 int main()

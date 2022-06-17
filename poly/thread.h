@@ -83,8 +83,8 @@ thread_exit (int result)
 // Ada style
 ////////////////////////////////////////////////////////////////////////
 
-// THREAD_ID: 0, 1, ... (0 reserved to main)
-static _Thread_local unsigned   THREAD_ID = 0;
+// Thread_ID: 0, 1, ... (0 reserved to main)
+static _Thread_local unsigned   Thread_ID = 0;
 // private atomic global counter (provide unique IDs)
 static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
 
@@ -93,51 +93,56 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *      slots
  *  END_TYPE
  * =>
- *  int name_body(void*);
- *  struct name_type { slots };
+ *  int name_body_(void*);
+ *  struct name_face_;
+ *  struct name_type_ { slots };
  */
-#define THREAD_TYPE(NAME)   \
-    int NAME##_body(void*); \
-    struct NAME##_type {
+#define THREAD_TYPE(NAME)               \
+    int    NAME##_body_(void*);         \
+    struct NAME##_face_;                \
+    struct NAME##_type_ {               \
+        atomic(bool) initialized_;      \
+        struct NAME##_face_ * interface_;
 
 #define END_TYPE \
-    }; // struct end
+    }; // struct NAME##_type_ end
 
 /*
  *  THREAD_BODY (name)
  *      code
  *  END_BODY
  * =>
- *  int name_body(void* arg_)
+ *  int name_body_(void* arg_)
  *  {
- *      struct name_type const this = *((struct name_type*)arg_);
- *      THREAD_ID = THREAD_ID_COUNT_++;
- *      thread_detach(thread_current());
+ *      PREAMBLE
  *      ...
  *      code
  *      ...
  *      return STATUS_SUCCESS;
  *  }
  */
-#define THREAD_BODY(NAME)                \
-    int NAME##_body (void* arg_)         \
-    {                                    \
-        /*assert(arg_ != NULL);*/        \
-        struct NAME##_type const this = *((struct NAME##_type*)arg_); \
-        /* fetch-and-increment atomic global counter*/ \
-        THREAD_ID = THREAD_ID_COUNT_++;  \
+#define THREAD_BODY(NAME)                                               \
+    int NAME##_body_ (void* arg_)                                       \
+    {                                                                   \
+        struct NAME##_type_ const this = *((struct NAME##_type_*)arg_); \
+        ((struct NAME##_type_*)arg_)->initialized_ = true;              \
+        Thread_ID = THREAD_ID_COUNT_++;                                 \
         thread_detach(thread_current());
 
 #define END_BODY                \
         return STATUS_SUCCESS;  \
-    } // function end
+    } // function NAME##_body_ end
 
 /*
  * Run a thread, given the thread type name and slots.
  *
  *  run_thread (name, slots...);
+ *
+ * Run a thread with an interface.
+ *
+ *  run_task (name, interface, slots...);
  * =>
- *  thread_create(&(Thread){0}, name_body, &(struct name_type){slots})
+ *  thread_create(&(Thread){0}, name_body_, &(struct name_type_){slots})
  *
  * Slots syntax:
  *
@@ -145,11 +150,24 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  */
 #define run_thread(NAME,...)                                            \
 do {                                                                    \
-    struct NAME##_type data_ = {__VA_ARGS__};                           \
-    int const err_ = thread_create(&(Thread){0}, NAME##_body, &data_);  \
-	if (err_ != STATUS_SUCCESS) panic("cannot start thread");           \
-	thread_sleep(ms2ns(1));                                             \
+    struct NAME##_type_ data_ = {__VA_ARGS__};                          \
+    int const err_ = thread_create(&(Thread){0}, NAME##_body_, &data_); \
+    if (err_ != STATUS_SUCCESS) panic("cannot start thread");           \
+    while (!data_.initialized_) thread_yield();                         \
 } while (0)
+
+/*
+ *  THREAD_TYPE (name)
+ *  END_TYPE
+ *
+ *  THREAD_BODY (name)
+ *      ...
+ *      use entries in interface (see passing/interface.h)
+ *      ...
+ *  END_BODY
+ */
+#define run_task(T,I,...) \
+    run_thread(T, .interface_=(I) __VA_OPT__(,)__VA_ARGS__)
 
 /*
  *  THREAD_TYPE (name)

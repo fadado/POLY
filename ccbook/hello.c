@@ -6,9 +6,7 @@
 
 static atomic(bool) done;
 
-THREAD_TYPE(Hello)
-	/* empty */
-END_TYPE
+THREAD_TYPE(Hello) END_TYPE
 
 THREAD_BODY(Hello)
 	printf("Hello, world!\n");

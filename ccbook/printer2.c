@@ -8,12 +8,8 @@
 
 static atomic(int) done;
 
-INTERFACE_TYPE(Printer2)
-END_TYPE
-
 THREAD_TYPE(Printer2)
 	int i;
-	INTERFACE_SLOT(Printer2);
 END_TYPE
 
 THREAD_BODY(Printer2)
