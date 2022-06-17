@@ -98,7 +98,6 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  */
 #define THREAD_TYPE(NAME)   \
     int NAME##_body(void*); \
-/*  struct NAME##_face;   */\
     struct NAME##_type {
 
 #define END_TYPE \
@@ -144,8 +143,13 @@ static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
  *
  *  .s1=v, .s2=v, ...
  */
-#define run_thread(NAME,...) \
-    thread_create(&(Thread){0}, NAME##_body, &(struct NAME##_type){__VA_ARGS__})
+#define run_thread(NAME,...)                                            \
+do {                                                                    \
+    struct NAME##_type data_ = {__VA_ARGS__};                           \
+    int const err_ = thread_create(&(Thread){0}, NAME##_body, &data_);  \
+	if (err_ != STATUS_SUCCESS) panic("cannot start thread");           \
+	thread_sleep(ms2ns(1));                                             \
+} while (0)
 
 /*
  *  THREAD_TYPE (name)

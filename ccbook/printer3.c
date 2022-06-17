@@ -33,35 +33,8 @@ int main()
 	catch (interface_init(ENTRIES(iface1), &iface1));
 	catch (interface_init(ENTRIES(iface2), &iface2));
 
-	// TODO: bug???
-#if 1 // OK
-	err = run_task(Printer3, &iface1, .i=1);
-	catch (err);
-#elif 0 // OK
-	err = thread_create(&(Thread){0},
-			Printer3_body,
-			&(struct Printer3_type){.i=1, .IFACE_=&iface1});
-	catch (err);
-#elif 0
-	if ((err=thread_create(&(Thread){0},
-			Printer3_body,
-			&(struct Printer3_type){.i=1, .IFACE_=&iface1})) != 0)
-		goto onerror;
-#elif 0
-	if (thread_create(&(Thread){0},
-			Printer3_body,
-			&(struct Printer3_type){.i=1, .IFACE_=&iface1}) != 0)
-		goto onerror;
-#elif 0
-	// !!!!!!!!!!!!!!!!!
-	struct Printer3_type* p = &(struct Printer3_type){.i=1, .IFACE_=&iface1};
-	if (thread_create(&(Thread){0}, Printer3_body, p) != 0)
-		goto onerror;
-#elif 1
-	catch (run_task(Printer3, &iface1, .i=1));
-#endif
-	err = run_task(Printer3, &iface2, .i=2);
-	catch (err);
+	run_task(Printer3, &iface1, .i=1);
+	run_task(Printer3, &iface2, .i=2);
 
 	Scalar s, r;
 	s = Pointer("Good Morning!");

@@ -62,8 +62,6 @@ END_BODY
 
 int main(int argc, char* argv[argc+1])
 {
-	int err = 0;
-
 	enum { NPRIMES=100 };
 	int n = (argc == 1) ? NPRIMES : atoi(argv[1]);
 	if (n <= 0) n = NPRIMES; // ignore bad parameter
@@ -73,8 +71,7 @@ int main(int argc, char* argv[argc+1])
 
 	Port* input = alloc();
 	port_init(input);
-	err = run_filter(Candidates, NULL, input);
-	assert(err == 0);
+	run_filter(Candidates, NULL, input);
 
 	for (int i=1; i <= n; ++i) {
 		Scalar s;
@@ -83,8 +80,7 @@ int main(int argc, char* argv[argc+1])
 
 		Port* output = alloc();
 		port_init(output);
-		err = run_filter(Sieve, input, output, .prime=prime);
-		assert(err == 0);
+		run_filter(Sieve, input, output, .prime=prime);
 
 		printf("%4d%c", prime, (i%10==0 ? '\n' : ' '));
 
