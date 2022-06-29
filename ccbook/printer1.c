@@ -9,12 +9,19 @@
 
 static atomic(bool) done;
 
-THREAD_TYPE(Printer1) END_TYPE
+struct Printer1 {
+	THREAD_TYPE
+};
 
-THREAD_BODY(Printer1)
+int Printer1(void* data)
+{
+	THREAD_BODY (Printer1, data)
+
 	printf("Hi from printer thread\n");
 	done = true;
-END_BODY
+
+	END_BODY
+}
 
 int main()
 {

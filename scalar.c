@@ -9,22 +9,22 @@
 
 #include "poly/passing/interface.h"
 
-INTERFACE_TYPE (ITest)
+typedef struct {
     Entry a;
     Entry b;
     Entry c;
-};
+} ITest;
 
-static_assert(sizeof(struct ITest_face) == sizeof(Entry)*3);
+static_assert(sizeof(ITest) == sizeof(Entry)*3);
 
 int main(int argc, char* argv[argc+1])
 {
 ////////////////////////////////////////////////////////////////////////
 
-    interface(ITest) iface;
+    ITest iface;
     assert(ENTRIES(iface) == 3);
-    interface_init(ENTRIES(iface), &iface);
-    interface_destroy(ENTRIES(iface), &iface);
+    interface_init(ENTRIES(ITest), &iface);
+    interface_destroy(ENTRIES(ITest), &iface);
 
 ////////////////////////////////////////////////////////////////////////
 

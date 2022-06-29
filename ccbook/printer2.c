@@ -8,14 +8,20 @@
 
 static atomic(int) done;
 
-THREAD_TYPE(Printer2)
+struct Printer2 {
+	THREAD_TYPE
 	int i;
-END_TYPE
+};
 
-THREAD_BODY(Printer2)
+int Printer2(void* data)
+{
+	THREAD_BODY (Printer2, data)
+
 	printf("Hi from printer thread: %d\n", this.i);
 	++done;
-END_BODY
+
+	END_BODY
+}
 
 int main()
 {

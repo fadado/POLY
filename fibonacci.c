@@ -25,11 +25,15 @@ static Event calculating = {1};
 // Run forever painting the spinner
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Spinner)
+struct Spinner {
+	THREAD_TYPE
 	int delay; // nanoseconds
-END_TYPE
+};
 
-THREAD_BODY (Spinner)
+int Spinner(void* data)
+{
+	THREAD_BODY (Spinner, data)
+
 	const char s[] = "-\\|/-";
 	inline void spin(int i) {
 		putchar('\r'); putchar(' '); putchar(s[i]);
@@ -45,18 +49,22 @@ THREAD_BODY (Spinner)
 			spin(i);
 		}
 	}
-END_BODY
+	END_BODY
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Compute fib(n) in the background
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Fibonacci)
+struct Fibonacci {
+	THREAD_TYPE
 	Channel* future;
 	long     n;
-END_TYPE
+};
 
-THREAD_BODY (Fibonacci)
+int Fibonacci(void* data)
+{
+	THREAD_BODY (Fibonacci, data)
 
 	auto long slow_fib(long x) {
 		if (x < 2) { return x; }
@@ -69,7 +77,9 @@ THREAD_BODY (Fibonacci)
 	long result = slow_fib(this.n);
 	// ...long time...
 	channel_send(this.future, (Unsigned)result); // what if error: return > 0 ???
-END_BODY
+												 //
+	END_BODY
+}
 
 ////////////////////////////////////////////////////////////////////////
 //

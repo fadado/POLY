@@ -17,12 +17,16 @@
 // Generate 2,3,5,7,9...
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Candidates)
+struct Candidates {
+	THREAD_TYPE
 	Port* input;
 	Port* output;
-END_TYPE
+};
 
-THREAD_BODY (Candidates)
+int Candidates(void* data)
+{
+	THREAD_BODY (Candidates, data)
+
 	assert(this.input == NULL);
 
 	int n = 2;
@@ -31,19 +35,25 @@ THREAD_BODY (Candidates)
 	for (n=3; true; n+=2)  {
 		port_send(this.output, (Signed)n);
 	}
-END_BODY
+
+	END_BODY
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Filter multiples of `this->prime`
 ////////////////////////////////////////////////////////////////////////
 
-THREAD_TYPE (Sieve)
+struct Sieve {
+	THREAD_TYPE
 	Port* input;
 	Port* output;
 	int prime;
-END_TYPE
+};
 
-THREAD_BODY (Sieve)
+int Sieve(void* data)
+{
+	THREAD_BODY (Sieve, data)
+
 	inline ALWAYS bool divides(int n) {
 		return n%this.prime == 0;
 	}
@@ -54,7 +64,9 @@ THREAD_BODY (Sieve)
 			port_send(this.output, s);
 		}
 	}
-END_BODY
+
+	END_BODY
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Start generator and successive filters

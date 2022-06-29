@@ -43,9 +43,7 @@ enum {
 	STATUS_BUSY     = thrd_busy,
 	STATUS_ERROR    = thrd_error,
 	STATUS_NOMEM    = thrd_nomem,
-	STATUS_TIMEDOUT = thrd_timedout,
-	// define non standard constants after this point
-	STATUS_NEXT     = thrd_success + thrd_busy + thrd_error + thrd_nomem + thrd_timedout,
+	STATUS_TIMEDOUT = thrd_timedout
 };
 
 // verify if negative status are used

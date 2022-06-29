@@ -5,15 +5,20 @@
 #include "poly/passing/entry.h"
 #include "poly/passing/interface.h"
 
-INTERFACE_TYPE(Printer3)
+typedef struct {
 	Entry print;
-END_TYPE
+} IPrinter3;
 
-THREAD_TYPE(Printer3)
+struct Printer3 {
+	THREAD_TYPE
+	INTERFACE (IPrinter3)
 	int i;
-END_TYPE
+};
 
-THREAD_BODY(Printer3)
+int Printer3(void* data)
+{
+	THREAD_BODY (Printer3, data)
+
 	void accept(void) {
 		char* msg = cast(entry(print).query, char*);
 		if (msg != NULL && *msg != '\0') {
@@ -22,15 +27,17 @@ THREAD_BODY(Printer3)
 		entry(print).reply = Signed(this.i);
 	}
 	entry_accept(&entry(print), accept);
-END_BODY
+
+	END_BODY
+}
 
 int main()
 {
 	int err;
-	interface(Printer3) iface1, iface2;
 
-	catch (interface_init(ENTRIES(iface1), &iface1));
-	catch (interface_init(ENTRIES(iface2), &iface2));
+	IPrinter3 iface1, iface2;
+	catch (interface_init(ENTRIES(IPrinter3), &iface1));
+	catch (interface_init(ENTRIES(IPrinter3), &iface2));
 
 	run_task(Printer3, &iface1, .i=1);
 	run_task(Printer3, &iface2, .i=2);

@@ -47,31 +47,9 @@ interface_destroy (unsigned n, Entry entries[])
 // Interface definition
 ////////////////////////////////////////////////////////////////////////
 
-#define INTERFACE_TYPE(T)   struct T##_face_ {
+#define INTERFACE(I)    I* interface_;
 
-#define ENTRIES(I)          (sizeof(I)/sizeof(Entry))
-
-#define interface(T)        struct T##_face_
-
-/*
- *
- *  INTERFACE_TYPE (T)
- *      Entry e1;
- *      Entry e2;
- *      ...
- *  END_TYPE
- *
- *  THREAD_TYPE (T)
- *      ...
- *      INTERFACE_SLOT (T);
- *  END_TYPE
- *
- *  static interface(Printer) IPrinter;
- *  interface_init(n, &IPrinter);
- *  err = run_task(Printer &IPrinter,...);
- *  Scalar r;
- *  entry_call(&IPrinter.e1, s, &r);
- */
+#define ENTRIES(I)     (sizeof(I) / sizeof(Entry))
 
 ////////////////////////////////////////////////////////////////////////
 // Select statement

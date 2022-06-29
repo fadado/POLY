@@ -6,12 +6,20 @@
 
 static atomic(bool) done;
 
-THREAD_TYPE(Hello) END_TYPE
+struct Hello {
+	THREAD_TYPE
+};
 
-THREAD_BODY(Hello)
+
+int Hello(void* data)
+{
+	THREAD_BODY (Hello, data)
+
 	printf("Hello, world!\n");
 	done = true;
-END_BODY
+
+	END_BODY
+}
 
 int main(void)
 {
