@@ -1,24 +1,24 @@
 /* printer1.c */
-#pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
 #include <stdio.h>
 #include "poly/thread.h"
-#include "poly/passing/entry.h"
-#include "poly/passing/interface.h"
 
-static atomic(bool) done;
+typedef atomic(bool) Flag;
 
 struct Printer1 {
 	THREAD_TYPE
 };
+
+static Flag done = 0;
 
 int Printer1(void* data)
 {
 	THREAD_BODY (Printer1, data)
 
 	printf("Hi from printer thread\n");
-	done = true;
+
+	done = 1;
 
 	END_BODY
 }

@@ -45,6 +45,12 @@ static bool channel_ready(Channel const*const this);
 static int  channel_receive(Channel *const this, Scalar response[static 1]);
 static int  channel_send(Channel *const this, Scalar scalar);
 
+#define run_filter(T,I,O,...) \
+    run_thread(T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
+
+#define run_promise(T,F,...) \
+    run_thread(T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
+
 ////////////////////////////////////////////////////////////////////////
 // Channel implementation
 ////////////////////////////////////////////////////////////////////////

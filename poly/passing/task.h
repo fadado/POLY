@@ -1,5 +1,5 @@
-#ifndef POLY_INTERFACE_H
-#define POLY_INTERFACE_H
+#ifndef POLY_TASK_H
+#define POLY_TASK_H
 
 #ifndef POLY_H
 #include "../POLY.h"
@@ -10,18 +10,20 @@
 // Rendezvous
 ////////////////////////////////////////////////////////////////////////
 
-static int  interface_init(unsigned n, Entry entries[]);
-static void interface_destroy(unsigned n, Entry entries[]);
+static int  task_init(unsigned n, Entry entries[]);
+static void task_destroy(unsigned n, Entry entries[]);
+
+#define ENTRIES(E)  (sizeof(E) / sizeof(Entry))
 
 static int
-interface_init (unsigned n, Entry entries[])
+task_init (unsigned n, Entry entries[])
 {
 	assert(n > 0);
 	for (unsigned i = 0; i < n; ++i) {
 		const int err = entry_init(&entries[i]);
 		if (err != STATUS_SUCCESS) {
 			if (i > 0) {
-				interface_destroy(i, entries);
+				task_destroy(i, entries);
 			}
 			return err;
 		}
@@ -29,10 +31,10 @@ interface_init (unsigned n, Entry entries[])
 	return STATUS_SUCCESS;
 }
 
-#define interface_init(N,E) interface_init((N), (Entry*)(E))
+#define task_init(N,E) task_init((N), (Entry*)(E))
 
 static void
-interface_destroy (unsigned n, Entry entries[])
+task_destroy (unsigned n, Entry entries[])
 {
 	assert(n > 0);
 	do {
@@ -41,15 +43,49 @@ interface_destroy (unsigned n, Entry entries[])
 	} while (n != 0);
 }
 
-#define interface_destroy(N,E) interface_destroy((N), (Entry*)(E))
+#define task_destroy(N,E) task_destroy((N), (Entry*)(E))
 
 ////////////////////////////////////////////////////////////////////////
-// Interface definition
+// Task specification
 ////////////////////////////////////////////////////////////////////////
 
-#define INTERFACE(I)    I* interface_;
+#define TASK_TYPE(E)    \
+	THREAD_TYPE         \
+	E* entries_;
 
-#define ENTRIES(I)     (sizeof(I) / sizeof(Entry))
+/*
+ *
+ *  typedef struct {
+ *      Entry A;
+ *      Entry B;
+ *      ...
+ *  } ET;
+ *
+ *  struct T {
+ *      THREAD_TYPE
+ *      TASK_TYPE (ET)
+ *      ...
+ *  };
+ *
+ *  int T(void* data)
+ *  {
+ *      THREAD_BODY (T, data)
+ *      ...
+ *      END_BODY
+ *  }
+ */
+
+#define run_task(T,E,...) \
+    run_thread(T, .entries_=(E) __VA_OPT__(,)__VA_ARGS__)
+
+/*
+ *  ET e;
+ *  catch (task_init(ENTRIES(ET), &e));
+ *  ...
+	run_task(T, &e, ...);
+ *  ...
+ *  catch (task_destroy(ENTRIES(ET), &e));
+ */
 
 ////////////////////////////////////////////////////////////////////////
 // Select statement
@@ -57,7 +93,7 @@ interface_destroy (unsigned n, Entry entries[])
 
 #define select          int open_=0; int selec_=0;
 
-#define entry(E)        this.interface_->E
+#define entry(E)        this.entries_->E
 
 #define when(G,E)       if ((G) && ++open_ && entry_ready(entry(E)) && ++selec_)
 

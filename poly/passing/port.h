@@ -25,6 +25,12 @@ static int  port_receive(Port *const this, Scalar scalar[static 1]);
 static bool port_ready(Port const*const this);
 static int  port_send(Port *const this, Scalar scalar);
 
+#define run_filter(T,I,O,...) \
+    run_thread(T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
+
+#define run_promise(T,F,...) \
+    run_thread(T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
+
 ////////////////////////////////////////////////////////////////////////
 // Port implementation
 ////////////////////////////////////////////////////////////////////////

@@ -1,17 +1,16 @@
 /* printer2.c */
-#pragma GCC diagnostic ignored "-Wunused-function"
 
 #include <stdio.h>
 #include "poly/thread.h"
-#include "poly/passing/entry.h"
-#include "poly/passing/interface.h"
 
-static atomic(int) done;
+typedef atomic(short) Counter;
 
 struct Printer2 {
 	THREAD_TYPE
 	int i;
 };
+
+static Counter done = 0;
 
 int Printer2(void* data)
 {

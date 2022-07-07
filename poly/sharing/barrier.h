@@ -14,9 +14,9 @@
 typedef struct Barrier {
 	Lock        syncronized;
 	Condition   queue;
-	signed      value;      // # of threads still expected before opening
 	signed      capacity;   // # of threads to wait before opening the barrier
-	unsigned    cycle;      // an unique token for each cycle
+	signed      count;      // # of threads still expected before opening
+	unsigned    episode;    // an unique token for each episode
 } Barrier;
 
 static int  barrier_init(Barrier *const this, int capacity);
@@ -30,8 +30,8 @@ static int  barrier_wait(Barrier *const this, bool last[static 1]);
 #ifdef DEBUG
 #   define ASSERT_BARRIER_INVARIANT  \
         assert(this->capacity >= 0); \
-        assert(0 < this->value       \
-                && this->value <= this->capacity);
+        assert(0 < this->count       \
+                && this->count <= this->capacity);
 #else
 #   define ASSERT_BARRIER_INVARIANT
 #endif
@@ -41,8 +41,8 @@ barrier_init (Barrier *const this, int capacity)
 {
 	assert(capacity > 1);
 
-	this->value = this->capacity = capacity;
-	this->cycle = 0; // 0,1,2...MAX,0,1,... (overflow is welcome)
+	this->count = this->capacity = capacity;
+	this->episode = 0; // 0,1,2...MAX,0,1,... (overflow is welcome)
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -60,7 +60,7 @@ barrier_init (Barrier *const this, int capacity)
 static void
 barrier_destroy (Barrier *const this)
 {
-	assert(this->value == this->capacity); // empty
+	assert(this->count == this->capacity); // empty
 
 	condition_destroy(&this->queue);
 	lock_destroy(&this->syncronized);
@@ -69,7 +69,7 @@ barrier_destroy (Barrier *const this)
 /*
  * catch (barrier_wait(&b,0)); | catch (barrier_wait(&b,0)); | N threads 
  *
- * How to detect end of cycle:
+ * How to detect end of episode:
  *
  * bool last = false;
  * catch (barrier_wait(&b, &last));
@@ -81,17 +81,19 @@ barrier_wait (Barrier *const this, bool last[static 1])
 {
 	MONITOR_ENTRY
 
-	switch (this->value) {
+	switch (this->count) {
 		default: // >= 2
-			--this->value;
-			unsigned const cycle = this->cycle;
+			--this->count;
+			// wait until this episode is complete
+			unsigned const e = this->episode;
 			do {
 				catch (condition_wait(&this->queue, &this->syncronized));
-			} while (cycle == this->cycle);
+			} while (e == this->episode);
 			break;
 		case 1:
-			this->value = this->capacity;
-			++this->cycle;
+			this->count = this->capacity;
+			// signal episode completion
+			++this->episode;
 			catch (condition_broadcast(&this->queue));
 			last[0] = true;
 			break;

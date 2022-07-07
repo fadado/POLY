@@ -14,7 +14,7 @@
 typedef struct Semaphore {
 	Lock        syncronized;
 	Condition   queue;
-	signed      value;  // available resources
+	signed      resources;  // available resources
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
@@ -37,7 +37,7 @@ static int  semaphore_V(Semaphore *const this);
 
 #ifdef DEBUG
 #   define ASSERT_SEMAPHORE_INVARIANT \
-        assert(this->value >= 0);
+        assert(this->resources >= 0);
 #else
 #   define ASSERT_SEMAPHORE_INVARIANT
 #endif
@@ -45,7 +45,7 @@ static int  semaphore_V(Semaphore *const this);
 static int
 semaphore_init (Semaphore *const this, unsigned count)
 {
-	this->value = count;
+	this->resources = count;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -63,7 +63,7 @@ semaphore_init (Semaphore *const this, unsigned count)
 static void
 semaphore_destroy (Semaphore *const this)
 {
-	assert(this->value == 0 ); // ???
+	assert(this->resources == 0 ); // ???
 
 	condition_destroy(&this->queue);
 	lock_destroy(&this->syncronized);
@@ -76,7 +76,7 @@ semaphore_destroy (Semaphore *const this)
  * catch (semaphore_release(&mutex));
  *
  * catch (semaphore_init(&event, 0));
- * catch (semaphore_wait(&event)); | catch (semaphore_signal(&event));
+ * catch (semaphore_wait(&event));  ...; catch (semaphore_signal(&event));
  *
  * catch (semaphore_init(&allocator, N));
  */
@@ -86,10 +86,10 @@ semaphore_P (Semaphore *const this)
 {
 	MONITOR_ENTRY
 
-	while (this->value == 0) {
+	while (this->resources == 0) {
 		catch (condition_wait(&this->queue, &this->syncronized));
 	}
-	--this->value;
+	--this->resources;
 	ASSERT_SEMAPHORE_INVARIANT
 
 	ENTRY_END
@@ -100,7 +100,7 @@ semaphore_V (Semaphore *const this)
 {
 	MONITOR_ENTRY
 
-	++this->value;
+	++this->resources;
 	catch (condition_signal(&this->queue));;
 	ASSERT_SEMAPHORE_INVARIANT
 

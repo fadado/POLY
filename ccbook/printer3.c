@@ -3,15 +3,14 @@
 #include <stdio.h>
 #include "poly/thread.h"
 #include "poly/passing/entry.h"
-#include "poly/passing/interface.h"
+#include "poly/passing/task.h"
 
 typedef struct {
 	Entry print;
-} IPrinter3;
+} _Printer3;
 
 struct Printer3 {
-	THREAD_TYPE
-	INTERFACE (IPrinter3)
+	TASK_TYPE (_Printer3)
 	int i;
 };
 
@@ -35,22 +34,22 @@ int main()
 {
 	int err;
 
-	IPrinter3 iface1, iface2;
-	catch (interface_init(ENTRIES(IPrinter3), &iface1));
-	catch (interface_init(ENTRIES(IPrinter3), &iface2));
+	_Printer3 printer[2];
+	catch (task_init(ENTRIES(_Printer3), &printer[0]));
+	catch (task_init(ENTRIES(_Printer3), &printer[1]));
 
-	run_task(Printer3, &iface1, .i=1);
-	run_task(Printer3, &iface2, .i=2);
+	run_task(Printer3, &printer[0], .i=1);
+	run_task(Printer3, &printer[1], .i=2);
 
 	Scalar s, r;
 	s = Pointer("Good Morning!");
-	catch (entry_call(&iface1.print, s, &r));
+	catch (entry_call(&printer[0].print, s, &r));
 	assert(cast(r, int) == 1);
-	catch (entry_call(&iface2.print, s, &r));
+	catch (entry_call(&printer[1].print, s, &r));
 	assert(cast(r, int) == 2);
 
-	interface_destroy(ENTRIES(iface1), &iface1);
-	interface_destroy(ENTRIES(iface1), &iface2);
+	task_destroy(ENTRIES(_Printer3), &printer[0]);
+	task_destroy(ENTRIES(_Printer3), &printer[1]);
 
 	return 0;
 onerror:

@@ -4,19 +4,21 @@
 #include <stdio.h>
 #include "poly/thread.h"
 
-static atomic(bool) done;
+typedef atomic(bool) Flag;
 
 struct Hello {
 	THREAD_TYPE
 };
 
+static Flag done = 0;
 
 int Hello(void* data)
 {
 	THREAD_BODY (Hello, data)
 
 	printf("Hello, world!\n");
-	done = true;
+
+	done = 1;
 
 	END_BODY
 }

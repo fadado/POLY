@@ -88,7 +88,6 @@ static _Thread_local unsigned   Thread_ID = 0;
 // private atomic global counter (provide unique IDs)
 static _Atomic unsigned         THREAD_ID_COUNT_ = 1;
 
-
 #define THREAD_TYPE \
         atomic(bool) initialized_;
 
@@ -108,14 +107,5 @@ do {                                                          \
     if (err_ != STATUS_SUCCESS) panic("cannot start thread"); \
     while (!data_.initialized_) thread_yield();               \
 } while (0)
-
-#define run_task(T,I,...) \
-    run_thread(T, .interface_=(I) __VA_OPT__(,)__VA_ARGS__)
-
-#define run_filter(T,I,O,...) \
-    run_thread(T, .input=(I), .output=(O) __VA_OPT__(,)__VA_ARGS__)
-
-#define run_promise(T,F,...) \
-    run_thread(T, .future=(F) __VA_OPT__(,)__VA_ARGS__)
 
 #endif // vim:ai:sw=4:ts=4:syntax=cpp
