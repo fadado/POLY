@@ -65,9 +65,9 @@ entry_destroy (Entry *const this)
 static ALWAYS inline bool
 entry_ready (Entry *const this)
 {
-    lock_acquire(&this->syncronized);
+	lock_acquire(&this->syncronized);
 	bool const r = notice_ready(&this->board[0]);
-    lock_release(&this->syncronized);
+	lock_release(&this->syncronized);
 	return r;
 }
 

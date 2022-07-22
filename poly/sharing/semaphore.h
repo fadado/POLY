@@ -14,7 +14,7 @@
 typedef struct Semaphore {
 	Lock        syncronized;
 	Condition   queue;
-	signed      resources;  // available resources
+	signed      resources;
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
@@ -101,7 +101,7 @@ semaphore_V (Semaphore *const this)
 	MONITOR_ENTRY
 
 	++this->resources;
-	catch (condition_signal(&this->queue));;
+	catch (condition_signal(&this->queue));
 	ASSERT_SEMAPHORE_INVARIANT
 
 	ENTRY_END

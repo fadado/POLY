@@ -14,7 +14,7 @@
 typedef struct Event {
 	Lock    	syncronized;
 	Condition	queue;
-	unsigned	value;  // 0: not happened; 1: already happened
+	unsigned	flag;
 } Event;
 
 static void event_destroy(Event *const this);
@@ -27,11 +27,11 @@ static int  event_reset(Event *const this);
 // Implementation
 ////////////////////////////////////////////////////////////////////////
 
-enum { EVENT_NOT_HAPPENED, EVENT_ALREADY_HAPPENED };
+enum { EVENT_DOWN, EVENT_UP };
 
 #ifdef DEBUG
 #   define ASSERT_EVENT_INVARIANT \
-        assert(this->value < 2);
+        assert(this->flag < 2);
 #else
 #   define ASSERT_EVENT_INVARIANT
 #endif
@@ -39,7 +39,7 @@ enum { EVENT_NOT_HAPPENED, EVENT_ALREADY_HAPPENED };
 static int
 event_init (Event *const this)
 {
-	this->value = EVENT_NOT_HAPPENED;
+	this->flag = EVENT_DOWN;
 
 	int err;
 	if ((err=(lock_init(&this->syncronized))) != STATUS_SUCCESS) {
@@ -72,7 +72,7 @@ event_wait (Event *const this)
 {
 	MONITOR_ENTRY
 
-	while (this->value == EVENT_NOT_HAPPENED) {
+	while (this->flag == EVENT_DOWN) {
 		catch (condition_wait(&this->queue, &this->syncronized));
 	}
 	ASSERT_EVENT_INVARIANT
@@ -85,7 +85,7 @@ event_signal (Event *const this)
 {
 	MONITOR_ENTRY
 
-	this->value = EVENT_ALREADY_HAPPENED;
+	this->flag = EVENT_UP;
 	catch (condition_broadcast(&this->queue));
 	ASSERT_EVENT_INVARIANT
 
@@ -97,7 +97,7 @@ event_reset (Event *const this)
 {
 	MONITOR_ENTRY
 
-	this->value = EVENT_NOT_HAPPENED;
+	this->flag = EVENT_DOWN;
 
 	ENTRY_END
 }
