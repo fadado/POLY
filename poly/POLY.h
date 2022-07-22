@@ -78,7 +78,7 @@ static_assert(STATUS_TIMEDOUT >= 0);
 // Clock time measured in nanoseconds
 ////////////////////////////////////////////////////////////////////////
 
-typedef unsigned long long Clock;
+typedef signed long long Clock;
 
 #define s2ns(T)     (Clock)((T)*1000000000ull)
 #define ms2ns(T)    (Clock)((T)*1000000ull)
