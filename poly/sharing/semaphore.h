@@ -14,7 +14,7 @@
 typedef struct Semaphore {
 	Lock        syncronized;
 	Condition   queue;
-	signed      resources;  // available resources
+	signed      resources;
 } Semaphore;
 
 static void semaphore_destroy(Semaphore *const this);
